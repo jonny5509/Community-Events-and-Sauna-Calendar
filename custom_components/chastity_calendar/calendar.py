@@ -140,6 +140,10 @@ class ChastityChallengeCalendar(CalendarEntity):
         self.coordinator = coordinator
         self._attr_unique_id = f"{DOMAIN}_challenges"
 
+    async_added_to_hass(self):
+        """Refresh the calendar entity when online discoveries update."""
+        self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
+
     async def async_get_events(self, hass, start_date, end_date):
         """Return events overlapping the requested date range."""
         start_date = dt_util.as_local(start_date).replace(tzinfo=None)
