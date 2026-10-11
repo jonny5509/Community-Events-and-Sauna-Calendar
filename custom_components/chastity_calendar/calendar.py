@@ -140,7 +140,7 @@ class ChastityChallengeCalendar(CalendarEntity):
         self.coordinator = coordinator
         self._attr_unique_id = f"{DOMAIN}_challenges"
 
-    async_added_to_hass(self):
+    async def async_added_to_hass(self):
         """Refresh the calendar entity when online discoveries update."""
         self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
 
