@@ -28,24 +28,24 @@ COUNTRY_CODES = {
     "usa": "US",
 }
 SEARCHES = (
-    '"chastity" event',
-    '"Locktober" event',
-    '"male chastity" event',
-    '"chastity challenge" dates',
-    '"No Nut November" event',
-    '"kink event" chastity',
-    '"chastity" convention OR meetup OR contest',
-    '"Pride" festival parade',
-    '"LGBTQ" events festival',
-    '"LGBTQIA" Pride events dates',
-    '"Trans Pride" events',
-    '"Bi Pride" OR "Lesbian Pride" events',
-    '"Pride Month" events dates',
-    '"LGBTQ History Month" events',
-    '"Trans Day of Visibility" event',
-    '"International Day Against Homophobia" event',
-    '"Bi Visibility Day" event',
-    '"Trans Day of Remembrance" event',
+    ("community", '"chastity" event'),
+    ("community", '"Locktober" event'),
+    ("community", '"male chastity" event'),
+    ("community", '"chastity challenge" dates'),
+    ("community", '"No Nut November" event'),
+    ("community", '"kink event" chastity'),
+    ("community", '"chastity" convention OR meetup OR contest'),
+    ("pride", '"Pride" festival parade'),
+    ("pride", '"LGBTQ" events festival'),
+    ("pride", '"LGBTQIA" Pride events dates'),
+    ("pride", '"Trans Pride" events'),
+    ("pride", '"Bi Pride" OR "Lesbian Pride" events'),
+    ("pride", '"Pride Month" events dates'),
+    ("pride", '"LGBTQ History Month" events'),
+    ("pride", '"Trans Day of Visibility" event'),
+    ("pride", '"International Day Against Homophobia" event'),
+    ("pride", '"Bi Visibility Day" event'),
+    ("pride", '"Trans Day of Remembrance" event'),
 )
 MONTHS = (
     "January|February|March|April|May|June|July|August|September|October|November|December"
@@ -100,7 +100,7 @@ async def async_discover_events(
     seen = set()
     discovered = []
 
-    async def fetch(query: str):
+    async def fetch(category: str, query: str):
         localized_query = f"{query} {geographic_terms}".strip()
         gl = country_code or "US"
         ceid = f"{gl}:en"
@@ -158,11 +158,11 @@ async def async_discover_events(
                     f"Original result: {link}"
                 ),
                 "url": link,
-                "category": "discovered-unverified",
+                "category": category,
             })
         return results
 
-    batches = await asyncio.gather(*(fetch(query) for query in SEARCHES))
+    batches = await asyncio.gather(*(fetch(category, query) for category, query in SEARCHES))
     for batch in batches:
         discovered.extend(batch)
     return sorted(discovered, key=lambda item: item["start"])
