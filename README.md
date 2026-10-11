@@ -77,7 +77,7 @@ mode: single
 
 ### Online event discovery
 
-The integration also searches Google News public RSS results for several chastity/community-event and LGBTQ+ queries at startup and every 12 hours. During setup, enter a **country** (required) and optionally a **city, state, province, or region** to narrow the search. You can change these later under the integration's **Configure** options. The country selects a Google News edition where supported and is also added to search queries; the optional location is added to queries as a relevance filter. Results are not guaranteed to physically take place in the selected area because public search snippets are imperfect.
+The integration also searches Google News public RSS results for several chastity/community-event and LGBTQ+ queries at startup and at **00:00, 06:00, 12:00, and 18:00** Home Assistant local time (midnight and every six hours). During setup, enter a **country** (required) and optionally a **city, state, province, or region** to narrow the search. You can change these later under the integration's **Configure** options. The country selects a Google News edition where supported and is also added to search queries; the optional location is added to queries as a relevance filter. Results are not guaranteed to physically take place in the selected area because public search snippets are imperfect.
 
 It adds a result only when it can extract an explicit date within the next two years. These entries are prefixed **Possible event:** and marked unverified; their descriptions include the original search-result link. Please verify dates before relying on them. The built-in recurring challenge entries remain unchanged and are not country-filtered.
 
