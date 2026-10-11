@@ -177,26 +177,36 @@ async def _fetch_ticketmaster(session, api_key, country_code, today):
     return [item for batch in batches for item in batch]
 
 def _deduplicate(events):
-    """Merge repeated URLs and cross-source title/date duplicates."""
+    """Merge same-source URL updates and cross-source title/date matches."""
     merged = {}
+    url_to_key = {}
+    title_date_to_key = {}
     for event in events:
-        url_key = _normalise_url(event.get("url",""))
-        title_key = re.sub(r"[^a-z0-9]+"," ",event["summary"].casefold()).strip()
-        key = ("url",url_key) if url_key else ("title-date",title_key,event["start"].date().isoformat())
-        if key not in merged:
+        url_key = _normalise_url(event.get("url", ""))
+        title_key = re.sub(r"[^a-z0-9]+", " ", event["summary"].casefold()).strip()
+        date_key = event["start"].date().isoformat()
+        key = url_to_key.get(url_key) if url_key else None
+        if key is None:
+            key = title_date_to_key.get((title_key, date_key))
+        if key is None:
+            key = ("event", len(merged))
             merged[key] = event
-            continue
-        old = merged[key]
-        if event.get("date_confidence") == "structured" or old.get("date_confidence") != "structured":
-            old["start"],old["end"] = event["start"],event["end"]
-        old["categories"] = sorted(set(old.get("categories",[])) | set(event.get("categories",[])))
-        old["sources"] = sorted(set(old.get("sources",[])) | set(event.get("sources",[])))
-        old["source_links"] = list(dict.fromkeys(old.get("source_links",[]) + event.get("source_links",[])))
-        if event.get("location") and not old.get("location"): old["location"] = event["location"]
-        if event.get("date_confidence") == "structured":
-            old["summary"],old["url"],old["description"] = event["summary"],event["url"],event["description"]
-            old["date_confidence"] = "structured"
-    return sorted(merged.values(),key=lambda item:item["start"])
+        else:
+            old = merged[key]
+            if event.get("date_confidence") == "structured" or old.get("date_confidence") != "structured":
+                old["start"], old["end"] = event["start"], event["end"]
+            old["categories"] = sorted(set(old.get("categories", [])) | set(event.get("categories", [])))
+            old["sources"] = sorted(set(old.get("sources", [])) | set(event.get("sources", [])))
+            old["source_links"] = list(dict.fromkeys(old.get("source_links", []) + event.get("source_links", [])))
+            if event.get("location") and not old.get("location"):
+                old["location"] = event["location"]
+            if event.get("date_confidence") == "structured":
+                old["summary"], old["url"], old["description"] = event["summary"], event["url"], event["description"]
+                old["date_confidence"] = "structured"
+        if url_key:
+            url_to_key[url_key] = key
+        title_date_to_key[(title_key, date_key)] = key
+    return sorted(merged.values(), key=lambda item: item["start"])
 
 async def async_discover_events(hass, country: str = "", location: str = "", ticketmaster_api_key: str = "") -> list[dict]:
     """Search public sources for dated events in the configured country."""
