@@ -172,9 +172,7 @@ PRIDE_EVENTS = [
         "description": "Annual observance celebrating bisexual visibility and community.",
         "category": "pride",
     },
-```
-
-```
+]
 
 
 def _event_for_year(item: dict, year: int) -> CalendarEvent:
