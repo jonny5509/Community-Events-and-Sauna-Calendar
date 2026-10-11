@@ -77,13 +77,16 @@ mode: single
 
 ### Online event discovery
 
-The integration also searches Google News public RSS results for several chastity/community-event and LGBTQ+ queries at startup and every 12 hours. It adds a result only when it can extract an explicit date within the next two years. These entries are prefixed **Possible event:** and marked unverified; their descriptions include the original search-result link. Please verify dates before relying on them.
+The integration also searches Google News public RSS results for several chastity/community-event and LGBTQ+ queries at startup and every 12 hours. During setup, enter a **country** (required) and optionally a **city, state, province, or region** to narrow the search. You can change these later under the integration's **Configure** options. The country selects a Google News edition where supported and is also added to search queries; the optional location is added to queries as a relevance filter. Results are not guaranteed to physically take place in the selected area because public search snippets are imperfect.
+
+It adds a result only when it can extract an explicit date within the next two years. These entries are prefixed **Possible event:** and marked unverified; their descriptions include the original search-result link. Please verify dates before relying on them. The built-in recurring challenge entries remain unchanged and are not country-filtered.
 
 This is best-effort discovery, not a search of the entire internet. Search engines may miss private groups, social posts, event platforms, or pages they have not indexed. It requires Home Assistant to have internet access. If the search service is temporarily unavailable, the recurring built-in calendar entries remain available.
 
 ### Notes
 
-- The built-in annual events are generated locally. Online discovery uses public Google News RSS feeds.
+- The built-in annual events are generated locally. Online discovery uses public Google News RSS feeds and the configured country/location as search filters.
+- Google News country editions are mapped for common countries; other country names are still included in the query, but use the global/US English feed edition. This is best-effort geographic filtering, not a strict geofence.
 - This is a calendar and reminder integration only. It does not control any device.
 - Challenges involving intimacy or sexual activity should always be consensual.
 - This is an initial custom integration; validate it against your Home Assistant
