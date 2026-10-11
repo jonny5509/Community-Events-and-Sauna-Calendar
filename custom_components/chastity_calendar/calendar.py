@@ -217,8 +217,12 @@ class ChastityChallengeCalendar(CalendarEntity):
                     events.append(event)
 
         for item in (self.coordinator.data or []):
-            expected_category = "pride" if self.calendar_type == "pride" else "community"
-            if item.get("category") != expected_category:
+            # Monthly is the broad all-discovered-events calendar. Pride stays focused.
+            categories = set(item.get("categories", []))
+            if self.calendar_type == "pride" and not (
+                item.get("category") in {"pride", "gay", "lesbian", "bisexual", "transgender", "queer", "lgbtq"}
+                or categories.intersection({"pride", "lgbtq", "gay", "lesbian", "bisexual", "transgender", "queer"})
+            ):
                 continue
             raw_start = item["start"]
             raw_end = item["end"]

@@ -1,57 +1,52 @@
 # Chastity Challenge Calendar
 
-A custom [Home Assistant](https://www.home-assistant.io/) integration that adds two calendar entities, two sensors, and best-effort discovery of dated events from public Google News RSS results.
+A custom [Home Assistant](https://www.home-assistant.io/) integration with recurring challenge and LGBTQ+ observance calendars, sensors, and best-effort discovery of public events across the configured country.
 
-> **Important:** Online discoveries are unverified search results, not an authoritative event directory. Check the original organiser/source before relying on a date or location. Some recurring challenge names are informal or community-created rather than official observances.
+> **Important:** This is a broad discovery tool, not a complete or verified event directory. Public adult-only listings are included when indexed by the sources. Always verify dates, age restrictions, access requirements, and venues with the organiser.
 
 ## Features
 
-- **Monthly Events calendar** — recurring challenge themes such as Locktober and No Nut November.
-- **Pride EC Events calendar** — recurring LGBTQ+ observances, including Transgender Day of Visibility, Pride Month, National Coming Out Day, and World AIDS Day.
-- **Next Event sensor** — shows the name of the current or next event, with start date, end date, and description attributes.
-- **Upcoming Events sensor** — counts events active or starting in the next 30 days, with the counting window documented in its attributes.
-- **Location-aware discovery** — configure a country and optional city/region to make public RSS searches more relevant.
-- **UI configuration** — set up and edit the search area through Settings; no YAML configuration is required.
+- Monthly challenge and Pride/observance calendars.
+- Next Event, Upcoming Events, Event Locations, Nearby Saunas, and LGBTQ+ category sensors.
+- Broad searches for community festivals, conventions, meetups, workshops, arts/music events, kink/fetish and chastity events, Pride/LGBTQ+ listings, and public adult-only listings.
+- Google News RSS works without credentials. Optional Ticketmaster Discovery API support provides structured event dates, venue details, and source links.
+- Deduplication merges repeated source URLs and matching title/date listings, retaining category tags and source links.
+- Automatic event refresh every six hours; nearby sauna lookup refreshes every 24 hours.
+- Nearby Saunas sensor geocodes the configured city/region and lists mapped sauna/public-bath venues within 20 km, nearest first, including distance, address when mapped, and website/map links where available.
 
 ## Installation
 
-### Install with HACS
+### HACS
+1. Open HACS and choose **Custom repositories**.
+2. Add `jonny5509/calendar-events` as an **Integration**.
+3. Download the integration and restart Home Assistant.
+4. Add it from **Settings → Devices & services → Add integration**.
 
-1. Open **HACS** in Home Assistant.
-2. Open the menu and choose **Custom repositories**.
-3. Add `jonny5509/calendar-events` and select **Integration** as the category.
-4. Find **Chastity Challenge Calendar** in HACS and download it.
-5. Restart Home Assistant.
-6. Go to **Settings → Devices & services → Add integration**, search for **Chastity Challenge Calendar**, and follow the setup flow.
-
-If the repository becomes available directly in the HACS default catalogue, you can search for it without adding a custom repository.
-
-### Manual installation
-
-1. Copy `custom_components/chastity_calendar` into your Home Assistant `config/custom_components/` directory.
-2. Restart Home Assistant.
-3. Add **Chastity Challenge Calendar** from **Settings → Devices & services → Add integration**.
+### Manual
+Copy `custom_components/chastity_calendar` to `config/custom_components/`, restart Home Assistant, and add the integration.
 
 ## Configuration
 
-During setup, select a country and optionally enter a city, state, province, or region. You can change these values later through the integration's **Configure** option.
+Choose the country to search. The optional city/region field adds a local relevance term to RSS queries and is used as the centre for the Nearby Saunas sensor. Sauna discovery uses OpenStreetMap's Nominatim geocoder and Overpass data; it searches a 20 km radius and refreshes daily. This is a best-effort map directory, not a complete adult-venue directory.
 
-The country and location are used as search terms and to select a Google News edition where supported. They improve relevance but do **not** guarantee that a result physically takes place in the selected area.
+The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
 
-## Entities and dashboard
+## Event data
 
-The integration creates these entities:
+Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Repeated URLs collapse even if a publisher updates the date; cross-source title/date matches merge when possible. Subsequent scheduled refreshes update the current results.
 
-| Entity | Contents |
-| --- | --- |
-| **Monthly Events calendar** | Recurring monthly challenge themes and discovered community events |
-| **Pride EC Events calendar** | Recurring LGBTQ+ observances and discovered Pride-related events |
-| **Next Event sensor** | Event name as its state; includes `start_date`, `end_date`, and `description` attributes |
-| **Upcoming Events sensor** | Number of events active or starting in the next 30 days |
+## Transparent limitations
 
-Exact entity IDs depend on your Home Assistant entity registry. Find them under **Developer tools → States**.
+- No source can discover every event or every post. Private groups, login-only social posts, closed mailing lists, and unindexed websites cannot reliably be searched.
+- RSS returns a limited set of indexed results. Snippets may omit dates or include irrelevant dates.
+- Ticketmaster requires an API key and covers only its catalogue and supported countries; it is not a universal event directory.
+- Keyword-derived categories may overlap or be incorrect.
+- Country search terms improve relevance but do not guarantee the event is physically in the country. Venue details are shown only when supplied by a source.
+- Adult-only events are included when publicly indexed, but eligibility and age restrictions must be checked with the organiser.
+- Nearby sauna coverage depends on OpenStreetMap tagging; adult-only venues and venue events may be missing, and the integration does not verify opening hours, age rules, or events hosted at each sauna.
+- Zero results means no matching dated listing was found, not that no events exist.
 
-Add a standard **Calendar** card to a dashboard and select either or both calendars:
+## Dashboard
 
 ```yaml
 type: calendar
@@ -61,50 +56,12 @@ entities:
   - calendar.chastity_challenge_calendar_pride
 ```
 
-You can also display the sensors in an Entities card or use them in templates and automations. For example, a template can read the next event date with `state_attr('sensor.chastity_calendar_next_event', 'start_date')`; verify the actual entity ID in your instance.
+Exact entity IDs can vary; check **Developer tools → States**.
 
-## Event discovery and limitations
+## Privacy
 
-The integration searches public Google News RSS results for dated community and Pride-related events. Searches are refreshed periodically. A result is included only when a future date within the supported search window can be extracted from the title or snippet.
-
-- Online results are labelled **Possible event** and include the original result link.
-- Search snippets can contain incorrect, ambiguous, or unrelated dates; always verify them.
-- Search engines may miss local festivals, community listings, private groups, and social-media posts.
-- If RSS discovery is unavailable, the built-in recurring calendar observances remain available.
-- The built-in annual entries are informational; some challenge themes are informal or suggested ideas, not official holidays.
-
-## Automation example
-
-This example sends a notification when Locktober starts. Replace `notify.notify` and the entity ID with values from your Home Assistant installation.
-
-```yaml
-alias: Locktober starts
-triggers:
-  - trigger: calendar
-    entity_id: calendar.chastity_challenge_calendar_monthly
-    event: start
-    offset: "0:0:0"
-conditions:
-  - condition: template
-    value_template: "{{ trigger.calendar_event.summary == 'Locktober' }}"
-actions:
-  - action: notify.notify
-    data:
-      title: "Calendar challenge"
-      message: "Locktober starts today."
-mode: single
-```
-
-## Troubleshooting
-
-- **Can't find the integration:** confirm the folder is named `custom_components/chastity_calendar`, restart Home Assistant, and check the logs.
-- **No discovered local festivals:** RSS discovery is best-effort. Check the configured country/location and verify that Home Assistant has internet access.
-- **A result has the wrong date or location:** follow the original link and treat the listing as unverified.
-
-## Privacy and safety
-
-The integration sends configured country/location terms to Google News RSS search URLs to retrieve public results. Do not enter private or sensitive information in the location field. This integration only provides calendar entries and reminders; it does not control devices. Any intimate or sexual activity should be consensual.
+Configured country/location terms are sent to Google News RSS; if enabled, search terms and country code are sent to Ticketmaster. Do not enter private information in the location field. Do not publish API keys.
 
 ## Contributing
 
-Bug reports and pull requests are welcome. Please include your Home Assistant version, relevant logs with personal information removed, and clear steps to reproduce the issue.
+Bug reports and pull requests are welcome. Include Home Assistant version and logs with personal information removed.
