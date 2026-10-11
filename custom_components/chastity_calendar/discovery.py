@@ -46,7 +46,6 @@ SEARCHES = (
     ("pride", '"International Day Against Homophobia" event'),
     ("pride", '"Bi Visibility Day" event'),
     ("pride", '"Trans Day of Remembrance" event'),
-)
     ("gay", '"gay pride" events dates'),
     ("gay", '"gay men" festival OR meetup OR event dates'),
     ("lesbian", '"lesbian" festival OR meetup OR events dates'),
@@ -56,6 +55,7 @@ SEARCHES = (
     ("transgender", '"trans community" festival OR meetup dates'),
     ("queer", '"queer" LGBTQ festival OR community event dates'),
     ("lgbtq", '"LGBTQ" events festival dates'),
+)
 MONTHS = (
     "January|February|March|April|May|June|July|August|September|October|November|December"
 )
