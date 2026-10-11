@@ -1,7 +1,7 @@
 """Annual and discovered chastity-themed community calendar."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.util import dt as dt_util
@@ -115,11 +115,11 @@ EVENTS = [
 
 
 def _event_for_year(item: dict, year: int) -> CalendarEvent:
-    """Build an all-day event for a given year."""
+    """Build an all-day event using dates and an exclusive end date."""
     start_month, start_day = item["start"]
     end_month, end_day = item["end"]
-    start = datetime(year, start_month, start_day)
-    end = datetime(year, end_month, end_day) + timedelta(days=1)
+    start = date(year, start_month, start_day)
+    end = date(year, end_month, end_day) + timedelta(days=1)
     return CalendarEvent(
         summary=item["summary"],
         start=start,
@@ -146,22 +146,26 @@ class ChastityChallengeCalendar(CalendarEntity):
         self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
 
     async def async_get_events(self, hass, start_date, end_date):
-        """Return events overlapping the requested date range."""
-        start_date = dt_util.as_local(start_date).replace(tzinfo=None)
-        end_date = dt_util.as_local(end_date).replace(tzinfo=None)
+        """Return all-day events overlapping the requested date range."""
+        start_day = dt_util.as_local(start_date).date()
+        end_day = dt_util.as_local(end_date).date()
         events = []
-        for year in range(start_date.year, end_date.year + 1):
+        for year in range(start_day.year, end_day.year + 1):
             for item in EVENTS:
-                # Skip 29 February is not needed for the listed event dates.
                 event = _event_for_year(item, year)
-                if event.end > start_date and event.start < end_date:
+                if event.end > start_day and event.start < end_day:
                     events.append(event)
+
+        # Google News discovery returns datetimes; these entries are date-only
+        # events, so expose them to Home Assistant as date-based all-day events.
         for item in (self.coordinator.data or []):
-            if item["end"] > start_date and item["start"] < end_date:
+            event_start = item["start"].date() if isinstance(item["start"], datetime) else item["start"]
+            event_end = item["end"].date() if isinstance(item["end"], datetime) else item["end"]
+            if event_end > start_day and event_start < end_day:
                 events.append(CalendarEvent(
                     summary=item["summary"],
-                    start=item["start"],
-                    end=item["end"],
+                    start=event_start,
+                    end=event_end,
                     description=item["description"],
                 ))
         return sorted(events, key=lambda event: event.start)

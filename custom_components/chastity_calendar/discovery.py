@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
@@ -9,6 +10,8 @@ from urllib.parse import quote_plus
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
+
+_LOGGER = logging.getLogger(__name__)
 
 # Google News country editions. Unknown country names still become a query term,
 # while the RSS feed falls back to its English/global edition.
@@ -113,10 +116,20 @@ async def async_discover_events(
                     headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.2"},
                 ) as response:
                     if response.status != 200:
+                        _LOGGER.warning(
+                            "Google News RSS returned HTTP %s for query %r",
+                            response.status,
+                            localized_query,
+                        )
                         return []
                     body = await response.text()
             root = ET.fromstring(body)
-        except (Exception, asyncio.TimeoutError):
+        except (Exception, asyncio.TimeoutError) as err:
+            _LOGGER.warning(
+                "Unable to fetch or parse Google News RSS for query %r: %s",
+                localized_query,
+                err,
+            )
             return []
 
         results = []
