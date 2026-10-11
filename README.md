@@ -75,9 +75,15 @@ actions:
 mode: single
 ```
 
+### Online event discovery
+
+The integration also searches Google News public RSS results for several chastity/community-event queries at startup and every 12 hours. It adds a result only when it can extract an explicit date within the next two years. These entries are prefixed **Possible event:** and marked unverified; their descriptions include the original search-result link. Please verify dates before relying on them.
+
+This is best-effort discovery, not a search of the entire internet. Search engines may miss private groups, social posts, event platforms, or pages they have not indexed. It requires Home Assistant to have internet access. If the search service is temporarily unavailable, the recurring built-in calendar entries remain available.
+
 ### Notes
 
-- Events recur annually and are generated locally; no external API is required.
+- The built-in annual events are generated locally. Online discovery uses public Google News RSS feeds.
 - This is a calendar and reminder integration only. It does not control any device.
 - Challenges involving intimacy or sexual activity should always be consensual.
 - This is an initial custom integration; validate it against your Home Assistant
