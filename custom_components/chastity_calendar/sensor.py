@@ -147,12 +147,67 @@ class ChastityUpcomingEventCountSensor(ChastityCalendarSensorBase):
         }
 
 
+class ChastityEventLocationsSensor(ChastityCalendarSensorBase):
+    """Show the configured search area and any explicit event locations."""
+
+    _attr_name = "Event Locations"
+    _attr_icon = "mdi:map-marker-multiple"
+
+    def __init__(self, coordinator, country: str, location: str) -> None:
+        """Initialize location sensor with the configured search area."""
+        super().__init__(coordinator)
+        self.country = country.strip()
+        self.location = location.strip()
+        self._attr_unique_id = f"{DOMAIN}_event_locations"
+
+    @property
+    def native_value(self) -> str:
+        """Show the configured search area, not an inferred event venue."""
+        return ", ".join(part for part in (self.location, self.country) if part) or "Not configured"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Separate the configured search area from explicitly supplied venues."""
+        discovered = self.coordinator.data or []
+        event_locations = [
+            {
+                "name": item.get("summary", "Unnamed event"),
+                "location": item["location"],
+                "start_date": item["start"].date().isoformat()
+                if hasattr(item.get("start"), "date")
+                else str(item.get("start", "")),
+                "source": item.get("url", ""),
+            }
+            for item in discovered
+            if item.get("location")
+        ]
+        return {
+            "configured_search_area": {
+                "city_or_region": self.location or None,
+                "country": self.country or None,
+            },
+            "event_locations": event_locations,
+            "event_locations_count": len(event_locations),
+            "location_note": (
+                "Only explicit event locations are listed here. Current RSS discovery "
+                "does not reliably extract venue locations, so this list may be empty. "
+                "The configured search area is not proof that an event takes place there."
+            ),
+        }
+
+
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
-    """Set up the next-event and upcoming-event sensors."""
+    """Set up event, upcoming-event, and location sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
+    preferences = {**entry.data, **entry.options}
     async_add_entities(
         [
             ChastityNextEventSensor(coordinator),
             ChastityUpcomingEventCountSensor(coordinator),
+            ChastityEventLocationsSensor(
+                coordinator,
+                preferences.get("country", ""),
+                preferences.get("location", ""),
+            ),
         ]
     )
