@@ -157,7 +157,7 @@ async def _fetch_ticketmaster(session, api_key, country_code, today):
             return []
         records = []
         for item in payload.get("_embedded",{}).get("events",[]):
-            raw = item.get("dates",{}).get("start",{}).get("dateTime") or item.get("dates",{}).get("start",{}).get("localDate")
+            raw = item.get("dates",{}).get("start",{}).get("localDate") or item.get("dates",{}).get("start",{}).get("dateTime")
             if not raw: continue
             try: start = datetime.fromisoformat(raw.replace("Z","+00:00")).replace(tzinfo=None)
             except ValueError: continue
