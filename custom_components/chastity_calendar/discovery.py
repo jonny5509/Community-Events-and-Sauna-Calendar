@@ -21,6 +21,17 @@ SEARCHES = (
     '"No Nut November" event',
     '"kink event" chastity',
     '"chastity" convention OR meetup OR contest',
+    '"Pride" festival parade 2027',
+    '"LGBTQ" events festival 2027',
+    '"LGBTQIA" Pride events dates',
+    '"Trans Pride" events 2027',
+    '"Bi Pride" OR "Lesbian Pride" events',
+    '"Pride Month" events dates',
+    '"LGBTQ History Month" events',
+    '"Trans Day of Visibility" event',
+    '"International Day Against Homophobia" event',
+    '"Bi Visibility Day" event',
+    '"Trans Day of Remembrance" event',
 )
 MONTHS = (
     "January|February|March|April|May|June|July|August|September|October|November|December"
