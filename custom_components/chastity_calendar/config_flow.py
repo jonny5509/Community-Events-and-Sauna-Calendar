@@ -81,15 +81,10 @@ class ChastityCalendarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         """Allow users to change their search area later."""
-        return ChastityCalendarOptionsFlow(config_entry)
-
+        return ChastityCalendarOptionsFlow()
 
 class ChastityCalendarOptionsFlow(config_entries.OptionsFlow):
     """Edit the country and optional local-area search."""
-
-    def __init__(self, config_entry):
-        """Keep the config entry for defaults."""
-        self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Save search preferences."""
