@@ -1,67 +1,82 @@
-# calendar-events
+# Chastity Challenge Calendar
 
-## Chastity Challenge Calendar for Home Assistant
+A custom [Home Assistant](https://www.home-assistant.io/) integration that adds two calendar entities: recurring monthly community challenges and LGBTQ+ Pride observances, plus best-effort discovery of dated events from public Google News RSS results.
 
-This repository now includes a custom Home Assistant integration at
-`custom_components/chastity_calendar`. It exposes a real `calendar` entity
-with annual all-day entries for Locktober, No Nut November, and other chastity-
-themed online community challenges.
+> **Important:** Online discoveries are unverified search results, not an authoritative event directory. Check the original organiser/source before relying on a date or location. Some recurring challenge names are informal or community-created rather than official observances.
 
-### Included events
+## Features
 
-- International Male Chastity Day — 14 January (informal)
-- Jailbird January
-- Feminized February
-- Maleless March
-- Abstinence April
-- You May Not Cum
-- Summer Chastity Challenge (suggested theme)
-- Midyear Chastity Challenge (suggested theme)
-- Anal Only August
-- Sissy September
-- Locktober — 1–31 October
-- No Nut November — 1–30 November
-- Denied December
-- Chastity Advent Calendar — 1–24 December (suggested theme)
+- **Monthly Events calendar** — recurring challenge themes such as Locktober and No Nut November.
+- **Pride EC Events calendar** — recurring LGBTQ+ observances, including Transgender Day of Visibility, Pride Month, National Coming Out Day, and World AIDS Day.
+- **Location-aware discovery** — configure a country and optional city/region to make public RSS searches more relevant.
+- **Upcoming events** — calendar entities expose current/next events and date-range queries for Home Assistant dashboards and automations.
+- **UI configuration** — set up and edit the search area through Settings; no YAML configuration is required.
 
-**Accuracy note:** Locktober and No Nut November are well-known online challenges.
-Several other names are niche, community-created themes or suggested ideas, not
-official observances. This integration labels them in each event description.
+## Installation
 
-### Install
+### Install with HACS
 
-1. Copy `custom_components/chastity_calendar` into your Home Assistant
-   configuration directory, preserving the folder structure.
+1. Open **HACS** in Home Assistant.
+2. Open the menu and choose **Custom repositories**.
+3. Add `jonny5509/calendar-events` and select **Integration** as the category.
+4. Find **Chastity Challenge Calendar** in HACS and download it.
+5. Restart Home Assistant.
+6. Go to **Settings → Devices & services → Add integration**, search for **Chastity Challenge Calendar**, and follow the setup flow.
+
+If the repository becomes available directly in the HACS default catalogue, you can search for it without adding a custom repository.
+
+### Manual installation
+
+1. Copy `custom_components/chastity_calendar` into your Home Assistant `config/custom_components/` directory.
 2. Restart Home Assistant.
-3. Open **Settings → Devices & services → Add integration**.
-4. Search for **Chastity Challenge Calendar** and add it.
-5. Open **Settings → Dashboards → Resources** only if you are using a separate
-   custom card; the standard Home Assistant Calendar card needs no extra resource.
-6. Add a **Calendar** card to a dashboard and select the new calendar entity.
-   The entity ID will usually be `calendar.chastity_challenge_calendar` or
-   similar; verify it under **Developer tools → States**.
+3. Add **Chastity Challenge Calendar** from **Settings → Devices & services → Add integration**.
 
-Example dashboard card YAML (replace the entity ID with the one shown in your
-instance):
+## Configuration
+
+During setup, select a country and optionally enter a city, state, province, or region. You can change these values later through the integration's **Configure** option.
+
+The country and location are used as search terms and to select a Google News edition where supported. They improve relevance but do **not** guarantee that a result physically takes place in the selected area.
+
+## Calendars and dashboard
+
+The integration creates two separate calendar entities:
+
+| Calendar | Contents |
+| --- | --- |
+| **Monthly Events** | Recurring monthly challenge themes and discovered community events |
+| **Pride EC Events** | Recurring LGBTQ+ observances and discovered Pride-related events |
+
+Add a standard **Calendar** card to a dashboard and select either or both entities. For example, replace the entity IDs below with the IDs shown under **Developer tools → States**:
 
 ```yaml
 type: calendar
 initial_view: month
 entities:
-  - calendar.chastity_challenge_calendar
+  - calendar.chastity_challenge_calendar_monthly
+  - calendar.chastity_challenge_calendar_pride
 ```
 
-### Example automation
+Home Assistant entity IDs may differ depending on your installation and any previous entity registry changes, so verify the actual IDs in your instance.
 
-This example sends a notification when the Locktober calendar event starts.
-Change `notify.notify` to a notification service configured in your Home
-Assistant instance.
+## Event discovery and limitations
+
+The integration searches public Google News RSS results for dated community and Pride-related events. Searches are refreshed periodically. A result is included only when a future date within the supported search window can be extracted from the title or snippet.
+
+- Online results are labelled **Possible event** and include the original result link.
+- Search snippets can contain incorrect, ambiguous, or unrelated dates; always verify them.
+- Search engines may miss local festivals, community listings, private groups, and social-media posts.
+- If RSS discovery is unavailable, the built-in recurring calendar observances remain available.
+- The built-in annual entries are informational; some challenge themes are informal or suggested ideas, not official holidays.
+
+## Automation example
+
+This example sends a notification when Locktober starts. Replace `notify.notify` and the entity ID with values from your Home Assistant installation.
 
 ```yaml
 alias: Locktober starts
 triggers:
   - trigger: calendar
-    entity_id: calendar.chastity_challenge_calendar
+    entity_id: calendar.chastity_challenge_calendar_monthly
     event: start
     offset: "0:0:0"
 conditions:
@@ -75,19 +90,16 @@ actions:
 mode: single
 ```
 
-### Online event discovery
+## Troubleshooting
 
-The integration also searches Google News public RSS results for several chastity/community-event and LGBTQ+ queries at startup and at **00:00, 06:00, 12:00, and 18:00** Home Assistant local time (midnight and every six hours). During setup, enter a **country** (required) and optionally a **city, state, province, or region** to narrow the search. You can change these later under the integration's **Configure** options. The country selects a Google News edition where supported and is also added to search queries; the optional location is added to queries as a relevance filter. Results are not guaranteed to physically take place in the selected area because public search snippets are imperfect.
+- **Can't find the integration:** confirm the folder is named `custom_components/chastity_calendar`, restart Home Assistant, and check the logs.
+- **No discovered local festivals:** RSS discovery is best-effort. Check the configured country/location and verify that Home Assistant has internet access.
+- **A result has the wrong date or location:** follow the original link and treat the listing as unverified.
 
-It adds a result only when it can extract an explicit date within the next two years. These entries are prefixed **Possible event:** and marked unverified; their descriptions include the original search-result link. Please verify dates before relying on them. The built-in recurring challenge entries remain unchanged and are not country-filtered.
+## Privacy and safety
 
-This is best-effort discovery, not a search of the entire internet. Search engines may miss private groups, social posts, event platforms, or pages they have not indexed. It requires Home Assistant to have internet access. If the search service is temporarily unavailable, the recurring built-in calendar entries remain available.
+The integration sends configured country/location terms to Google News RSS search URLs to retrieve public results. Do not enter private or sensitive information in the location field. This integration only provides calendar entries and reminders; it does not control devices. Any intimate or sexual activity should be consensual.
 
-### Notes
+## Contributing
 
-- The built-in annual events are generated locally. Online discovery uses public Google News RSS feeds and the configured country/location as search filters.
-- Google News country editions are mapped for common countries; other country names are still included in the query, but use the global/US English feed edition. This is best-effort geographic filtering, not a strict geofence.
-- This is a calendar and reminder integration only. It does not control any device.
-- Challenges involving intimacy or sexual activity should always be consensual.
-- This is an initial custom integration; validate it against your Home Assistant
-  version before relying on it for important automations.
+Bug reports and pull requests are welcome. Please include your Home Assistant version, relevant logs with personal information removed, and clear steps to reproduce the issue.
