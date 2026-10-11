@@ -10,9 +10,20 @@ from urllib.parse import quote_plus
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
-# Google News exposes public RSS search results. This is a useful index, not
-# exhaustive web coverage; results are included only when a future date can
-# be extracted explicitly from the title or snippet.
+# Google News country editions. Unknown country names still become a query term,
+# while the RSS feed falls back to its English/global edition.
+COUNTRY_CODES = {
+    "australia": "AU", "austria": "AT", "belgium": "BE",
+    "brazil": "BR", "canada": "CA", "denmark": "DK",
+    "finland": "FI", "france": "FR", "germany": "DE",
+    "india": "IN", "ireland": "IE", "italy": "IT",
+    "japan": "JP", "mexico": "MX", "netherlands": "NL",
+    "new zealand": "NZ", "norway": "NO", "portugal": "PT",
+    "singapore": "SG", "south africa": "ZA", "south korea": "KR",
+    "spain": "ES", "sweden": "SE", "switzerland": "CH",
+    "united kingdom": "GB", "uk": "GB", "united states": "US",
+    "usa": "US",
+}
 SEARCHES = (
     '"chastity" event',
     '"Locktober" event',
@@ -21,10 +32,10 @@ SEARCHES = (
     '"No Nut November" event',
     '"kink event" chastity',
     '"chastity" convention OR meetup OR contest',
-    '"Pride" festival parade 2027',
-    '"LGBTQ" events festival 2027',
+    '"Pride" festival parade',
+    '"LGBTQ" events festival',
     '"LGBTQIA" Pride events dates',
-    '"Trans Pride" events 2027',
+    '"Trans Pride" events',
     '"Bi Pride" OR "Lesbian Pride" events',
     '"Pride Month" events dates',
     '"LGBTQ History Month" events',
@@ -37,9 +48,9 @@ MONTHS = (
     "January|February|March|April|May|June|July|August|September|October|November|December"
 )
 DATE_PATTERNS = (
-    re.compile(rf"\b({MONTHS})\s+(\d{{1,2}})(?:st|nd|rd|th)?[,]?\s+(20\d{{2}})\b", re.I),
-    re.compile(rf"\b(\d{{1,2}})\s+({MONTHS})[,]?\s+(20\d{{2}})\b", re.I),
-    re.compile(r"\b(20\d{2})-(\d{2})-(\d{2})\b"),
+    re.compile(rf"\\b({MONTHS})\\s+(\\d{{1,2}})(?:st|nd|rd|th)?[,]?\\s+(20\\d{{2}})\\b", re.I),
+    re.compile(rf"\\b(\\d{{1,2}})\\s+({MONTHS})[,]?\\s+(20\\d{{2}})\\b", re.I),
+    re.compile(r"\\b(20\\d{2})-(\\d{2})-(\\d{2})\\b"),
 )
 
 
@@ -67,22 +78,40 @@ def _find_future_date(text: str, today: datetime):
     return None
 
 
-async def async_discover_events(hass) -> list[dict]:
-    """Search public RSS results and return explicitly dated possible events."""
+async def async_discover_events(
+    hass, country: str = "", location: str = ""
+) -> list[dict]:
+    """Search public RSS results, scoped to a country and optional local area."""
     session = async_get_clientsession(hass)
     today = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    country = (country or "").strip()
+    location = (location or "").strip()
+    country_code = COUNTRY_CODES.get(country.casefold(), "")
+    # Put geographic terms directly in each query as well as selecting the
+    # corresponding Google News edition. This is relevance filtering, not a
+    # guarantee that every result physically takes place in that area.
+    geographic_terms = " ".join(
+        f'"{term}"' if " " in term else term
+        for term in (country, location) if term
+    )
     seen = set()
     discovered = []
 
     async def fetch(query: str):
+        localized_query = f"{query} {geographic_terms}".strip()
+        gl = country_code or "US"
+        ceid = f"{gl}:en"
         url = (
             "https://news.google.com/rss/search?q="
-            + quote_plus(query)
-            + "&hl=en-GB&gl=GB&ceid=GB:en"
+            + quote_plus(localized_query)
+            + f"&hl=en-{gl}&gl={gl}&ceid={ceid}"
         )
         try:
             async with asyncio.timeout(20):
-                async with session.get(url, headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.1"}) as response:
+                async with session.get(
+                    url,
+                    headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.2"},
+                ) as response:
                     if response.status != 200:
                         return []
                     body = await response.text()
@@ -111,6 +140,8 @@ async def async_discover_events(hass) -> list[dict]:
                 "description": (
                     "Unverified discovery from Google News RSS. The date was "
                     "extracted from the result title/snippet and may need checking. "
+                    f"Search area: {', '.join(term for term in (location, country) if term) or 'not specified'}. "
+                    "Search relevance does not guarantee the event is physically in this area. "
                     f"Original result: {link}"
                 ),
                 "url": link,
