@@ -142,6 +142,7 @@ class ChastityChallengeCalendar(CalendarEntity):
 
     async def async_added_to_hass(self):
         """Refresh the calendar entity when online discoveries update."""
+        await super().async_added_to_hass()
         self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
 
     async def async_get_events(self, hass, start_date, end_date):
