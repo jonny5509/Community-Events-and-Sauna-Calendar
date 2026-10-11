@@ -9,7 +9,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration that adds 
 - **Monthly Events calendar** — recurring challenge themes such as Locktober and No Nut November.
 - **Pride EC Events calendar** — recurring LGBTQ+ observances, including Transgender Day of Visibility, Pride Month, National Coming Out Day, and World AIDS Day.
 - **Next Event sensor** — shows the name of the current or next event, with start date, end date, and description attributes.
-- **Upcoming Events sensor** — counts events active or starting in the next 30 days, with the counting window documented in its attributes.
+- **Upcoming Events sensor** — shows upcoming event names in its state and exposes the full event list, dates, and count as attributes.
 - **Location-aware discovery** — configure a country and optional city/region to make public RSS searches more relevant.
 - **UI configuration** — set up and edit the search area through Settings; no YAML configuration is required.
 
@@ -47,7 +47,7 @@ The integration creates these entities:
 | **Monthly Events calendar** | Recurring monthly challenge themes and discovered community events |
 | **Pride EC Events calendar** | Recurring LGBTQ+ observances and discovered Pride-related events |
 | **Next Event sensor** | Event name as its state; includes `start_date`, `end_date`, and `description` attributes |
-| **Upcoming Events sensor** | Number of events active or starting in the next 30 days |
+| **Upcoming Events sensor** | Upcoming event names as its state; includes `count`, `window_days`, and an `upcoming_events` list with names and dates |
 
 Exact entity IDs depend on your Home Assistant entity registry. Find them under **Developer tools → States**.
 
