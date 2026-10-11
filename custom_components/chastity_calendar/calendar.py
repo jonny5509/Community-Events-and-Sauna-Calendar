@@ -1,4 +1,4 @@
-"""Annual chastity-themed community challenge calendar."""
+"""Annual and discovered chastity-themed community calendar."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -135,8 +135,9 @@ class ChastityChallengeCalendar(CalendarEntity):
     _attr_name = "Challenges"
     _attr_icon = "mdi:calendar-heart"
 
-    def __init__(self) -> None:
+    def __init__(self, coordinator) -> None:
         """Initialize the calendar."""
+        self.coordinator = coordinator
         self._attr_unique_id = f"{DOMAIN}_challenges"
 
     async def async_get_events(self, hass, start_date, end_date):
@@ -150,9 +151,17 @@ class ChastityChallengeCalendar(CalendarEntity):
                 event = _event_for_year(item, year)
                 if event.end > start_date and event.start < end_date:
                     events.append(event)
+        for item in (self.coordinator.data or []):
+            if item["end"] > start_date and item["start"] < end_date:
+                events.append(CalendarEvent(
+                    summary=item["summary"],
+                    start=item["start"],
+                    end=item["end"],
+                    description=item["description"],
+                ))
         return sorted(events, key=lambda event: event.start)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the calendar entity."""
-    async_add_entities([ChastityChallengeCalendar()])
+    async_add_entities([ChastityChallengeCalendar(hass.data[DOMAIN][entry.entry_id])])
