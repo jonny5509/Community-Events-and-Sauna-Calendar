@@ -3,11 +3,30 @@
     "step": {
       "user": {
         "title": "Chastity Challenge Calendar",
-        "description": "Add a local calendar of annual chastity-themed community challenges."
+        "description": "Choose a country for online event discovery. Optionally enter a city, state, province, or region to narrow results.",
+        "data": {
+          "country": "Country",
+          "location": "Optional city, state, province, or region"
+        }
       }
+    },
+    "error": {
+      "required": "Please enter a country."
     },
     "abort": {
       "already_configured": "This calendar is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Event search area",
+        "description": "Online event searches will use this country and optional local area.",
+        "data": {
+          "country": "Country",
+          "location": "Optional city, state, province, or region"
+        }
+      }
     }
   }
 }
