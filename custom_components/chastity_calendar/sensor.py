@@ -8,6 +8,7 @@ from homeassistant.util import dt as dt_util
 
 from .calendar import ChastityChallengeCalendar
 from .const import DOMAIN
+from .sauna_sensor import NearbySaunasSensor
 
 
 COUNT_WINDOW_DAYS = 30
@@ -253,6 +254,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
     preferences = {**entry.data, **entry.options}
     async_add_entities(
         [
+            NearbySaunasSensor(hass, preferences.get("country", ""), preferences.get("location", "")),
             ChastityNextEventSensor(coordinator),
             ChastityUpcomingEventCountSensor(coordinator),
             ChastityEventLocationsSensor(
