@@ -156,7 +156,8 @@ class ChastityChallengeCalendar(CalendarEntity):
                         events.append(event)
 
         for item in (self.coordinator.data or []):
-            if item.get("category") != self.calendar_type:
+            expected_category = "pride" if self.calendar_type == "pride" else "community"
+            if item.get("category") != expected_category:
                 continue
             raw_start = item["start"]
             raw_end = item["end"]
