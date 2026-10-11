@@ -1,6 +1,6 @@
 # Chastity Challenge Calendar
 
-A custom [Home Assistant](https://www.home-assistant.io/) integration that adds two calendar entities, two sensors, and best-effort discovery of dated events from public Google News RSS results.
+A custom [Home Assistant](https://www.home-assistant.io/) integration that adds two calendar entities, three sensors, and best-effort discovery of dated events from public Google News RSS results.
 
 > **Important:** Online discoveries are unverified search results, not an authoritative event directory. Check the original organiser/source before relying on a date or location. Some recurring challenge names are informal or community-created rather than official observances.
 
@@ -10,6 +10,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration that adds 
 - **Pride EC Events calendar** — recurring LGBTQ+ observances, including Transgender Day of Visibility, Pride Month, National Coming Out Day, and World AIDS Day.
 - **Next Event sensor** — shows the name of the current or next event, with start date, end date, and description attributes.
 - **Upcoming Events sensor** — shows upcoming event names in its state and exposes the full event list, dates, and count as attributes.
+- **Event Locations sensor** — shows the configured search area and lists explicit event locations when the discovery data provides them.
 - **Location-aware discovery** — configure a country and optional city/region to make public RSS searches more relevant.
 - **UI configuration** — set up and edit the search area through Settings; no YAML configuration is required.
 
@@ -48,6 +49,9 @@ The integration creates these entities:
 | **Pride EC Events calendar** | Recurring LGBTQ+ observances and discovered Pride-related events |
 | **Next Event sensor** | Event name as its state; includes `start_date`, `end_date`, and `description` attributes |
 | **Upcoming Events sensor** | Upcoming event names as its state; includes `count`, `window_days`, and an `upcoming_events` list with names and dates |
+| **Event Locations sensor** | Configured search area as its state; includes `configured_search_area` and an `event_locations` list for explicit locations present in discovery data |
+
+The Event Locations sensor distinguishes the configured search area from actual event locations. Google News RSS results do not reliably provide venue metadata, so `event_locations` may be empty; the configured area must not be interpreted as proof of an event venue.
 
 Exact entity IDs depend on your Home Assistant entity registry. Find them under **Developer tools → States**.
 
@@ -70,6 +74,7 @@ The integration searches public Google News RSS results for dated community and 
 - Online results are labelled **Possible event** and include the original result link.
 - Search snippets can contain incorrect, ambiguous, or unrelated dates; always verify them.
 - Search engines may miss local festivals, community listings, private groups, and social-media posts.
+- RSS search relevance is not verification of a physical venue or location.
 - If RSS discovery is unavailable, the built-in recurring calendar observances remain available.
 - The built-in annual entries are informational; some challenge themes are informal or suggested ideas, not official holidays.
 
