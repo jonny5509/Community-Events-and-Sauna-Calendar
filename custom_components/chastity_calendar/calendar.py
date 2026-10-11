@@ -140,15 +140,8 @@ class ChastityChallengeCalendar(CalendarEntity):
         self.coordinator = coordinator
         self._attr_unique_id = f"{DOMAIN}_challenges"
 
-    async def async_added_to_hass(self):
-        """Refresh the calendar entity when online discoveries update."""
-        await super().async_added_to_hass()
-        self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
-
-    async def async_get_events(self, hass, start_date, end_date):
-        """Return all-day events overlapping the requested date range."""
-        start_day = dt_util.as_local(start_date).date()
-        end_day = dt_util.as_local(end_date).date()
+    def _events_between(self, start_day: date, end_day: date) -> list[CalendarEvent]:
+        """Build events overlapping a date range (end is exclusive)."""
         events = []
         for year in range(start_day.year, end_day.year + 1):
             for item in EVENTS:
@@ -156,11 +149,11 @@ class ChastityChallengeCalendar(CalendarEntity):
                 if event.end > start_day and event.start < end_day:
                     events.append(event)
 
-        # Google News discovery returns datetimes; these entries are date-only
-        # events, so expose them to Home Assistant as date-based all-day events.
         for item in (self.coordinator.data or []):
-            event_start = item["start"].date() if isinstance(item["start"], datetime) else item["start"]
-            event_end = item["end"].date() if isinstance(item["end"], datetime) else item["end"]
+            raw_start = item["start"]
+            raw_end = item["end"]
+            event_start = raw_start.date() if isinstance(raw_start, datetime) else raw_start
+            event_end = raw_end.date() if isinstance(raw_end, datetime) else raw_end
             if event_end > start_day and event_start < end_day:
                 events.append(CalendarEvent(
                     summary=item["summary"],
@@ -169,6 +162,38 @@ class ChastityChallengeCalendar(CalendarEntity):
                     description=item["description"],
                 ))
         return sorted(events, key=lambda event: event.start)
+
+    @property
+    def event(self) -> CalendarEvent | None:
+        """Return the current or next upcoming event for the entity state."""
+        now = dt_util.now()
+        today = now.date()
+        # Include the next two calendar years so the next event is available
+        # even near the end of December.
+        candidates = self._events_between(date(today.year, 1, 1), date(today.year + 2, 1, 1))
+        for event in candidates:
+            if event.end_datetime_local > now:
+                return event
+        return None
+
+    async def async_added_to_hass(self):
+        """Refresh the calendar entity when online discoveries update."""
+        await super().async_added_to_hass()
+        self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
+
+    async def async_get_events(self, hass, start_date, end_date):
+        """Return all-day events overlapping the requested datetime range."""
+        # CalendarEntity receives timezone-aware datetimes. Compare date-only
+        # events against the full datetime bounds so the final day is not lost
+        # when a caller's end time is before midnight.
+        start_day = dt_util.as_local(start_date).date()
+        end_day = dt_util.as_local(end_date).date()
+        events = self._events_between(start_day, end_day + timedelta(days=1))
+        return [
+            event for event in events
+            if event.end_datetime_local > start_date
+            and event.start_datetime_local < end_date
+        ]
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
