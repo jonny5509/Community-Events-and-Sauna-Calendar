@@ -1,6 +1,6 @@
 # Chastity Challenge Calendar
 
-A custom [Home Assistant](https://www.home-assistant.io/) integration that adds two calendar entities: recurring monthly community challenges and LGBTQ+ Pride observances, plus best-effort discovery of dated events from public Google News RSS results.
+A custom [Home Assistant](https://www.home-assistant.io/) integration that adds two calendar entities, two sensors, and best-effort discovery of dated events from public Google News RSS results.
 
 > **Important:** Online discoveries are unverified search results, not an authoritative event directory. Check the original organiser/source before relying on a date or location. Some recurring challenge names are informal or community-created rather than official observances.
 
@@ -8,8 +8,9 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration that adds 
 
 - **Monthly Events calendar** — recurring challenge themes such as Locktober and No Nut November.
 - **Pride EC Events calendar** — recurring LGBTQ+ observances, including Transgender Day of Visibility, Pride Month, National Coming Out Day, and World AIDS Day.
+- **Next Event sensor** — shows the name of the current or next event, with start date, end date, and description attributes.
+- **Upcoming Events sensor** — counts events active or starting in the next 30 days, with the counting window documented in its attributes.
 - **Location-aware discovery** — configure a country and optional city/region to make public RSS searches more relevant.
-- **Upcoming events** — calendar entities expose current/next events and date-range queries for Home Assistant dashboards and automations.
 - **UI configuration** — set up and edit the search area through Settings; no YAML configuration is required.
 
 ## Installation
@@ -37,16 +38,20 @@ During setup, select a country and optionally enter a city, state, province, or 
 
 The country and location are used as search terms and to select a Google News edition where supported. They improve relevance but do **not** guarantee that a result physically takes place in the selected area.
 
-## Calendars and dashboard
+## Entities and dashboard
 
-The integration creates two separate calendar entities:
+The integration creates these entities:
 
-| Calendar | Contents |
+| Entity | Contents |
 | --- | --- |
-| **Monthly Events** | Recurring monthly challenge themes and discovered community events |
-| **Pride EC Events** | Recurring LGBTQ+ observances and discovered Pride-related events |
+| **Monthly Events calendar** | Recurring monthly challenge themes and discovered community events |
+| **Pride EC Events calendar** | Recurring LGBTQ+ observances and discovered Pride-related events |
+| **Next Event sensor** | Event name as its state; includes `start_date`, `end_date`, and `description` attributes |
+| **Upcoming Events sensor** | Number of events active or starting in the next 30 days |
 
-Add a standard **Calendar** card to a dashboard and select either or both entities. For example, replace the entity IDs below with the IDs shown under **Developer tools → States**:
+Exact entity IDs depend on your Home Assistant entity registry. Find them under **Developer tools → States**.
+
+Add a standard **Calendar** card to a dashboard and select either or both calendars:
 
 ```yaml
 type: calendar
@@ -56,7 +61,7 @@ entities:
   - calendar.chastity_challenge_calendar_pride
 ```
 
-Home Assistant entity IDs may differ depending on your installation and any previous entity registry changes, so verify the actual IDs in your instance.
+You can also display the sensors in an Entities card or use them in templates and automations. For example, a template can read the next event date with `state_attr('sensor.chastity_calendar_next_event', 'start_date')`; verify the actual entity ID in your instance.
 
 ## Event discovery and limitations
 
