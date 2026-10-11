@@ -1,5 +1,9 @@
 # Chastity Challenge Calendar
 
+[![HACS validation](https://github.com/jonny5509/calendar-events/actions/workflows/validate-hacs.yml/badge.svg)](https://github.com/jonny5509/calendar-events/actions/workflows/validate-hacs.yml)
+[![Home Assistant validation](https://github.com/jonny5509/calendar-events/actions/workflows/hassfest.yml/badge.svg)](https://github.com/jonny5509/calendar-events/actions/workflows/hassfest.yml)
+[![Tests](https://github.com/jonny5509/calendar-events/actions/workflows/tests.yml/badge.svg)](https://github.com/jonny5509/calendar-events/actions/workflows/tests.yml)
+
 A custom [Home Assistant](https://www.home-assistant.io/) integration that adds two calendar entities: recurring monthly community challenges and LGBTQ+ Pride observances, plus best-effort discovery of dated events from public Google News RSS results.
 
 > **Important:** Online discoveries are unverified search results, not an authoritative event directory. Check the original organiser/source before relying on a date or location. Some recurring challenge names are informal or community-created rather than official observances.
@@ -96,10 +100,20 @@ mode: single
 - **No discovered local festivals:** RSS discovery is best-effort. Check the configured country/location and verify that Home Assistant has internet access.
 - **A result has the wrong date or location:** follow the original link and treat the listing as unverified.
 
+## Development
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and event-discovery guidelines. The project uses automated checks for HACS compatibility, Home Assistant integration metadata, Python linting, and regression tests.
+
+Run the local checks with Python 3.12 or newer:
+
+```bash
+python -m pip install homeassistant pytest ruff
+ruff check custom_components tests
+pytest
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for notable project changes.
+
 ## Privacy and safety
 
 The integration sends configured country/location terms to Google News RSS search URLs to retrieve public results. Do not enter private or sensitive information in the location field. This integration only provides calendar entries and reminders; it does not control devices. Any intimate or sexual activity should be consensual.
-
-## Contributing
-
-Bug reports and pull requests are welcome. Please include your Home Assistant version, relevant logs with personal information removed, and clear steps to reproduce the issue.
