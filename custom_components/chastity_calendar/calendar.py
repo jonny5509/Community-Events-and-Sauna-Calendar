@@ -132,24 +132,32 @@ class ChastityChallengeCalendar(CalendarEntity):
     """Expose recurring annual challenge events."""
 
     _attr_has_entity_name = True
-    _attr_name = "Challenges"
     _attr_icon = "mdi:calendar-heart"
 
-    def __init__(self, coordinator) -> None:
-        """Initialize the calendar."""
+    def __init__(self, coordinator, calendar_type: str) -> None:
+        """Initialize one of the integration's separate calendars."""
         self.coordinator = coordinator
-        self._attr_unique_id = f"{DOMAIN}_challenges"
+        self.calendar_type = calendar_type
+        if calendar_type == "pride":
+            self._attr_name = "Pride EC Events"
+            self._attr_icon = "mdi:flag"
+        else:
+            self._attr_name = "Monthly Events"
+        self._attr_unique_id = f"{DOMAIN}_{calendar_type}"
 
     def _events_between(self, start_day: date, end_day: date) -> list[CalendarEvent]:
         """Build events overlapping a date range (end is exclusive)."""
         events = []
-        for year in range(start_day.year, end_day.year + 1):
-            for item in EVENTS:
-                event = _event_for_year(item, year)
-                if event.end > start_day and event.start < end_day:
-                    events.append(event)
+        if self.calendar_type == "monthly":
+            for year in range(start_day.year, end_day.year + 1):
+                for item in EVENTS:
+                    event = _event_for_year(item, year)
+                    if event.end > start_day and event.start < end_day:
+                        events.append(event)
 
         for item in (self.coordinator.data or []):
+            if item.get("category") != self.calendar_type:
+                continue
             raw_start = item["start"]
             raw_end = item["end"]
             event_start = raw_start.date() if isinstance(raw_start, datetime) else raw_start
@@ -197,5 +205,9 @@ class ChastityChallengeCalendar(CalendarEntity):
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up the calendar entity."""
-    async_add_entities([ChastityChallengeCalendar(hass.data[DOMAIN][entry.entry_id])])
+    """Set up separate monthly challenge and Pride event calendars."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities([
+        ChastityChallengeCalendar(coordinator, "monthly"),
+        ChastityChallengeCalendar(coordinator, "pride"),
+    ])
