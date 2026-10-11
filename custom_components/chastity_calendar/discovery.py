@@ -142,7 +142,7 @@ async def async_discover_events(
             event_date = _find_future_date(f"{title} {description}", today)
             if event_date is None:
                 continue
-            key = link.split("&", 1)[0]
+            key = (category, link.split("&", 1)[0])
             if key in seen:
                 continue
             seen.add(key)
