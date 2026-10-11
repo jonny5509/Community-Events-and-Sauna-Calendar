@@ -48,9 +48,9 @@ MONTHS = (
     "January|February|March|April|May|June|July|August|September|October|November|December"
 )
 DATE_PATTERNS = (
-    re.compile(rf"\\b({MONTHS})\\s+(\\d{{1,2}})(?:st|nd|rd|th)?[,]?\\s+(20\\d{{2}})\\b", re.I),
-    re.compile(rf"\\b(\\d{{1,2}})\\s+({MONTHS})[,]?\\s+(20\\d{{2}})\\b", re.I),
-    re.compile(r"\\b(20\\d{2})-(\\d{2})-(\\d{2})\\b"),
+    re.compile(rf"\b({MONTHS})\s+(\d{{1,2}})(?:st|nd|rd|th)?[,]?\s+(20\d{{2}})\b", re.I),
+    re.compile(rf"\b(\d{{1,2}})\s+({MONTHS})[,]?\s+(20\d{{2}})\b", re.I),
+    re.compile(r"\b(20\d{2})-(\d{2})-(\d{2})\b"),
 )
 
 
