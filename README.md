@@ -11,6 +11,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration that adds 
 - **Next Event sensor** — shows the name of the current or next event, with start date, end date, and description attributes.
 - **Upcoming Events sensor** — shows upcoming event names in its state and exposes the full event list, dates, and count as attributes.
 - **Event Locations sensor** — shows the configured search area and lists explicit event locations when the discovery data provides them.
+- **Category sensors** — separate Gay Events, Lesbian Events, Bisexual Events, Transgender Events, Queer Events, and LGBTQ+ Events sensors. Each shows a matching discovery count and exposes event names, dates, and source links as attributes.
 - **Location-aware discovery** — configure a country and optional city/region to make public RSS searches more relevant.
 - **UI configuration** — set up and edit the search area through Settings; no YAML configuration is required.
 
@@ -51,7 +52,7 @@ The integration creates these entities:
 | **Upcoming Events sensor** | Upcoming event names as its state; includes `count`, `window_days`, and an `upcoming_events` list with names and dates |
 | **Event Locations sensor** | Configured search area as its state; includes `configured_search_area` and an `event_locations` list for explicit locations present in discovery data |
 
-The Event Locations sensor distinguishes the configured search area from actual event locations. Google News RSS results do not reliably provide venue metadata, so `event_locations` may be empty; the configured area must not be interpreted as proof of an event venue.
+Category sensors are based on focused RSS search queries and may overlap; results are best-effort and unverified. A zero count means no matching dated results were found, not that no events exist. The Event Locations sensor distinguishes the configured search area from actual event locations. Google News RSS results do not reliably provide venue metadata, so `event_locations` may be empty; the configured area must not be interpreted as proof of an event venue.
 
 Exact entity IDs depend on your Home Assistant entity registry. Find them under **Developer tools → States**.
 
