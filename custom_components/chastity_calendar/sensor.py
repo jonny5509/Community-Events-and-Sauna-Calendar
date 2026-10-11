@@ -196,6 +196,57 @@ class ChastityEventLocationsSensor(ChastityCalendarSensorBase):
         }
 
 
+class ChastityCategoryEventsSensor(ChastityCalendarSensorBase):
+    """Show discovered events matching one LGBTQ+ category."""
+
+    def __init__(self, coordinator, category: str, name: str, icon: str) -> None:
+        """Initialize a category-specific event sensor."""
+        super().__init__(coordinator)
+        self.category = category
+        self._attr_name = name
+        self._attr_icon = icon
+        self._attr_unique_id = f"{DOMAIN}_{category}_events"
+
+    def _category_events(self):
+        """Return upcoming discovered events tagged with this category."""
+        now = dt_util.now()
+        discovered = self.coordinator.data or []
+        return sorted(
+            (
+                item for item in discovered
+                if item.get("category") == self.category
+                and item.get("start") is not None
+                and item["start"].date() >= now.date()
+            ),
+            key=lambda item: item["start"],
+        )
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of matching discovered events."""
+        return len(self._category_events())
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Expose matching event names, dates, and source links."""
+        events = self._category_events()
+        return {
+            "count": len(events),
+            "category": self.category,
+            "events": [
+                {
+                    "name": item.get("summary", "Unnamed event"),
+                    "date": item["start"].date().isoformat(),
+                    "source": item.get("url", ""),
+                }
+                for item in events
+            ],
+            "note": "Best-effort, unverified public RSS discoveries; this is not a complete event directory.",
+        }
+
+
+
+
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
     """Set up event, upcoming-event, and location sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -209,5 +260,11 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
                 preferences.get("country", ""),
                 preferences.get("location", ""),
             ),
+            ChastityCategoryEventsSensor(coordinator, "gay", "Gay Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, "lesbian", "Lesbian Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, "bisexual", "Bisexual Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, "transgender", "Transgender Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, "queer", "Queer Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, "lgbtq", "LGBTQ+ Events", "mdi:calendar-star"),
         ]
     )
