@@ -1,4 +1,4 @@
-""""Config and options flow for Chastity Challenge Calendar."""
+"""Config and options flow for Chastity Challenge Calendar."""
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
