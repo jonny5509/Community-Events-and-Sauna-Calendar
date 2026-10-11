@@ -50,6 +50,12 @@ SEARCHES = (
 MONTHS = (
     "January|February|March|April|May|June|July|August|September|October|November|December"
 )
+# Festival listings often publish a weekend range (for example, "June 26–27, 2027").
+RANGE_PATTERN = re.compile(
+    rf"\b({MONTHS})\s+(\d{{1,2}})(?:st|nd|rd|th)?\s*[-–—]\s*"
+    rf"(\d{{1,2}})(?:st|nd|rd|th)?[,]?\s+(20\d{{2}})\b",
+    re.I,
+)
 DATE_PATTERNS = (
     re.compile(rf"\b({MONTHS})\s+(\d{{1,2}})(?:st|nd|rd|th)?[,]?\s+(20\d{{2}})\b", re.I),
     re.compile(rf"\b(\d{{1,2}})\s+({MONTHS})[,]?\s+(20\d{{2}})\b", re.I),
@@ -59,6 +65,15 @@ DATE_PATTERNS = (
 
 def _find_future_date(text: str, today: datetime):
     """Return an explicit date in text if it is today or in the future."""
+    matches = []
+    for match in RANGE_PATTERN.finditer(text):
+        try:
+            matches.append(datetime.strptime(
+                f"{match.group(1)} {match.group(2)} {match.group(4)}",
+                "%B %d %Y",
+            ))
+        except ValueError:
+            continue
     for pattern in DATE_PATTERNS:
         for match in pattern.finditer(text):
             try:
@@ -77,8 +92,12 @@ def _find_future_date(text: str, today: datetime):
             except ValueError:
                 continue
             if today.date() <= found.date() <= (today + timedelta(days=730)).date():
-                return found
-    return None
+                matches.append(found)
+    eligible = [
+        found for found in matches
+        if today.date() <= found.date() <= (today + timedelta(days=730)).date()
+    ]
+    return min(eligible, key=lambda found: found.date()) if eligible else None
 
 
 async def async_discover_events(
@@ -99,6 +118,17 @@ async def async_discover_events(
     )
     seen = set()
     discovered = []
+
+    # Add focused searches for dated local Pride festivals/parades for this
+    # year and next year. RSS results are leads, not verified event listings.
+    searches = list(SEARCHES)
+    if location or country:
+        for year in (today.year, today.year + 1):
+            searches.extend([
+                ("pride", f'"Pride festival" {year} dates'),
+                ("pride", f'"Pride parade" {year} date'),
+                ("pride", f'"LGBTQ Pride" festival {year} schedule'),
+            ])
 
     async def fetch(category: str, query: str):
         localized_query = f"{query} {geographic_terms}".strip()
@@ -162,7 +192,7 @@ async def async_discover_events(
             })
         return results
 
-    batches = await asyncio.gather(*(fetch(category, query) for category, query in SEARCHES))
+    batches = await asyncio.gather(*(fetch(category, query) for category, query in searches))
     for batch in batches:
         discovered.extend(batch)
     return sorted(discovered, key=lambda item: item["start"])
