@@ -113,6 +113,67 @@ EVENTS = [
     },
 ]
 
+# Reliable annual observances ensure this calendar has upcoming events even
+# when public RSS search results contain no parseable dates.
+PRIDE_EVENTS = [
+    {
+        "summary": "Transgender Day of Visibility",
+        "start": (3, 31),
+        "end": (3, 31),
+        "description": "Annual day recognising transgender people and raising awareness of discrimination.",
+        "category": "pride",
+    },
+    {
+        "summary": "International Day Against Homophobia, Biphobia and Transphobia",
+        "start": (5, 17),
+        "end": (5, 17),
+        "description": "Annual day promoting LGBTQ+ rights and opposing anti-LGBTQ+ discrimination.",
+        "category": "pride",
+    },
+    {
+        "summary": "Pride Month",
+        "start": (6, 1),
+        "end": (6, 30),
+        "description": "Annual LGBTQ+ Pride observance. Local Pride events take place on different dates.",
+        "category": "pride",
+    },
+    {
+        "summary": "International Lesbian Day",
+        "start": (10, 8),
+        "end": (10, 8),
+        "description": "Annual observance celebrating lesbian communities.",
+        "category": "pride",
+    },
+    {
+        "summary": "National Coming Out Day",
+        "start": (10, 11),
+        "end": (10, 11),
+        "description": "Annual LGBTQ+ awareness day observed on 11 October.",
+        "category": "pride",
+    },
+    {
+        "summary": "Transgender Day of Remembrance",
+        "start": (11, 20),
+        "end": (11, 20),
+        "description": "Annual day remembering transgender people lost to anti-transgender violence.",
+        "category": "pride",
+    },
+    {
+        "summary": "World AIDS Day",
+        "start": (12, 1),
+        "end": (12, 1),
+        "description": "Annual day of awareness and remembrance related to HIV and AIDS.",
+        "category": "pride",
+    },
+    {
+        "summary": "Bisexual Visibility Day",
+        "start": (9, 23),
+        "end": (9, 23),
+        "description": "Annual observance celebrating bisexual visibility and community.",
+        "category": "pride",
+    },
+]
+
 
 def _event_for_year(item: dict, year: int) -> CalendarEvent:
     """Build an all-day event using dates and an exclusive end date."""
@@ -148,12 +209,12 @@ class ChastityChallengeCalendar(CalendarEntity):
     def _events_between(self, start_day: date, end_day: date) -> list[CalendarEvent]:
         """Build events overlapping a date range (end is exclusive)."""
         events = []
-        if self.calendar_type == "monthly":
-            for year in range(start_day.year, end_day.year + 1):
-                for item in EVENTS:
-                    event = _event_for_year(item, year)
-                    if event.end > start_day and event.start < end_day:
-                        events.append(event)
+        annual_events = EVENTS if self.calendar_type == "monthly" else PRIDE_EVENTS
+        for year in range(start_day.year, end_day.year + 1):
+            for item in annual_events:
+                event = _event_for_year(item, year)
+                if event.end > start_day and event.start < end_day:
+                    events.append(event)
 
         for item in (self.coordinator.data or []):
             expected_category = "pride" if self.calendar_type == "pride" else "community"
