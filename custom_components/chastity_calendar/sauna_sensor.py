@@ -14,6 +14,12 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 _REFRESH = timedelta(hours=24)
 _USER_AGENT = "HomeAssistant-ChastityCalendar/1.5 (OpenStreetMap sauna discovery)"
+_OVERPASS_ENDPOINTS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://overpass.nchc.org.tw/api/interpreter",
+)
 
 
 def _distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -78,8 +84,9 @@ class NearbySaunasSensor(SensorEntity):
                 self.async_write_ha_state()
                 return
             lat, lon = float(geocoded[0]["lat"]), float(geocoded[0]["lon"])
-            # A 20 km radius is a useful default for nearby facilities.
-            overpass_query = f"""[out:json][timeout:25];
+            # A 20 km radius is a useful default for nearby facilities. Give
+            # Overpass more time than the server-side query limit to respond.
+            overpass_query = f"""[out:json][timeout:45];
 (
   nwr(around:20000,{lat},{lon})[leisure=sauna];
   nwr(around:20000,{lat},{lon})[amenity=sauna];
@@ -88,26 +95,29 @@ class NearbySaunasSensor(SensorEntity):
 );
 out center tags;"""
             payload = None
-            # Public Overpass instances occasionally rate-limit or time out.
-            # Try a second instance before reporting a failed lookup.
-            for endpoint in (
-                "https://overpass-api.de/api/interpreter",
-                "https://overpass.kumi.systems/api/interpreter",
-            ):
+            failures = []
+            # Public Overpass instances can be busy, rate-limit requests, or
+            # temporarily go offline. Try several independent instances and
+            # keep the previous results if all of them fail.
+            for endpoint in _OVERPASS_ENDPOINTS:
                 try:
                     async with session.post(
                         endpoint,
                         data=overpass_query,
                         headers=headers,
-                        timeout=35,
+                        timeout=60,
                     ) as response:
                         response.raise_for_status()
                         payload = await response.json()
                     break
                 except Exception as err:
-                    _LOGGER.debug("Sauna Overpass endpoint %s failed: %s", endpoint, err)
+                    reason = f"{endpoint}: {type(err).__name__}: {err}"
+                    failures.append(reason)
+                    _LOGGER.warning("Sauna Overpass request failed: %s", reason)
             if payload is None:
-                raise RuntimeError("All OpenStreetMap Overpass endpoints failed")
+                raise RuntimeError(
+                    f"All {len(_OVERPASS_ENDPOINTS)} OpenStreetMap Overpass endpoints failed"
+                ) from (RuntimeError("; ".join(failures)) if failures else None)
             places = []
             seen = set()
             for element in payload.get("elements", []):
@@ -147,6 +157,8 @@ out center tags;"""
             self._updated = dt_util.now().isoformat()
         except Exception as err:
             _LOGGER.warning("Nearby sauna lookup failed: %s", err)
+            # Do not clear self._places or self._updated here: they represent
+            # the last successful lookup and remain useful during an outage.
             self._error = "Sauna search temporarily unavailable; results may be stale."
         self.async_write_ha_state()
 
