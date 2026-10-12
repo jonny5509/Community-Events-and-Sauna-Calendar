@@ -285,9 +285,17 @@ def _current_fields(current):
     county = current.get("county", "")
     city = current.get("city", "")
     area = current.get("area", "")
-    old_location = current.get("location", "")
+    old_location = str(current.get("location", "") or "").strip()
     if old_location and not any((region, county, city, area)):
-        city = old_location
+        # Older releases stored a single free-text location. Some newer
+        # intermediate builds stored the whole hierarchy in that field,
+        # including country. Remove the trailing country to avoid repeating
+        # it when the country is appended by discovery/geocoding.
+        parts = [part.strip() for part in old_location.split(",") if part.strip()]
+        country = str(current.get("country", "") or "").strip()
+        if parts and country and parts[-1].casefold() == country.casefold():
+            parts.pop()
+        city = ", ".join(parts)
     return region, county, city, area
 
 
