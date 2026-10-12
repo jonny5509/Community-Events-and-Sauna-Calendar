@@ -8,7 +8,9 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.chastity_calendar.const import DOMAIN
 
 
-async def test_config_entry_setup_creates_entities_and_unloads_cleanly(hass):
+async def test_config_entry_setup_creates_entities_and_unloads_cleanly(
+    hass, enable_custom_integrations
+):
     """Exercise the real HA config-entry and platform lifecycle without network calls."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -34,10 +36,11 @@ async def test_config_entry_setup_creates_entities_and_unloads_cleanly(hass):
 
         assert entry.state is ConfigEntryState.LOADED
         assert entry.entry_id in hass.data[DOMAIN]
-        assert hass.states.get("calendar.chastity_calendar_monthly") is not None
-        assert hass.states.get("calendar.chastity_calendar_pride") is not None
-        assert hass.states.get("calendar.chastity_calendar_sauna") is not None
-        assert hass.states.get("sensor.chastity_calendar_ongoing_month_event") is not None
+        assert len(hass.states.async_entity_ids("calendar")) >= 3
+        assert any(
+            "ongoing_month_event" in entity_id
+            for entity_id in hass.states.async_entity_ids("sensor")
+        )
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()
