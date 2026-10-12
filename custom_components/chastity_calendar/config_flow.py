@@ -182,8 +182,10 @@ class _LocationFlow:
 
     async def _show_region(self, user_input=None):
         if user_input is not None:
-            self._location_data["region"] = user_input["region"]
-            self._location_data.update({"city": "", "area": ""})
+            new_region = user_input["region"]
+            if new_region != self._location_data.get("region", SKIP):
+                self._location_data.update({"city": "", "area": ""})
+            self._location_data["region"] = new_region
             return await self._show_city()
         options = await _regions(self.hass, self._location_data["country"])
         marker, field = _dropdown(
@@ -194,8 +196,10 @@ class _LocationFlow:
 
     async def _show_city(self, user_input=None):
         if user_input is not None:
-            self._location_data["city"] = user_input["city"]
-            self._location_data["area"] = ""
+            new_city = user_input["city"]
+            if new_city != self._location_data.get("city", SKIP):
+                self._location_data["area"] = ""
+            self._location_data["city"] = new_city
             return await self._show_area()
         options = await _cities(
             self.hass, self._location_data["country"], self._location_data.get("region", "")
