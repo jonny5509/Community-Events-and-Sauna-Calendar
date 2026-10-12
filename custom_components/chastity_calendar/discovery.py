@@ -407,34 +407,65 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
         visible_text = html.unescape(re.sub(r"<[^>]+>", " ", visible_text))
         visible_text = re.sub(r"\s+", " ", visible_text).strip()
         recurring = (
+            # Offers published on the official offers page.
             (re.compile(r"30.?s\s*&\s*Under Night.{0,120}?Every Monday.{0,40}?7\s*[–-]\s*10\s*pm", re.I),
-             "30’s & Under Night at Number 52 Sauna", 0, 19, 22),
+             "30’s & Under Night at Number 52 Sauna", "weekday", 0, 19, 22),
             (re.compile(r"Dads\s*&\s*Lads Night.{0,120}?Every Tuesday.{0,40}?7\s*[–-]\s*10\s*pm", re.I),
-             "Dads & Lads Night at Number 52 Sauna", 1, 19, 22),
+             "Dads & Lads Night at Number 52 Sauna", "weekday", 1, 19, 22),
             (re.compile(r"Couples\s*&\s*Bring a Friend Day.{0,120}?Every Wednesday", re.I),
-             "Couples & Bring a Friend Day at Number 52 Sauna", 2, 11, 22),
+             "Couples & Bring a Friend Day at Number 52 Sauna", "weekday", 2, 11, 22),
+            (re.compile(r"Under 30.?s.{0,100}?£12 entry every Monday, Tuesday\s*&\s*Wednesday", re.I),
+             "Under 30’s £12 Entry at Number 52 Sauna", "weekday", (0, 1, 2), 11, 22),
+        )
+        # The venue's published themed-night schedule is documented by the venue
+        # calendar and current public event listings. Add fixed weekday patterns
+        # only where the recurrence is explicit; weekend events remain sourced
+        # from dated listings so we don't guess which Friday/Saturday they occur.
+        themed_recurring = (
+            ("Fetish Night at Number 52 Sauna", (1, 3), 3, 18, 22),
+            ("Sports/Chav Night at Number 52 Sauna", (2, 4), 3, 18, 22),
         )
         now = dt_util.now().replace(tzinfo=None)
-        for pattern, title, weekday, start_hour, end_hour in recurring:
-            if not pattern.search(visible_text):
-                continue
-            day = today.date()
-            last_day = (today + timedelta(days=180)).date()
-            while day <= last_day:
-                if day.weekday() == weekday:
+        last_day = (today + timedelta(days=180)).date()
+        day = today.date()
+        while day <= last_day:
+            if day.weekday() in (0, 1, 2):
+                for pattern, title, kind, weekdays, start_hour, end_hour in recurring:
+                    if kind != "weekday" or not pattern.search(visible_text):
+                        continue
+                    if day.weekday() not in (weekdays if isinstance(weekdays, tuple) else (weekdays,)):
+                        continue
                     start = datetime.combine(day, datetime.min.time()).replace(hour=start_hour)
                     end = datetime.combine(day, datetime.min.time()).replace(hour=end_hour)
                     if start >= now:
                         record = _record(
                             title, start, offers_url, "sauna",
-                            "Recurring schedule published by Number 52 Sauna. Check the official page for current terms and any changes.",
+                            "Recurring offer published by Number 52 Sauna. Check the official page for current terms and any changes.",
                             source="Number 52 Sauna official website",
                             location="Number 52 Sauna, Newcastle upon Tyne, United Kingdom",
                         )
                         record["end"] = end
                         record["date_confidence"] = "structured"
                         events.append(record)
-                day += timedelta(days=1)
+            # 1st/3rd Thursday = Fetish Night; 2nd/4th Thursday = Sports/Chav Night.
+            if day.weekday() == 3:
+                occurrence = (day.day - 1) // 7 + 1
+                for title, occurrences, weekday, start_hour, end_hour in themed_recurring:
+                    if occurrence not in occurrences:
+                        continue
+                    start = datetime.combine(day, datetime.min.time()).replace(hour=start_hour)
+                    end = datetime.combine(day, datetime.min.time()).replace(hour=end_hour)
+                    if start >= now:
+                        record = _record(
+                            title, start, f"{base_url}/our-events/", "sauna",
+                            "Recurring themed night listed in public Number 52 Sauna event information. Verify the venue's current calendar for changes.",
+                            source="Number 52 Sauna public event schedule",
+                            location="Number 52 Sauna, Newcastle upon Tyne, United Kingdom",
+                        )
+                        record["end"] = end
+                        record["date_confidence"] = "recurring_schedule"
+                        events.append(record)
+            day += timedelta(days=1)
 
     _LOGGER.info("Number 52 Sauna source returned %s dated or recurring events", len(events))
     return events
