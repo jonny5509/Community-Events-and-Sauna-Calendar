@@ -6,6 +6,8 @@ from custom_components.chastity_calendar.discovery import (
     _category_tags,
     _deduplicate,
     _is_sauna_event,
+    _normalise_url,
+    _find_future_date,
     _record,
 )
 
@@ -103,3 +105,21 @@ def test_sauna_search_result_with_explicit_context_is_routed_to_sauna_calendar()
 def test_add_months_clamps_end_of_month():
     assert _add_months(datetime(2027, 1, 31), 1) == datetime(2027, 2, 28)
     assert _add_months(datetime(2027, 12, 31), 2) == datetime(2028, 2, 29)
+
+
+def test_normalise_url_removes_tracking_parameters_and_trailing_slash():
+    assert _normalise_url(
+        "HTTPS://Example.Test/events/pride/?utm_source=newsletter&fbclid=abc"
+    ) == "https://example.test/events/pride"
+
+
+def test_find_future_date_prefers_earliest_explicit_future_date():
+    today = datetime(2026, 10, 13)
+    assert _find_future_date(
+        "Festival dates: June 12, 2027 and December 1, 2026", today
+    ) == datetime(2026, 12, 1)
+
+
+def test_find_future_date_ignores_dates_outside_supported_window():
+    today = datetime(2026, 10, 13)
+    assert _find_future_date("Event on January 1, 2030", today) is None

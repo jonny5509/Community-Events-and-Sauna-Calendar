@@ -327,7 +327,7 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
             async with asyncio.timeout(12):
                 async with session.get(
                     url,
-                    headers={"User-Agent": "HomeAssistant-CommunityEventsCalendar/1.9.0"},
+                    headers={"User-Agent": "HomeAssistant-CommunityEventsCalendar/2.0.0"},
                 ) as response:
                     if response.status != 200:
                         _LOGGER.debug("Number 52 page returned HTTP %s: %s", response.status, url)
@@ -513,6 +513,13 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         ("community", 'site:eventbrite.com events'),
         ("community", 'site:meetup.com events'),
         ("community", 'site:facebook.com/events public event'),
+        # These indexed searches broaden LGBTQ+ coverage beyond London-only sources.
+        # They complement public RSS search; they are not direct provider integrations.
+        ("lgbtq", 'site:outsavvy.com/events LGBTQ OR queer'),
+        ("lgbtq", 'site:eventbrite.co.uk LGBTQ OR queer events'),
+        ("lgbtq", 'site:meetup.com LGBTQ OR queer events'),
+        ("lgbtq", 'site:gaydio.co.uk events LGBTQ'),
+        ("lgbtq", 'site:attitude.co.uk events Pride LGBTQ'),
     )
     # Searching every query at every configured locality multiplies into
     # hundreds of RSS requests and routinely exceeds the integration's overall
