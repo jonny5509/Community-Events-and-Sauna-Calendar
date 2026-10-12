@@ -1,0 +1,88 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose country",
+        "description": "Choose a country, then narrow the location by region and county where available. Enter any city or town manually; online city lists are incomplete.",
+        "data": {
+          "country": "Country"
+        }
+      },
+      "region": {
+        "title": "Choose region",
+        "description": "Choose a broad region. The next step narrows to a county or sub-region.",
+        "data": {
+          "region": "State / Province / Region"
+        }
+      },
+      "city": {
+        "title": "Choose city",
+        "description": "Enter any city or town name. This avoids incomplete city lists and supports small towns and rural locations.",
+        "data": {
+          "city": "City / Town"
+        }
+      },
+      "area": {
+        "title": "Choose local area",
+        "description": "Neighbourhoods and districts are looked up from OpenStreetMap. The local area is optional. You can also enter a Ticketmaster API key.",
+        "data": {
+          "area": "District / Area",
+          "ticketmaster_api_key": "Optional Ticketmaster API key"
+        }
+      },
+      "county": {
+        "title": "Choose county or sub-region",
+        "description": "Choose a county or local sub-region within the selected region, or skip this level where county data is unavailable.",
+        "data": {
+          "county": "County / Sub-region"
+        }
+      }
+    },
+    "error": {
+      "required": "Please choose a value."
+    },
+    "abort": {
+      "already_configured": "This calendar is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Choose country",
+        "description": "Choose a country and narrow by region/county where available. Enter any city or town manually; online city lists are incomplete.",
+        "data": {
+          "country": "Country"
+        }
+      },
+      "region": {
+        "title": "Choose region",
+        "description": "Choose a broad region. The next step narrows to a county or sub-region.",
+        "data": {
+          "region": "State / Province / Region"
+        }
+      },
+      "city": {
+        "title": "Choose city",
+        "description": "Enter any city or town name. This avoids incomplete city lists and supports small towns and rural locations.",
+        "data": {
+          "city": "City / Town"
+        }
+      },
+      "area": {
+        "title": "Choose local area",
+        "description": "Choose an available neighbourhood or district, or skip this level.",
+        "data": {
+          "area": "District / Area",
+          "ticketmaster_api_key": "Optional Ticketmaster API key"
+        }
+      },
+      "county": {
+        "title": "Choose county or sub-region",
+        "description": "Choose a county or local sub-region within the selected region, or skip this level where county data is unavailable.",
+        "data": {
+          "county": "County / Sub-region"
+        }
+      }
+    }
+  }
+}
