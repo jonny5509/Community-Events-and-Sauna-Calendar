@@ -18,7 +18,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration with recur
 
 ### HACS
 1. Open HACS and choose **Custom repositories**.
-2. Add `jonny5509/calendar-events` as an **Integration**.
+2. Add `jonny5509/Community-Events-and-Sauna-Calendar` as an **Integration**.
 3. Download the integration and restart Home Assistant.
 4. Add it from **Settings → Devices & services → Add integration**.
 
