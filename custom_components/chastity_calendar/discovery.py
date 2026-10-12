@@ -2,6 +2,7 @@
 from __future__ import annotations
 import asyncio
 import html
+import json
 import logging
 import re
 import xml.etree.ElementTree as ET
@@ -244,6 +245,172 @@ def _deduplicate(events):
         title_date_to_key[(title_key, date_key)] = key
     return sorted(merged.values(), key=lambda item: item["start"])
 
+
+async def _jsonld_event_records(session, website: str, venue_name: str, venue_location: str, today: datetime):
+    """Extract future Event records from a venue website's Schema.org JSON-LD."""
+    try:
+        async with asyncio.timeout(12):
+            async with session.get(
+                website,
+                headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.6 (public event discovery)"},
+                allow_redirects=True,
+            ) as response:
+                if response.status != 200:
+                    return []
+                content_type = response.headers.get("Content-Type", "").casefold()
+                if "text/html" not in content_type and "application/xhtml" not in content_type:
+                    return []
+                body = await response.text(errors="ignore")
+    except Exception as err:
+        _LOGGER.debug("Could not fetch sauna website %s: %s", website, err)
+        return []
+
+    scripts = re.findall(
+        r"<script\b[^>]*type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script\s*>",
+        body,
+        flags=re.I | re.S,
+    )
+    found = []
+
+    def walk(value):
+        if isinstance(value, list):
+            for child in value:
+                yield from walk(child)
+        elif isinstance(value, dict):
+            kind = value.get("@type", [])
+            kinds = {kind.casefold()} if isinstance(kind, str) else {
+                str(item).casefold() for item in kind
+            } if isinstance(kind, list) else set()
+            if "event" in kinds or any(item.endswith("event") for item in kinds):
+                yield value
+            for key, child in value.items():
+                if key in {"@graph", "mainEntity", "event"}:
+                    yield from walk(child)
+
+    for script in scripts:
+        try:
+            payload = json.loads(html.unescape(script).strip())
+        except (json.JSONDecodeError, TypeError):
+            continue
+        for item in walk(payload):
+            title = str(item.get("name") or "").strip()
+            raw_start = item.get("startDate")
+            if not title or not raw_start:
+                continue
+            try:
+                start = datetime.fromisoformat(str(raw_start).replace("Z", "+00:00"))
+                if start.tzinfo is not None:
+                    start = start.replace(tzinfo=None)
+            except ValueError:
+                continue
+            if not today.date() <= start.date() <= (today + timedelta(days=730)).date():
+                continue
+            raw_end = item.get("endDate")
+            end = start + timedelta(days=1)
+            if raw_end:
+                try:
+                    parsed_end = datetime.fromisoformat(str(raw_end).replace("Z", "+00:00"))
+                    if parsed_end.tzinfo is not None:
+                        parsed_end = parsed_end.replace(tzinfo=None)
+                    # Home Assistant all-day calendar events use an exclusive end date.
+                    end = max(start + timedelta(days=1), parsed_end)
+                except ValueError:
+                    pass
+            description = str(item.get("description") or "").strip()
+            event_url = str(item.get("url") or website).strip()
+            record = _record(
+                title, start, event_url, "sauna",
+                f"Found in Schema.org Event data published by {venue_name}. "
+                f"Venue: {venue_location or venue_name}. "
+                "Automatically collected from the venue website; confirm details with the organiser. "
+                f"{description}",
+                source=f"Sauna website: {venue_name}",
+                location=venue_location or venue_name,
+            )
+            record["end"] = end
+            record["date_confidence"] = "structured"
+            found.append(record)
+    return found
+
+
+async def _fetch_nearby_sauna_website_events(session, country: str, location: str, today: datetime):
+    """Find nearby OSM sauna websites and read their structured event listings."""
+    query = ", ".join(part for part in (location, country) if part)
+    if not query:
+        return []
+    headers = {"User-Agent": "HomeAssistant-ChastityCalendar/1.6 (OpenStreetMap sauna event discovery)"}
+    try:
+        async with asyncio.timeout(12):
+            async with session.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": query, "format": "jsonv2", "limit": "1"},
+                headers=headers,
+            ) as response:
+                response.raise_for_status()
+                geocoded = await response.json()
+        if not geocoded:
+            return []
+        lat, lon = float(geocoded[0]["lat"]), float(geocoded[0]["lon"])
+        overpass_query = f"""[out:json][timeout:20];
+(
+  nwr(around:20000,{lat},{lon})[leisure=sauna][website];
+  nwr(around:20000,{lat},{lon})[leisure=sauna]["contact:website"];
+  nwr(around:20000,{lat},{lon})[amenity=sauna][website];
+  nwr(around:20000,{lat},{lon})[amenity=sauna]["contact:website"];
+  nwr(around:20000,{lat},{lon})[amenity=public_bath][website];
+  nwr(around:20000,{lat},{lon})[amenity=public_bath]["contact:website"];
+  nwr(around:20000,{lat},{lon})[sauna=yes][website];
+  nwr(around:20000,{lat},{lon})[sauna=yes]["contact:website"];
+);
+out center tags;"""
+        payload = None
+        for endpoint in (
+            "https://overpass-api.de/api/interpreter",
+            "https://overpass.kumi.systems/api/interpreter",
+        ):
+            try:
+                async with asyncio.timeout(25):
+                    async with session.post(
+                        endpoint, data=overpass_query, headers=headers
+                    ) as response:
+                        response.raise_for_status()
+                        payload = await response.json()
+                break
+            except Exception as err:
+                _LOGGER.debug("Overpass endpoint %s failed during sauna event lookup: %s", endpoint, err)
+        if payload is None:
+            return []
+    except Exception as err:
+        _LOGGER.debug("Could not find nearby sauna websites: %s", err)
+        return []
+
+    venues = []
+    seen = set()
+    for element in payload.get("elements", []):
+        tags = element.get("tags", {})
+        website = tags.get("website") or tags.get("contact:website")
+        name = tags.get("name") or tags.get("name:en")
+        if not website or not name:
+            continue
+        if not website.startswith(("https://", "http://")):
+            website = "https://" + website
+        if website in seen:
+            continue
+        seen.add(website)
+        address = ", ".join(part for part in (
+            tags.get("addr:city") or tags.get("addr:town") or tags.get("addr:suburb"),
+            tags.get("addr:country"),
+        ) if part)
+        venues.append((website, name, address or name))
+
+    # Keep load on small venue websites modest and avoid scraping every mapped result.
+    venues = venues[:12]
+    batches = await asyncio.gather(*(
+        _jsonld_event_records(session, website, name, address, today)
+        for website, name, address in venues
+    ))
+    return [event for batch in batches for event in batch]
+
 async def async_discover_events(hass, country: str = "", location: str = "", ticketmaster_api_key: str = "") -> list[dict]:
     """Search public sources for dated events in the configured country."""
     session = async_get_clientsession(hass)
@@ -259,6 +426,7 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
     rss = await asyncio.gather(*(_fetch_rss(session,cat,q,country,location,code,today) for cat,q in searches))
     events = [item for batch in rss for item in batch]
     events.extend(await _fetch_ticketmaster(session,(ticketmaster_api_key or "").strip(),code,today))
+    events.extend(await _fetch_nearby_sauna_website_events(session, country, location, today))
     # Repeated source URLs collapse even when the publisher has changed the date;
     # matching titles/dates from separate sources are merged where possible.
     return _deduplicate(events)
