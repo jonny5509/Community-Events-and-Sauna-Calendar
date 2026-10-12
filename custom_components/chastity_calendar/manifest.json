@@ -3,8 +3,8 @@
   "name": "Community Events & Sauna Calendar",
   "codeowners": [],
   "config_flow": true,
-  "documentation": "https://github.com/jonny5509/calendar-events",
-  "issue_tracker": "https://github.com/jonny5509/calendar-events/issues",
+  "documentation": "https://github.com/jonny5509/Community-Events-and-Sauna-Calendar",
+  "issue_tracker": "https://github.com/jonny5509/Community-Events-and-Sauna-Calendar/issues",
   "iot_class": "cloud_polling",
-  "version": "1.8.7"
+  "version": "1.8.8"
 }
