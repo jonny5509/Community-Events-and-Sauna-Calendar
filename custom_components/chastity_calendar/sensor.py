@@ -25,6 +25,19 @@ class ChastityCalendarSensorBase(SensorEntity):
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
+        # These sensors derive their values from the current date and shared
+        # discovery data. Re-evaluate on the same cadence as discovery so
+        # events that start/end or roll past midnight are reflected promptly.
+        self.async_on_remove(
+            async_track_time_change(
+                self.hass, self._scheduled_state_refresh,
+                hour=[0, 6, 12, 18], minute=0, second=0,
+            )
+        )
+
+    async def _scheduled_state_refresh(self, _now) -> None:
+        """Refresh sensor state when the event window changes."""
+        self.async_write_ha_state()
 
     def _events(self, calendar_type: str, start_day: date, end_day: date):
         calendar = ChastityChallengeCalendar(self.coordinator, calendar_type)
