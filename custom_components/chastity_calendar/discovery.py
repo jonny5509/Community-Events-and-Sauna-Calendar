@@ -157,7 +157,7 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
         # Never silently force searches for unsupported countries into US locale.
         url += "&hl=en"
     try:
-        async with asyncio.timeout(20):
+        async with asyncio.timeout(8):
             async with session.get(url, headers={"User-Agent":"HomeAssistant-ChastityCalendar/1.4"}) as response:
                 if response.status != 200:
                     _LOGGER.debug("Google News RSS HTTP %s for %r", response.status, localized)
@@ -310,8 +310,12 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
     today = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
     country = (country or "").strip()
     location = (location or "").strip()
-    code = await _country_code(session, country)
-    coordinates = await _geocode_location(session, location or city or county or region, country)
+    # Resolve independent location metadata concurrently so network latency
+    # does not add together before the event searches even begin.
+    code, coordinates = await asyncio.gather(
+        _country_code(session, country),
+        _geocode_location(session, location or city or county or region, country),
+    )
     if coordinates:
         _LOGGER.info("Using 30 km event-search radius around configured location %s", location or city or county or region)
     else:
@@ -350,31 +354,45 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         ("community", 'site:meetup.com events'),
         ("community", 'site:facebook.com/events public event'),
     )
-    for locality in locality_levels:
+    # Searching every query at every configured locality multiplies into
+    # hundreds of RSS requests and routinely exceeds the integration's overall
+    # timeout. Search the two most specific distinct locality levels instead;
+    # broad country-wide searches above still provide wider coverage.
+    focused_localities = locality_levels[:2] or [location]
+    for locality in focused_localities:
         for category, query in local_queries:
             searches.append((category, query, locality))
 
+    # Year-specific queries add useful coverage but run only at the most
+    # specific locality to keep the total request count bounded.
     for year in (today.year, today.year + 1):
-        for locality in locality_levels or [location]:
-            searches.extend([
-                ("community", f'festival fair events {year} dates', locality),
-                ("community", f'concert theatre exhibition events {year}', locality),
-                ("pride", f'Pride festival parade {year} dates', locality),
-                ("kink", f'kink fetish convention events {year}', locality),
-            ])
+        locality = focused_localities[0]
+        searches.extend([
+            ("community", f'festival fair events {year} dates', locality),
+            ("community", f'concert theatre exhibition events {year}', locality),
+            ("pride", f'Pride festival parade {year} dates', locality),
+            ("kink", f'kink fetish convention events {year}', locality),
+        ])
 
-    # Bound concurrent requests so a multi-level location doesn't overload the
-    # user's Home Assistant instance or remote search service.
-    semaphore = asyncio.Semaphore(12)
+    # Bound concurrency and each RSS request so a single slow provider cannot
+    # hold up the entire search.
+    semaphore = asyncio.Semaphore(20)
     async def fetch_one(category, query, search_location):
         async with semaphore:
             return await _fetch_rss(
                 session, category, query, country, location, code, today,
                 search_location=search_location,
             )
-    rss = await asyncio.gather(*(fetch_one(cat, query, locality) for cat, query, locality in searches))
+    # Run the structured API search alongside RSS instead of making users
+    # wait for two sequential discovery phases.
+    rss_task = asyncio.gather(*(fetch_one(cat, query, locality) for cat, query, locality in searches))
+    ticketmaster_task = _fetch_ticketmaster(
+        session, (ticketmaster_api_key or "").strip(), code, today,
+        coordinates=coordinates, radius_km=30,
+    )
+    rss, ticketmaster = await asyncio.gather(rss_task, ticketmaster_task)
     events = [item for batch in rss for item in batch]
-    events.extend(await _fetch_ticketmaster(session, (ticketmaster_api_key or "").strip(), code, today, coordinates=coordinates, radius_km=30))
+    events.extend(ticketmaster)
     _LOGGER.info(
         "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
         location or "unspecified location", country or "unspecified country", len(searches), len(events),

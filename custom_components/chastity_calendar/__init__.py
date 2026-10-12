@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "with the events already loaded and trying again at the next refresh",
                 INITIAL_DISCOVERY_TIMEOUT,
             )
-            return []
+            return coordinator.data or []
         except Exception as err:
             raise UpdateFailed(f"Unable to search public event sources: {err}") from err
 
