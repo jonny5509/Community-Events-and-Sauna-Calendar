@@ -33,7 +33,7 @@ The optional **Ticketmaster Discovery API key** enables searches through the [Ti
 
 ## Event data
 
-Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Repeated URLs collapse even if a publisher updates the date; cross-source title/date matches merge when possible. Subsequent scheduled refreshes update the current results.
+Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 1.9.8. Subsequent scheduled refreshes update the current results.
 
 ## Transparent limitations
 
