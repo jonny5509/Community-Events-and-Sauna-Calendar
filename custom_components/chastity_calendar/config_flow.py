@@ -33,6 +33,21 @@ COUNTRY_REGIONS = {
     ],
 }
 
+UK_REGION_CITIES = {
+    "East Midlands": ["Derby", "Leicester", "Lincoln", "Northampton", "Nottingham"],
+    "East of England": ["Bedford", "Cambridge", "Chelmsford", "Colchester", "Ipswich", "Luton", "Norwich", "Peterborough", "Southend-on-Sea"],
+    "London": ["City of London", "Croydon", "Greenwich", "Kingston upon Thames", "Westminster"],
+    "North East": ["Darlington", "Durham", "Gateshead", "Middlesbrough", "Newcastle upon Tyne", "Sunderland"],
+    "North West": ["Blackpool", "Bolton", "Carlisle", "Chester", "Liverpool", "Manchester", "Preston", "Salford", "Warrington"],
+    "South East": ["Brighton and Hove", "Canterbury", "Chatham", "Guildford", "Milton Keynes", "Oxford", "Portsmouth", "Reading", "Southampton"],
+    "South West": ["Bath", "Bournemouth", "Bristol", "Exeter", "Gloucester", "Plymouth", "Swindon", "Taunton", "Truro"],
+    "West Midlands": ["Birmingham", "Coventry", "Hereford", "Shrewsbury", "Stoke-on-Trent", "Wolverhampton", "Worcester"],
+    "Yorkshire and the Humber": ["Bradford", "Doncaster", "Halifax", "Harrogate", "Huddersfield", "Hull", "Leeds", "Sheffield", "York"],
+    "Scotland": ["Aberdeen", "Dundee", "Edinburgh", "Glasgow", "Inverness", "Perth", "Stirling"],
+    "Wales": ["Aberystwyth", "Bangor", "Cardiff", "Newport", "Swansea", "Wrexham"],
+    "Northern Ireland": ["Armagh", "Belfast", "Derry", "Lisburn", "Newry"],
+}
+
 
 async def _json_request(hass, url, *, method="get", payload=None, timeout=15):
     """Make a bounded request to a public location data service."""
@@ -84,6 +99,10 @@ async def _cities(hass, country, region):
     """Fetch cities and towns for the selected region."""
     if not region or region == SKIP:
         return [SKIP]
+    if country == "United Kingdom" and region in UK_REGION_CITIES:
+        # CountriesNow uses administrative subdivisions and may not recognise
+        # English geographic regions, so provide a useful region-specific list.
+        return UK_REGION_CITIES[region]
     data = await _json_request(
         hass, "https://countriesnow.space/api/v0.1/countries/state/cities",
         method="post", payload={"country": country, "state": region},
