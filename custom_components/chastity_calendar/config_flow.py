@@ -204,11 +204,11 @@ async def _cities(hass, country, region, county):
     return names or [SKIP]
 
 
-async def _areas(hass, country, region, city):
-    """Fetch named neighbourhoods and suburbs around the selected city from OSM."""
+async def _areas(hass, country, region, city, county=""):
+    """Fetch named neighbourhoods and suburbs around the selected place from OSM."""
     if not city or city == SKIP:
         return [SKIP]
-    query = quote(", ".join(part for part in (city, region, country) if part))
+    query = quote(", ".join(part for part in (city, county, region, country) if part and part != SKIP))
     found = await _json_request(
         hass,
         f"https://nominatim.openstreetmap.org/search?q={query}&format=jsonv2&limit=1",
@@ -338,20 +338,25 @@ class _LocationFlow:
 
     async def _show_city(self, user_input=None):
         if user_input is not None:
-            new_city = user_input["city"]
+            # A free-text city avoids incomplete or stale third-party city lists
+            # and works for small towns, rural areas, and countries worldwide.
+            new_city = str(user_input.get("city", "")).strip() or SKIP
             if new_city != self._location_data.get("city", SKIP):
                 self._location_data["area"] = SKIP
             self._location_data["city"] = new_city
             return await self._show_area()
-        options = await _cities(
-            self.hass, self._location_data["country"],
-            self._location_data.get("region", ""), self._location_data.get("county", SKIP)
+
+        current_city = self._location_data.get("city", "")
+        default_city = "" if not current_city or current_city == SKIP else current_city
+        return self.async_show_form(
+            step_id="city",
+            data_schema=vol.Schema({vol.Required("city", default=default_city): str}),
+            description_placeholders={
+                "country": self._location_data.get("country", ""),
+                "region": "" if self._location_data.get("region") == SKIP else self._location_data.get("region", ""),
+                "county": "" if self._location_data.get("county") == SKIP else self._location_data.get("county", ""),
+            },
         )
-        marker, field = _dropdown(
-            "city", [SKIP, *[v for v in options if v != SKIP]],
-            self._location_data.get("city", SKIP),
-        )
-        return self.async_show_form(step_id="city", data_schema=vol.Schema({marker: field}))
 
     async def _show_area(self, user_input=None):
         if user_input is not None:
@@ -363,6 +368,7 @@ class _LocationFlow:
         options = await _areas(
             self.hass, self._location_data["country"],
             self._location_data.get("region", ""), self._location_data.get("city", ""),
+            self._location_data.get("county", ""),
         )
         marker, field = _dropdown(
             "area", [SKIP, *[v for v in options if v != SKIP]],
