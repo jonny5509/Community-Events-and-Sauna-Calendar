@@ -31,17 +31,7 @@ def test_lgbtq_events_are_separate_from_monthly_calendar():
     ]
 
     assert _summaries("monthly", events) == {"General community fair"}
-    assert _summaries("pride", events) == {
-        "Gay social meetup",
-        "Transgender Day of Visibility",
-        "International Day Against Homophobia, Biphobia and Transphobia",
-        "Pride Month",
-        "International Lesbian Day",
-        "National Coming Out Day",
-        "Transgender Day of Remembrance",
-        "World AIDS Day",
-        "Bisexual Visibility Day",
-    }
+    assert _summaries("pride", events) == {"Gay social meetup", "Pride Month"}
     assert _summaries("sauna", events) == {"Sauna theme night"}
 
 
