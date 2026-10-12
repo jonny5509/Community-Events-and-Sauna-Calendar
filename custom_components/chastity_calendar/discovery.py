@@ -214,17 +214,18 @@ async def _fetch_ticketmaster(session, api_key, country_code, today):
     return [item for batch in batches for item in batch]
 
 def _deduplicate(events):
-    """Merge same-source URL updates and cross-source title/date matches."""
+    """Merge duplicate title/date matches without collapsing a venue's event list."""
     merged = {}
-    url_to_key = {}
     title_date_to_key = {}
     for event in events:
-        url_key = _normalise_url(event.get("url", ""))
         title_key = re.sub(r"[^a-z0-9]+", " ", event["summary"].casefold()).strip()
         date_key = event["start"].date().isoformat()
-        key = url_to_key.get(url_key) if url_key else None
-        if key is None:
-            key = title_date_to_key.get((title_key, date_key))
+        # A venue page is often the URL for every event on that venue's website.
+        # URL-only merging therefore loses distinct event names and dates,
+        # especially when several JSON-LD events fall back to the same page URL.
+        # Treat the same title on the same date as a duplicate instead.
+        identity = (title_key, date_key)
+        key = title_date_to_key.get(identity)
         if key is None:
             key = ("event", len(merged))
             merged[key] = event
@@ -240,9 +241,7 @@ def _deduplicate(events):
             if event.get("date_confidence") == "structured":
                 old["summary"], old["url"], old["description"] = event["summary"], event["url"], event["description"]
                 old["date_confidence"] = "structured"
-        if url_key:
-            url_to_key[url_key] = key
-        title_date_to_key[(title_key, date_key)] = key
+        title_date_to_key[identity] = key
     return sorted(merged.values(), key=lambda item: item["start"])
 
 
