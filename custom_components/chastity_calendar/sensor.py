@@ -143,12 +143,92 @@ class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
         return self._details(event) if event else {}
 
 
+class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
+    """Show the next discovered event for a specific LGBTQ+ category."""
+
+    category = ""
+    _attr_icon = "mdi:calendar-star"
+
+    def __init__(self, coordinator, entry_id: str) -> None:
+        super().__init__(coordinator, entry_id)
+
+    def _event(self):
+        today = dt_util.now().date()
+        events = self._events("pride", today, date(today.year + 2, 1, 1))
+        matching_titles = set()
+        for item in self.coordinator.data or []:
+            tags = {str(tag).casefold() for tag in item.get("categories", [])}
+            category = str(item.get("category", "")).casefold()
+            if self.category in tags or category == self.category:
+                matching_titles.add(item.get("summary", ""))
+        upcoming = [
+            event for event in events
+            if event.summary in matching_titles and event.end_datetime_local.date() > today
+        ]
+        return min(upcoming, key=lambda event: event.start_datetime_local) if upcoming else None
+
+    @property
+    def native_value(self) -> str:
+        event = self._event()
+        return event.summary if event else f"No upcoming {self.category.title()} event"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        event = self._event()
+        return self._details(event) if event else {}
+
+
+class ChastityNextGayEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered gay event."""
+
+    category = "gay"
+    _attr_name = "Next Gay Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextLesbianEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered lesbian event."""
+
+    category = "lesbian"
+    _attr_name = "Next Lesbian Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextBisexualEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered bisexual event."""
+
+    category = "bisexual"
+    _attr_name = "Next Bisexual Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextTransgenderEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered transgender event."""
+
+    category = "transgender"
+    _attr_name = "Next Transgender Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextQueerEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered queer community event."""
+
+    category = "queer"
+    _attr_name = "Next Queer Event"
+    _attr_icon = "mdi:account-multiple"
+
+
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
-    """Set up exactly four focused event sensors."""
+    """Set up focused monthly, LGBTQ+, and category-specific event sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
         ChastityOngoingMonthEventSensor(coordinator, entry.entry_id),
         ChastityNextMonthEventSensor(coordinator, entry.entry_id),
         ChastityPastLGBTQEventSensor(coordinator, entry.entry_id),
         ChastityNextLGBTQEventSensor(coordinator, entry.entry_id),
+        ChastityNextGayEventSensor(coordinator, entry.entry_id),
+        ChastityNextLesbianEventSensor(coordinator, entry.entry_id),
+        ChastityNextBisexualEventSensor(coordinator, entry.entry_id),
+        ChastityNextTransgenderEventSensor(coordinator, entry.entry_id),
+        ChastityNextQueerEventSensor(coordinator, entry.entry_id),
     ])
