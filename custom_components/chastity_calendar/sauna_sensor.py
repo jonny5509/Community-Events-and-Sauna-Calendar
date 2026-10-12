@@ -34,10 +34,13 @@ class NearbySaunasSensor(SensorEntity):
     _attr_icon = "mdi:hot-tub"
     _attr_native_unit_of_measurement = None
 
-    def __init__(self, hass, country: str, location: str) -> None:
+    def __init__(self, hass, country: str, location: str, geocode_location: str | None = None) -> None:
         self.hass = hass
         self.country = country.strip()
         self.location = location.strip()
+        # Prefer a precise area/city query for geocoding. The full hierarchy is
+        # retained separately for display and event-search context.
+        self.geocode_location = (geocode_location or location).strip()
         self._places: list[dict] = []
         self._error: str | None = None
         self._updated: str | None = None
@@ -52,13 +55,13 @@ class NearbySaunasSensor(SensorEntity):
 
     async def _async_refresh(self, _now=None) -> None:
         """Geocode configured area and query nearby OpenStreetMap sauna features."""
-        if not self.location:
+        if not self.geocode_location:
             self._error = "Set a city or region in the integration options to find nearby saunas."
             self._places = []
             self.async_write_ha_state()
             return
         session = async_get_clientsession(self.hass)
-        query = ", ".join(part for part in (self.location, self.country) if part)
+        query = ", ".join(part for part in (self.geocode_location, self.country) if part)
         headers = {"User-Agent": _USER_AGENT}
         try:
             async with session.get(
