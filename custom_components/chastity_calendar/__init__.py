@@ -17,6 +17,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass,
                 country=preferences.get("country",""),
                 location=preferences.get("location",""),
+                region=preferences.get("region",""),
+                county=preferences.get("county",""),
+                city=preferences.get("city",""),
+                area=preferences.get("area",""),
                 ticketmaster_api_key=preferences.get("ticketmaster_api_key",""),
             )
         except Exception as err:
