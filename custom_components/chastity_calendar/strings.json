@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Choose country",
-        "description": "Choose a country. The next steps load matching regions, cities, and local areas from online location services.",
+        "description": "Choose a country, then narrow the location by region and county where available. Enter any city or town manually; online city lists are incomplete.",
         "data": {
           "country": "Country"
         }
@@ -17,7 +17,7 @@
       },
       "city": {
         "title": "Choose city",
-        "description": "Cities and towns are narrowed to the selected county where supported.",
+        "description": "Enter any city or town name. This avoids incomplete city lists and supports small towns and rural locations.",
         "data": {
           "city": "City / Town"
         }
@@ -49,7 +49,7 @@
     "step": {
       "init": {
         "title": "Choose country",
-        "description": "Choose a country, then select from its online region, city, and area lists.",
+        "description": "Choose a country and narrow by region/county where available. Enter any city or town manually; online city lists are incomplete.",
         "data": {
           "country": "Country"
         }
@@ -63,7 +63,7 @@
       },
       "city": {
         "title": "Choose city",
-        "description": "Cities and towns are narrowed to the selected county where supported.",
+        "description": "Enter any city or town name. This avoids incomplete city lists and supports small towns and rural locations.",
         "data": {
           "city": "City / Town"
         }
