@@ -267,8 +267,8 @@ def _schedule_occurrences(schedule: dict, today: datetime, horizon: datetime) ->
     except (TypeError, ValueError):
         return []
 
-    raw_end = schedule.get("endDate")
     schedule_end = horizon
+    raw_end = schedule.get("endDate")
     if raw_end:
         try:
             parsed_end = datetime.fromisoformat(str(raw_end).replace("Z", "+00:00"))
@@ -279,12 +279,10 @@ def _schedule_occurrences(schedule: dict, today: datetime, horizon: datetime) ->
             pass
 
     frequency = str(schedule.get("repeatFrequency") or "").strip().upper()
-    interval_match = re.fullmatch(r"P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?", frequency)
-    if not interval_match or not any(interval_match.groups()):
-        # An isolated schedule start is still useful even if recurrence is
-        # expressed in a format we do not yet support.
+    match = re.fullmatch(r"P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?", frequency)
+    if not match or not any(match.groups()):
         return [start] if today.date() <= start.date() <= horizon.date() else []
-    years, months, weeks, days = (int(value or 0) for value in interval_match.groups())
+    years, months, weeks, days = (int(value or 0) for value in match.groups())
     step_days = weeks * 7 + days
     by_day = schedule.get("byDay", [])
     if isinstance(by_day, str):
@@ -293,15 +291,30 @@ def _schedule_occurrences(schedule: dict, today: datetime, horizon: datetime) ->
         "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
         "friday": 4, "saturday": 5, "sunday": 6,
     }
-    weekdays = set()
-    for item in by_day if isinstance(by_day, list) else []:
-        name = str(item).rsplit("/", 1)[-1].casefold()
-        if name in weekday_names:
-            weekdays.add(weekday_names[name])
+    weekdays = {
+        weekday_names[str(item).rsplit("/", 1)[-1].casefold()]
+        for item in by_day if isinstance(by_day, list)
+        if str(item).rsplit("/", 1)[-1].casefold() in weekday_names
+    } if isinstance(by_day, list) else set()
 
     occurrences = []
+    # When weekdays are specified for a weekly schedule, inspect each day in
+    # the active weeks so multi-day schedules (e.g. Tue and Thu) are preserved.
+    if weekdays and weeks and not (years or months or days):
+        current = start
+        for _ in range(730):
+            if current > schedule_end or current > horizon:
+                break
+            week_number = (current.date() - start.date()).days // 7
+            if (week_number % weeks == 0 and current.weekday() in weekdays
+                    and current.date() >= start.date()):
+                occurrences.append(current)
+            current += timedelta(days=1)
+            if len(occurrences) >= 366:
+                break
+        return occurrences
+
     current = start
-    # Bound expansion to prevent malformed schedules from creating huge lists.
     for _ in range(800):
         if current > schedule_end or current > horizon:
             break
@@ -394,7 +407,6 @@ async def _jsonld_event_records(session, website: str, venue_name: str, venue_lo
                 continue
 
             raw_end = item.get("endDate")
-            raw_duration = item.get("duration")
             event_url = str(item.get("url") or website).strip()
             description = str(item.get("description") or "").strip()
             for start in sorted(set(starts)):
