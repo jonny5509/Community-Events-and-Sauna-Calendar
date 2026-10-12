@@ -158,6 +158,58 @@ def _record(title, start, url, category, description, source="Google News RSS", 
         "date_confidence": "extracted_from_search_snippet",
     }
 
+
+async def _fetch_structured_event_date(session, url: str, today: datetime):
+    """Extract an explicit event start date from a public event page."""
+    if urlsplit(url).scheme not in {"http", "https"}:
+        return None
+    try:
+        async with asyncio.timeout(6):
+            async with session.get(
+                url,
+                headers={"User-Agent": "HomeAssistant-CommunityEventsCalendar/2.0.3"},
+                allow_redirects=True,
+            ) as response:
+                if response.status != 200:
+                    return None
+                body = (await response.text())[:1500000]
+    except Exception as err:
+        _LOGGER.debug("Could not inspect event page %s: %s", url, err)
+        return None
+
+    raw_dates = []
+    script_pattern = re.compile(r'<script\b[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script\s*>', re.I | re.S)
+    for raw in script_pattern.findall(body):
+        try:
+            payload = json.loads(html.unescape(raw))
+        except (ValueError, TypeError):
+            continue
+        stack = [payload]
+        while stack:
+            value = stack.pop()
+            if isinstance(value, list):
+                stack.extend(value)
+            elif isinstance(value, dict):
+                types = value.get("@type", [])
+                if isinstance(types, str):
+                    types = [types]
+                if any(str(kind).casefold() == "event" for kind in types):
+                    start_date = value.get("startDate")
+                    if isinstance(start_date, str):
+                        raw_dates.append(start_date)
+                stack.extend(item for key, item in value.items() if key not in {"@context", "startDate"})
+    meta_pattern = re.compile(r'<meta[^>]+(?:property|name)=["\']event:start_time["\'][^>]+content=["\']([^"\']+)', re.I)
+    raw_dates.extend(meta_pattern.findall(body))
+    candidates = []
+    for raw in raw_dates:
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00")).replace(tzinfo=None)
+        except (ValueError, TypeError):
+            parsed = _find_future_date(str(raw), today)
+        if parsed and today.date() <= parsed.date() <= (today + timedelta(days=730)).date():
+            candidates.append(parsed)
+    return min(candidates, key=lambda item: item.date()) if candidates else None
+
 async def _fetch_rss(session, category, query, country, location, country_code, today, search_location=None):
     """Fetch one public Google News RSS search."""
     # Prefer the specific geographic level for this query, while always retaining country context.
@@ -181,13 +233,21 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
         _LOGGER.debug("Google News RSS failed for %r: %s", localized, err)
         return []
     results = []
+    structured_date_checks = 0
+    lgbtq_categories = {"pride", "gay", "lesbian", "bisexual", "transgender", "queer", "lgbtq"}
     for item in root.findall(".//item"):
         title = item.findtext("title") or ""
         description = item.findtext("description") or ""
         link = item.findtext("link") or ""
         if not title.strip() or not link.strip(): continue
         event_date = _find_future_date(f"{title} {description}", today)
-        if event_date is None: continue
+        # Search snippets often omit event dates. Inspect a bounded number of
+        # LGBTQ+ result pages for explicit structured event start dates.
+        if event_date is None and category in lgbtq_categories and structured_date_checks < 4:
+            structured_date_checks += 1
+            event_date = await _fetch_structured_event_date(session, link, today)
+        if event_date is None:
+            continue
         title = re.sub(r"\s+-\s+[^-]+$", "", title).strip()
         results.append(_record(
             title, event_date, link, category,
