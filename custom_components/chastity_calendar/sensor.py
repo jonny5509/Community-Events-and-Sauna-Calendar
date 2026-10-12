@@ -310,12 +310,70 @@ class ChastityNearestSaunaSensor(SensorEntity):
         }
 
 
+
+class ChastityNextSaunaEventSensor(ChastityCalendarSensorBase):
+    """Show the next discovered public sauna event."""
+
+    _attr_name = "Next Sauna Event"
+    _attr_icon = "mdi:calendar-star"
+
+    def _event_record(self):
+        today = dt_util.now().date()
+        matches = []
+        for item in self.coordinator.data or []:
+            searchable = " ".join(str(item.get(key, "")) for key in (
+                "summary", "description", "category", "location"
+            )) + " " + " ".join(str(value) for value in item.get("categories", []))
+            if "sauna" not in searchable.casefold():
+                continue
+            start = item.get("start")
+            if not start:
+                continue
+            if hasattr(start, "date"):
+                event_date = start.date()
+            else:
+                try:
+                    event_date = date.fromisoformat(str(start)[:10])
+                except ValueError:
+                    continue
+            if event_date >= today:
+                matches.append((event_date, item))
+        return min(matches, key=lambda match: match[0])[1] if matches else None
+
+    @property
+    def native_value(self) -> str:
+        event = self._event_record()
+        if not event:
+            return "No upcoming sauna event found"
+        start = event.get("start")
+        event_date = start.date().isoformat() if hasattr(start, "date") else str(start)[:10]
+        return f"{event.get('summary', 'Sauna event')} — {event_date}"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        event = self._event_record()
+        if not event:
+            return {}
+        start = event.get("start")
+        event_date = start.date().isoformat() if hasattr(start, "date") else str(start)[:10]
+        return {
+            "event": event.get("summary", ""),
+            "start_date": event_date,
+            "location": event.get("location", ""),
+            "description": event.get("description", ""),
+            "url": event.get("url", ""),
+            "source": event.get("source", ""),
+            "date_confidence": event.get("date_confidence", ""),
+        }
+
+
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
     """Set up focused monthly, LGBTQ+, and category-specific event sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     preferences = {**entry.data, **entry.options}
     async_add_entities([
         ChastityNearestSaunaSensor(hass, entry, preferences),
+        ChastityNextSaunaEventSensor(coordinator, entry.entry_id),
         ChastityOngoingMonthEventSensor(coordinator, entry.entry_id),
         ChastityNextMonthEventSensor(coordinator, entry.entry_id),
         ChastityPastLGBTQEventSensor(coordinator, entry.entry_id),
