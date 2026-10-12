@@ -37,6 +37,7 @@ The optional **Ticketmaster Discovery API key** enables searches through the [Ti
 - Never substitute generic article publication dates for event dates; listings without a reliable future event date remain excluded.
 - Bound each page lookup to six seconds and cap lookups per query to limit added latency.
 - Retain the 2.0.2 timeout/retry protection.
+- Only include Number 52 Sauna events when Number 52 is the closest mapped sauna within the configured 30 km sauna-discovery radius; apply the same rule to official-page and RSS results.
 - Update the integration manifest to 2.0.3.
 
 ## What's new in 2.0.2
