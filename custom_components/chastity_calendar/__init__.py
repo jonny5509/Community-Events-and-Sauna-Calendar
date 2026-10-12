@@ -5,7 +5,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.event import async_call_later, async_track_time_change
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -13,7 +13,8 @@ from .const import DOMAIN, PLATFORMS
 from .discovery import async_discover_events
 
 _LOGGER = logging.getLogger(__name__)
-INITIAL_DISCOVERY_TIMEOUT = 60
+INITIAL_DISCOVERY_TIMEOUT = 180
+DISCOVERY_RETRY_DELAY = 120
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -23,9 +24,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def async_update_data():
         coordinator.last_discovery_attempt = dt_util.utcnow().isoformat()
         try:
-            # Several public RSS endpoints may be slow or unavailable. Put a
-            # hard limit on the whole discovery run, not just each HTTP call,
-            # so a stalled source cannot hold setup or a refresh indefinitely.
+            # Discovery fans out across many public RSS searches. Give the
+            # bounded batch enough time to complete, without blocking setup.
             async with asyncio.timeout(INITIAL_DISCOVERY_TIMEOUT):
                 events = await async_discover_events(
                     hass,
@@ -40,17 +40,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             coordinator.last_successful_update = dt_util.utcnow().isoformat()
             coordinator.last_discovery_status = "success"
             coordinator.last_discovery_error = None
+            _LOGGER.info("Event discovery completed successfully: %s events", len(events))
             return events
         except TimeoutError:
             coordinator.last_discovery_status = "timeout"
             coordinator.last_discovery_error = (
-                f"Discovery exceeded {INITIAL_DISCOVERY_TIMEOUT} seconds; previous results retained."
+                f"Discovery exceeded {INITIAL_DISCOVERY_TIMEOUT} seconds; "
+                f"retry scheduled in {DISCOVERY_RETRY_DELAY} seconds."
             )
             _LOGGER.warning(
-                "Event discovery exceeded %s seconds; keeping the calendar available "
-                "with the events already loaded and trying again at the next refresh",
+                "Event discovery exceeded %s seconds; retaining %s existing events "
+                "and scheduling a retry in %s seconds",
                 INITIAL_DISCOVERY_TIMEOUT,
+                len(coordinator.data or []),
+                DISCOVERY_RETRY_DELAY,
             )
+
+            # Previously an initial timeout left the coordinator empty until
+            # the next six-hour refresh. Retry shortly so a slow first search
+            # does not make the LGBTQ+ calendar appear permanently blank.
+            def request_retry(_now):
+                hass.async_create_task(
+                    coordinator.async_request_refresh(),
+                    name=f"{DOMAIN} discovery retry",
+                )
+
+            cancel_retry = async_call_later(hass, DISCOVERY_RETRY_DELAY, request_retry)
+            entry.async_on_unload(cancel_retry)
             return coordinator.data or []
         except Exception as err:
             coordinator.last_discovery_status = "failed"
@@ -65,10 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=None,
     )
 
-    # Do not await remote discovery during Home Assistant bootstrap. Set up
-    # entities with an empty initial result, then perform the first search as
-    # a cancellable background task. This avoids HA reporting that this
-    # integration is still setting up while external search services hang.
+    # Set up entities immediately; remote discovery runs in the background.
     coordinator.async_set_updated_data([])
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
