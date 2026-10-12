@@ -27,7 +27,7 @@ Copy `custom_components/chastity_calendar` to `config/custom_components/`, resta
 
 ## Configuration
 
-Choose the country to search. The optional city/region field adds a local relevance term to RSS queries and is used as the centre for the Nearby Saunas sensor. Sauna discovery uses OpenStreetMap's Nominatim geocoder and Overpass data; it searches a 20 km radius and refreshes daily. This is a best-effort map directory, not a complete adult-venue directory.
+Choose a country, then optionally enter region/state, city/town, and district/area/postcode in that order. You can leave any lower level blank. The integration combines the entered levels for RSS relevance and uses the most specific combined location as the centre for the Nearby Saunas sensor. Sauna discovery uses OpenStreetMap's Nominatim geocoder and Overpass data; it searches a 20 km radius and refreshes daily. This is a best-effort map directory, not a complete adult-venue directory.
 
 The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
 

@@ -3,15 +3,18 @@
     "step": {
       "user": {
         "title": "Chastity Challenge Calendar",
-        "description": "Choose a country for online event discovery. Optionally enter a city, state, province, or region to narrow results.",
+        "description": "Choose a country, then optionally narrow the search by region, city, and local area or postcode.",
         "data": {
           "country": "Country",
-          "location": "Optional city, state, province, or region"
+          "region": "State / Province / Region",
+          "city": "City / Town",
+          "area": "District / Area / Postcode",
+          "ticketmaster_api_key": "Optional Ticketmaster API key"
         }
       }
     },
     "error": {
-      "required": "Please enter a country."
+      "required": "Please choose a country."
     },
     "abort": {
       "already_configured": "This calendar is already configured."
@@ -20,11 +23,14 @@
   "options": {
     "step": {
       "init": {
-        "title": "Event search area",
-        "description": "Online event searches will use this country and optional local area.",
+        "title": "Event and nearby sauna search area",
+        "description": "Enter the location from broad to specific: country, region, city, then district/area/postcode. You can leave lower levels blank.",
         "data": {
           "country": "Country",
-          "location": "Optional city, state, province, or region"
+          "region": "State / Province / Region",
+          "city": "City / Town",
+          "area": "District / Area / Postcode",
+          "ticketmaster_api_key": "Optional Ticketmaster API key"
         }
       }
     }
