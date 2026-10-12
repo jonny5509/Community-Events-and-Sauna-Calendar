@@ -35,8 +35,10 @@ The optional **Ticketmaster Discovery API key** enables searches through the [Ti
 
 - Add a dedicated **LGBTQ+ Events** calendar for discovered gay, lesbian, bisexual, transgender, queer, and Pride listings. These events are filtered out of Monthly Events; sauna-related LGBTQ+ events may appear in both relevant focused calendars.
 - Rename the former Pride-focused calendar to **LGBTQ+ Events** while preserving its unique ID for existing installations.
+- Add regression tests for routing LGBTQ+ events away from the general calendar.
 - Update the integration version and discovery user agent to 2.0.1.
 
+## What's new in 2.0.0
 
 - Broaden LGBTQ+ discovery with additional focused searches for OutSavvy, Eventbrite UK, Meetup, Gaydio, and Attitude, alongside Queer LDN and wherequeersgo.
 - Run the added source-focused searches through the same location-aware Google News RSS pipeline; these are indexed-search hints, not direct integrations with those services.
