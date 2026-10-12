@@ -203,13 +203,14 @@ class ChastityEventLocationsSensor(ChastityCalendarSensorBase):
 class ChastityCategoryEventsSensor(ChastityCalendarSensorBase):
     """Show discovered events matching one LGBTQ+ category."""
 
-    def __init__(self, coordinator, category: str, name: str, icon: str) -> None:
+    def __init__(self, coordinator, entry_id: str, category: str, name: str, icon: str) -> None:
         """Initialize a category-specific event sensor."""
         super().__init__(coordinator)
         self.category = category
         self._attr_name = name
         self._attr_icon = icon
-        self._attr_unique_id = f"{DOMAIN}_{category}_events"
+        # Include the config entry so multiple calendar locations do not collide.
+        self._attr_unique_id = f"{DOMAIN}_{entry_id}_{category}_events"
 
     def _category_events(self):
         """Return upcoming discovered events tagged with this category."""
@@ -280,11 +281,11 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
                 preferences.get("country", ""),
                 preferences.get("location", ""),
             ),
-            ChastityCategoryEventsSensor(coordinator, "gay", "Gay Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, "lesbian", "Lesbian Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, "bisexual", "Bisexual Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, "transgender", "Transgender Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, "queer", "Queer Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, "lgbtq", "LGBTQ+ Events", "mdi:calendar-star"),
+            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "gay", "Gay Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "lesbian", "Lesbian Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "bisexual", "Bisexual Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "transgender", "Transgender Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "queer", "Queer Events", "mdi:account-group"),
+            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "lgbtq", "LGBTQ+ Events", "mdi:calendar-star"),
         ]
     )
