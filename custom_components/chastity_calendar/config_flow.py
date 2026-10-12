@@ -22,6 +22,17 @@ COUNTRY_FALLBACK = [
     "United Kingdom", "United States",
 ]
 
+# CountriesNow lists administrative subdivisions, which do not always include
+# familiar geographic regions such as the English regions. Add these aliases
+# to the relevant dropdown while preserving API-provided options.
+COUNTRY_REGIONS = {
+    "United Kingdom": [
+        "East Midlands", "East of England", "London", "North East",
+        "North West", "South East", "South West", "West Midlands",
+        "Yorkshire and the Humber", "Scotland", "Wales", "Northern Ireland",
+    ],
+}
+
 
 async def _json_request(hass, url, *, method="get", payload=None, timeout=15):
     """Make a bounded request to a public location data service."""
@@ -65,7 +76,8 @@ async def _regions(hass, country):
         item.get("name", "").strip() for item in states
         if isinstance(item, dict) and item.get("name", "").strip()
     })
-    return names or [SKIP]
+    extra = COUNTRY_REGIONS.get(country, [])
+    return sorted(set(names + extra)) or [SKIP]
 
 
 async def _cities(hass, country, region):
