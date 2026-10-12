@@ -178,7 +178,7 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
         return None
 
     raw_dates = []
-    script_pattern = re.compile(r'<script\\b[^>]*type=["\\']application/ld\\+json["\\'][^>]*>(.*?)</script\\s*>', re.I | re.S)
+    script_pattern = re.compile(r'<script\b[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script\s*>', re.I | re.S)
     for raw in script_pattern.findall(body):
         try:
             payload = json.loads(html.unescape(raw))
@@ -198,7 +198,7 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
                     if isinstance(start_date, str):
                         raw_dates.append(start_date)
                 stack.extend(item for key, item in value.items() if key not in {"@context", "startDate"})
-    meta_pattern = re.compile(r'<meta[^>]+(?:property|name)=["\\']event:start_time["\\'][^>]+content=["\\']([^"\\']+)', re.I)
+    meta_pattern = re.compile(r'<meta[^>]+(?:property|name)=["\']event:start_time["\'][^>]+content=["\']([^"\']+)', re.I)
     raw_dates.extend(meta_pattern.findall(body))
     candidates = []
     for raw in raw_dates:
