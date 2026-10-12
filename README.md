@@ -31,12 +31,19 @@ During setup, choose a country, then narrow the location by region/state and cou
 
 The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
 
+## What's new in 2.0.4
+
+- Include Number 52 Sauna events only when Number 52 is the closest mapped sauna to the configured location within the 30 km sauna-discovery radius.
+- Apply the same rule to Number 52 results from official pages and Google News RSS, so distant listings cannot bypass the nearest-sauna check.
+- Update the integration manifest to 2.0.4.
+
 ## What's new in 2.0.3
 
 - Improve LGBTQ+ event discovery when search snippets omit dates by inspecting up to four linked results per LGBTQ+ search for explicit Schema.org `Event.startDate` or `event:start_time` metadata.
 - Never substitute generic article publication dates for event dates; listings without a reliable future event date remain excluded.
 - Bound each page lookup to six seconds and cap lookups per query to limit added latency.
 - Retain the 2.0.2 timeout/retry protection.
+- Only include Number 52 Sauna events when Number 52 is the closest mapped sauna within the configured 30 km sauna-discovery radius; apply the same rule to official-page and RSS results.
 - Update the integration manifest to 2.0.3.
 
 ## What's new in 2.0.2

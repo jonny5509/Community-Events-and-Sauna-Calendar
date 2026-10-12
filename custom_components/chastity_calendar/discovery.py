@@ -618,16 +618,49 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         coordinates=coordinates, radius_km=30,
     )
     sauna52_task = _fetch_sauna52_events(session, today)
-    rss, ticketmaster, sauna52 = await asyncio.gather(rss_task, ticketmaster_task, sauna52_task)
+    # Only include Number 52 events when it is actually the closest mapped
+    # sauna to the configured location. This reuses the same 30 km venue
+    # discovery logic exposed by the Nearest Sauna sensor.
+    nearest_saunas_task = async_discover_nearest_saunas(
+        hass, country=country, location=location or city or county or region
+    )
+    rss, ticketmaster, sauna52, nearest_saunas = await asyncio.gather(
+        rss_task, ticketmaster_task, sauna52_task, nearest_saunas_task
+    )
     events = [item for batch in rss for item in batch]
     events.extend(ticketmaster)
-    events.extend(sauna52)
+    nearest_name = str(nearest_saunas[0].get("name", "") if nearest_saunas else "").casefold()
+    number52_is_nearest = (
+        "number 52" in nearest_name
+        or "number52" in nearest_name.replace(" ", "")
+        or "number52sauna.co.uk" in str(nearest_saunas[0].get("website", "") if nearest_saunas else "").casefold()
+    )
+    if number52_is_nearest:
+        events.extend(sauna52)
+    else:
+        _LOGGER.info(
+            "Skipping Number 52 events because it is not the closest mapped sauna to configured location %s",
+            location or city or county or region or "unspecified",
+        )
+
+    # RSS can independently return Number 52 listings, so apply the same
+    # nearest-venue rule to those results instead of only gating its official feed.
+    if not number52_is_nearest:
+        number52_pattern = re.compile(
+            r"number\s*52|number52sauna\.co\.uk|scotswood road",
+            re.IGNORECASE,
+        )
+        events = [
+            item for item in events
+            if not number52_pattern.search(" ".join(str(item.get(key, "")) for key in (
+                "summary", "description", "location", "url", "source"
+            )))
+        ]
+
     _LOGGER.info(
         "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
         location or "unspecified location", country or "unspecified country", len(searches), len(events),
     )
-    # Sauna events are intentionally retained: venues often publish themed days
-    # and recurring sessions that users want alongside other local events.
     return _deduplicate(events)
 
 
