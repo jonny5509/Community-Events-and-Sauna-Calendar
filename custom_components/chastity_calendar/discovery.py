@@ -647,7 +647,7 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
     # nearest-venue rule to those results instead of only gating its official feed.
     if not number52_is_nearest:
         number52_pattern = re.compile(
-            r"number\\s*52|number52sauna\\.co\\.uk|scotswood road",
+            r"number\s*52|number52sauna\.co\.uk|scotswood road",
             re.IGNORECASE,
         )
         events = [
