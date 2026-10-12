@@ -202,6 +202,9 @@ class ChastityChallengeCalendar(CalendarEntity):
         if calendar_type == "pride":
             self._attr_name = "Pride EC Events"
             self._attr_icon = "mdi:flag"
+        elif calendar_type == "sauna":
+            self._attr_name = "Sauna Events"
+            self._attr_icon = "mdi:hot-tub"
         else:
             self._attr_name = "Monthly Events"
         self._attr_unique_id = f"{DOMAIN}_{calendar_type}"
@@ -209,7 +212,11 @@ class ChastityChallengeCalendar(CalendarEntity):
     def _events_between(self, start_day: date, end_day: date) -> list[CalendarEvent]:
         """Build events overlapping a date range (end is exclusive)."""
         events = []
-        annual_events = EVENTS if self.calendar_type == "monthly" else PRIDE_EVENTS
+        annual_events = (
+            EVENTS if self.calendar_type == "monthly"
+            else PRIDE_EVENTS if self.calendar_type == "pride"
+            else []
+        )
         for year in range(start_day.year, end_day.year + 1):
             for item in annual_events:
                 event = _event_for_year(item, year)
@@ -217,8 +224,14 @@ class ChastityChallengeCalendar(CalendarEntity):
                     events.append(event)
 
         for item in (self.coordinator.data or []):
-            # Monthly is the broad all-discovered-events calendar. Pride stays focused.
+            # Keep sauna listings in their own calendar rather than mixing them
+            # into Monthly Events. Pride remains a separate focused calendar.
             categories = set(item.get("categories", []))
+            is_sauna = item.get("category") == "sauna" or "sauna" in categories
+            if self.calendar_type == "monthly" and is_sauna:
+                continue
+            if self.calendar_type == "sauna" and not is_sauna:
+                continue
             if self.calendar_type == "pride" and not (
                 item.get("category") in {"pride", "gay", "lesbian", "bisexual", "transgender", "queer", "lgbtq"}
                 or categories.intersection({"pride", "lgbtq", "gay", "lesbian", "bisexual", "transgender", "queer"})
@@ -272,9 +285,10 @@ class ChastityChallengeCalendar(CalendarEntity):
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up separate monthly challenge and Pride event calendars."""
+    """Set up monthly, Pride, and sauna event calendars."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
         ChastityChallengeCalendar(coordinator, "monthly"),
         ChastityChallengeCalendar(coordinator, "pride"),
+        ChastityChallengeCalendar(coordinator, "sauna"),
     ])
