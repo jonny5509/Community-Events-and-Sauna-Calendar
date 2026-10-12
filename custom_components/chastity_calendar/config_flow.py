@@ -1,6 +1,7 @@
 """Config and options flow for Chastity Challenge Calendar."""
 
 import logging
+from urllib.parse import quote
 
 import aiohttp
 import voluptuous as vol
@@ -40,10 +41,8 @@ async def _json_request(hass, url, *, method="get", payload=None, timeout=15):
 
 
 async def _countries(hass):
-    """Fetch a current country list, with a fallback when the service is unavailable."""
-    data = await _json_request(
-        hass, "https://restcountries.com/v3.1/all?fields=name"
-    )
+    """Fetch countries online, falling back if the service is unavailable."""
+    data = await _json_request(hass, "https://restcountries.com/v3.1/all?fields=name")
     if isinstance(data, list):
         names = sorted({
             item.get("name", {}).get("common", "")
@@ -56,64 +55,57 @@ async def _countries(hass):
 
 
 async def _regions(hass, country):
-    """Fetch states/provinces from CountriesNow."""
+    """Fetch regions and provinces for the selected country."""
     data = await _json_request(
-        hass,
-        "https://countriesnow.space/api/v0.1/countries/states",
-        method="post",
-        payload={"country": country},
+        hass, "https://countriesnow.space/api/v0.1/countries/states",
+        method="post", payload={"country": country},
     )
     states = data.get("data", {}).get("states", []) if isinstance(data, dict) else []
     names = sorted({
-        item.get("name", "").strip()
-        for item in states
+        item.get("name", "").strip() for item in states
         if isinstance(item, dict) and item.get("name", "").strip()
     })
     return names or [SKIP]
 
 
 async def _cities(hass, country, region):
-    """Fetch cities/towns for a selected country and region."""
+    """Fetch cities and towns for the selected region."""
     if not region or region == SKIP:
         return [SKIP]
     data = await _json_request(
-        hass,
-        "https://countriesnow.space/api/v0.1/countries/state/cities",
-        method="post",
-        payload={"country": country, "state": region},
+        hass, "https://countriesnow.space/api/v0.1/countries/state/cities",
+        method="post", payload={"country": country, "state": region},
     )
     cities = data.get("data", []) if isinstance(data, dict) else []
-    names = sorted({name.strip() for name in cities if isinstance(name, str) and name.strip()})
+    names = sorted({v.strip() for v in cities if isinstance(v, str) and v.strip()})
     return names or [SKIP]
 
 
 async def _areas(hass, country, region, city):
-    """Find named neighbourhoods and suburbs near a selected city using OpenStreetMap."""
+    """Fetch named neighbourhoods and suburbs around the selected city from OSM."""
     if not city or city == SKIP:
         return [SKIP]
-    query = aiohttp.helpers.quote(city)
-    geocode_url = (
-        "https://nominatim.openstreetmap.org/search"
-        f"?q={query}%2C%20{aiohttp.helpers.quote(region)}%2C%20{aiohttp.helpers.quote(country)}"
-        "&format=jsonv2&limit=1"
+    query = quote(", ".join(part for part in (city, region, country) if part))
+    found = await _json_request(
+        hass,
+        f"https://nominatim.openstreetmap.org/search?q={query}&format=jsonv2&limit=1",
     )
-    found = await _json_request(hass, geocode_url)
     if not isinstance(found, list) or not found:
         return [SKIP]
     try:
         lat, lon = float(found[0]["lat"]), float(found[0]["lon"])
     except (KeyError, TypeError, ValueError):
         return [SKIP]
+
     overpass_query = (
         "[out:json][timeout:12];("
-        f"node(around:15000,{lat},{lon})[place~\"^(suburb|neighbourhood|quarter|district)$\"];"
-        f"way(around:15000,{lat},{lon})[place~\"^(suburb|neighbourhood|quarter|district)$\"];"
+        f'node(around:15000,{lat},{lon})[place~"^(suburb|neighbourhood|quarter|district)$"];'
+        f'way(around:15000,{lat},{lon})[place~"^(suburb|neighbourhood|quarter|district)$"];'
         ");out center tags;"
     )
-    from urllib.parse import quote as url_quote
     result = await _json_request(
         hass,
-        "https://overpass-api.de/api/interpreter?data=" + url_quote(overpass_query),
+        "https://overpass-api.de/api/interpreter?data=" + quote(overpass_query),
         timeout=18,
     )
     elements = result.get("elements", []) if isinstance(result, dict) else []
@@ -125,26 +117,22 @@ async def _areas(hass, country, region, city):
     return names or [SKIP]
 
 
-def _dropdown(field, options, default=None, required=True):
-    """Build a dropdown selector with a safe default."""
-    values = options or [SKIP]
-    if default not in values:
+def _dropdown(field, options, default=None):
+    """Build a dropdown, retaining a previously saved value if a source omits it."""
+    values = list(options or [SKIP])
+    if default and default not in values:
+        values.append(default)
+        values.sort()
+    if not default:
         default = values[0]
-    marker = vol.Required(field, default=default) if required else vol.Optional(field, default=default)
+    marker = vol.Required(field, default=default)
     return marker, selector.SelectSelector(
         selector.SelectSelectorConfig(options=values, mode=selector.SelectSelectorMode.DROPDOWN)
     )
 
 
-def _api_key_field(default=""):
-    return vol.Optional(
-        "ticketmaster_api_key",
-        description={"suggested_value": default},
-    ), str
-
-
 def _location_fields(data):
-    """Normalize the hierarchy and keep the legacy combined location field."""
+    """Normalize the hierarchy and preserve the combined location for older consumers."""
     country = data.get("country", "United Kingdom")
     region = data.get("region", "")
     city = data.get("city", "")
@@ -164,7 +152,7 @@ def _location_fields(data):
 
 
 def _current_fields(current):
-    """Migrate configurations that only stored the old location field."""
+    """Migrate entries that only stored the previous free-text location."""
     region = current.get("region", "")
     city = current.get("city", "")
     area = current.get("area", "")
@@ -175,20 +163,21 @@ def _current_fields(current):
 
 
 class _LocationFlow:
-    """Shared cascading location steps for setup and options."""
+    """Shared cascading dropdown steps for setup and options."""
 
     async def _show_country(self, user_input=None):
         if user_input is not None:
-            self._location_data["country"] = user_input["country"]
-            self._location_data.update({"region": "", "city": "", "area": ""})
+            new_country = user_input["country"]
+            if new_country != self._location_data.get("country"):
+                self._location_data.update({"region": "", "city": "", "area": ""})
+            self._location_data["country"] = new_country
             return await self._show_region()
         countries = await _countries(self.hass)
         marker, field = _dropdown(
             "country", countries, self._location_data.get("country", "United Kingdom")
         )
         return self.async_show_form(
-            step_id=self._country_step,
-            data_schema=vol.Schema({marker: field}),
+            step_id=self._country_step, data_schema=vol.Schema({marker: field})
         )
 
     async def _show_region(self, user_input=None):
@@ -197,7 +186,10 @@ class _LocationFlow:
             self._location_data.update({"city": "", "area": ""})
             return await self._show_city()
         options = await _regions(self.hass, self._location_data["country"])
-        marker, field = _dropdown("region", [SKIP, *[v for v in options if v != SKIP]], self._location_data.get("region", SKIP))
+        marker, field = _dropdown(
+            "region", [SKIP, *[v for v in options if v != SKIP]],
+            self._location_data.get("region", SKIP),
+        )
         return self.async_show_form(step_id="region", data_schema=vol.Schema({marker: field}))
 
     async def _show_city(self, user_input=None):
@@ -208,7 +200,10 @@ class _LocationFlow:
         options = await _cities(
             self.hass, self._location_data["country"], self._location_data.get("region", "")
         )
-        marker, field = _dropdown("city", [SKIP, *[v for v in options if v != SKIP]], self._location_data.get("city", SKIP))
+        marker, field = _dropdown(
+            "city", [SKIP, *[v for v in options if v != SKIP]],
+            self._location_data.get("city", SKIP),
+        )
         return self.async_show_form(step_id="city", data_schema=vol.Schema({marker: field}))
 
     async def _show_area(self, user_input=None):
@@ -219,16 +214,20 @@ class _LocationFlow:
             ).strip()
             return self._finish_location()
         options = await _areas(
-            self.hass,
-            self._location_data["country"],
-            self._location_data.get("region", ""),
-            self._location_data.get("city", ""),
+            self.hass, self._location_data["country"],
+            self._location_data.get("region", ""), self._location_data.get("city", ""),
         )
-        marker, field = _dropdown("area", [SKIP, *[v for v in options if v != SKIP]], self._location_data.get("area", SKIP))
-        api_marker, api_field = _api_key_field(self._location_data.get("ticketmaster_api_key", ""))
+        marker, field = _dropdown(
+            "area", [SKIP, *[v for v in options if v != SKIP]],
+            self._location_data.get("area", SKIP),
+        )
+        api_marker = vol.Optional(
+            "ticketmaster_api_key",
+            description={"suggested_value": self._location_data.get("ticketmaster_api_key", "")},
+        )
         return self.async_show_form(
             step_id="area",
-            data_schema=vol.Schema({marker: field, api_marker: api_field}),
+            data_schema=vol.Schema({marker: field, api_marker: str}),
         )
 
 
@@ -252,10 +251,8 @@ class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domai
         return await self._show_area(user_input)
 
     def _finish_location(self):
-        fields = _location_fields(self._location_data)
         return self.async_create_entry(
-            title="Chastity Challenge Calendar",
-            data=fields,
+            title="Chastity Challenge Calendar", data=_location_fields(self._location_data)
         )
 
     @staticmethod
@@ -269,7 +266,7 @@ class ChastityCalendarOptionsFlow(_LocationFlow, config_entries.OptionsFlow):
     _country_step = "init"
 
     def __init__(self, config_entry):
-        self.config_entry = config_entry
+        self._config_entry = config_entry
         current = {**config_entry.data, **config_entry.options}
         region, city, area = _current_fields(current)
         self._location_data = {
