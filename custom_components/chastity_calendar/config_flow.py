@@ -15,6 +15,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 SKIP = "— Skip this level —"
 MANUAL_CITY = "Other (enter manually…)"
+MANUAL_COUNTY = "Other (enter manually…)"
 COUNTRY_FALLBACK = [
     "Australia", "Austria", "Belgium", "Brazil", "Canada", "Denmark",
     "Finland", "France", "Germany", "India", "Ireland", "Italy", "Japan",
@@ -335,6 +336,8 @@ class _LocationFlow:
     async def _show_county(self, user_input=None):
         if user_input is not None:
             new_county = user_input["county"]
+            if new_county == MANUAL_COUNTY:
+                return await self._show_county_manual()
             if new_county != self._location_data.get("county", SKIP):
                 self._location_data.update({"city": SKIP, "area": SKIP})
             self._location_data["county"] = new_county
@@ -342,11 +345,23 @@ class _LocationFlow:
         options = await _counties(
             self.hass, self._location_data["country"], self._location_data.get("region", "")
         )
-        marker, field = _dropdown(
-            "county", [SKIP, *[v for v in options if v != SKIP]],
-            self._location_data.get("county", SKIP),
-        )
+        choices = [SKIP, *[v for v in options if v not in (SKIP, MANUAL_COUNTY)], MANUAL_COUNTY]
+        marker, field = _dropdown("county", choices, self._location_data.get("county", SKIP))
         return self.async_show_form(step_id="county", data_schema=vol.Schema({marker: field}))
+
+    async def _show_county_manual(self, user_input=None):
+        if user_input is not None:
+            new_county = str(user_input.get("county", "")).strip() or SKIP
+            if new_county != self._location_data.get("county", SKIP):
+                self._location_data.update({"city": SKIP, "area": SKIP})
+            self._location_data["county"] = new_county
+            return await self._show_city()
+        current_county = self._location_data.get("county", "")
+        default_county = "" if current_county in ("", SKIP, MANUAL_COUNTY) else current_county
+        return self.async_show_form(
+            step_id="county_manual",
+            data_schema=vol.Schema({vol.Required("county", default=default_county): str}),
+        )
 
     async def _show_city(self, user_input=None):
         if user_input is not None:
@@ -425,6 +440,9 @@ class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domai
     async def async_step_county(self, user_input=None):
         return await self._show_county(user_input)
 
+    async def async_step_county_manual(self, user_input=None):
+        return await self._show_county_manual(user_input)
+
     async def async_step_city(self, user_input=None):
         return await self._show_city(user_input)
 
@@ -470,6 +488,9 @@ class ChastityCalendarOptionsFlow(_LocationFlow, config_entries.OptionsFlow):
 
     async def async_step_county(self, user_input=None):
         return await self._show_county(user_input)
+
+    async def async_step_county_manual(self, user_input=None):
+        return await self._show_county_manual(user_input)
 
     async def async_step_city(self, user_input=None):
         return await self._show_city(user_input)
