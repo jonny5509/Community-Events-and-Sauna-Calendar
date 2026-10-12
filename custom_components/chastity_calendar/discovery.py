@@ -385,7 +385,7 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
 
 
 async def async_discover_nearest_saunas(hass, country: str = "", location: str = "") -> list[dict]:
-    """Find public sauna venues within 30 km of the configured location via OpenStreetMap."""
+    """Find nearby sauna venues from OpenStreetMap plus a known-venue fallback."""
     session = async_get_clientsession(hass)
     coordinates = await _geocode_location(session, location, country)
     if not coordinates:
@@ -398,20 +398,22 @@ async def async_discover_nearest_saunas(hass, country: str = "", location: str =
   nwr(around:30000,{lat},{lon})["building"="sauna"];
 );
 out center tags;"""
+    # Keep the address-based fallback working even when the Overpass service is
+    # unavailable or rate-limited.
+    payload = {"elements": []}
     try:
         async with asyncio.timeout(25):
             async with session.post(
                 "https://overpass-api.de/api/interpreter",
                 data={"data": query},
-                headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.8.3"},
+                headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.8.4"},
             ) as response:
-                if response.status != 200:
-                    _LOGGER.debug("OpenStreetMap Overpass returned HTTP %s", response.status)
-                    return []
-                payload = await response.json()
+                if response.status == 200:
+                    payload = await response.json()
+                else:
+                    _LOGGER.debug("OpenStreetMap Overpass returned HTTP %s; using venue fallbacks", response.status)
     except Exception as err:
-        _LOGGER.debug("Could not discover nearby saunas: %s", err)
-        return []
+        _LOGGER.debug("Could not query OpenStreetMap Overpass; using venue fallbacks: %s", err)
 
     def distance_km(lat1, lon1, lat2, lon2):
         from math import asin, cos, radians, sin, sqrt
@@ -440,4 +442,43 @@ out center tags;"""
             "longitude": float(sauna_lon),
             "osm_url": f"https://www.openstreetmap.org/{item.get('type', 'node')}/{item.get('id')}",
         })
+    # Number 52 is a known sauna in Newcastle. Use its published address as
+    # an independent venue fallback when it is not tagged as a sauna in OSM.
+    # This lookup runs even if the Overpass API is unavailable.
+    try:
+        async with asyncio.timeout(10):
+            async with session.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={
+                    "q": "Number 52 Sauna, 52 Scotswood Road, Newcastle upon Tyne, NE4 7JB, United Kingdom",
+                    "format": "jsonv2",
+                    "limit": "1",
+                },
+                headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.8.4 (sauna discovery)"},
+            ) as response:
+                if response.status == 200:
+                    venue_matches = await response.json()
+                    if venue_matches:
+                        venue_lat = float(venue_matches[0]["lat"])
+                        venue_lon = float(venue_matches[0]["lon"])
+                        venue_distance = distance_km(lat, lon, venue_lat, venue_lon)
+                        is_duplicate = any(
+                            "number 52" in venue["name"].casefold()
+                            or "scotswood road" in venue.get("address", "").casefold()
+                            for venue in found
+                        )
+                        if venue_distance <= 30 and not is_duplicate:
+                            found.append({
+                                "name": "Number 52 Sauna",
+                                "distance_km": round(venue_distance, 1),
+                                "address": "52 Scotswood Road, Newcastle upon Tyne, NE4 7JB",
+                                "website": "https://www.number52sauna.co.uk/",
+                                "phone": "0191 2212189",
+                                "latitude": venue_lat,
+                                "longitude": venue_lon,
+                                "osm_url": "https://www.openstreetmap.org/search?query=Number%2052%20Sauna%2C%20Newcastle",
+                            })
+    except Exception as err:
+        _LOGGER.debug("Could not resolve Number 52 fallback listing: %s", err)
+
     return sorted(found, key=lambda sauna: sauna["distance_km"])
