@@ -81,22 +81,33 @@ class NearbySaunasSensor(SensorEntity):
             # A 20 km radius is a useful default for nearby facilities.
             overpass_query = f"""[out:json][timeout:25];
 (
-  node(around:20000,{lat},{lon})[leisure=sauna];
-  way(around:20000,{lat},{lon})[leisure=sauna];
-  relation(around:20000,{lat},{lon})[leisure=sauna];
-  node(around:20000,{lat},{lon})[amenity=public_bath];
-  way(around:20000,{lat},{lon})[amenity=public_bath];
-  relation(around:20000,{lat},{lon})[amenity=public_bath];
+  nwr(around:20000,{lat},{lon})[leisure=sauna];
+  nwr(around:20000,{lat},{lon})[amenity=sauna];
+  nwr(around:20000,{lat},{lon})[amenity=public_bath];
+  nwr(around:20000,{lat},{lon})[sauna=yes];
 );
 out center tags;"""
-            async with session.post(
+            payload = None
+            # Public Overpass instances occasionally rate-limit or time out.
+            # Try a second instance before reporting a failed lookup.
+            for endpoint in (
                 "https://overpass-api.de/api/interpreter",
-                data=overpass_query,
-                headers=headers,
-                timeout=35,
-            ) as response:
-                response.raise_for_status()
-                payload = await response.json()
+                "https://overpass.kumi.systems/api/interpreter",
+            ):
+                try:
+                    async with session.post(
+                        endpoint,
+                        data=overpass_query,
+                        headers=headers,
+                        timeout=35,
+                    ) as response:
+                        response.raise_for_status()
+                        payload = await response.json()
+                    break
+                except Exception as err:
+                    _LOGGER.debug("Sauna Overpass endpoint %s failed: %s", endpoint, err)
+            if payload is None:
+                raise RuntimeError("All OpenStreetMap Overpass endpoints failed")
             places = []
             seen = set()
             for element in payload.get("elements", []):
@@ -122,7 +133,7 @@ out center tags;"""
                 )
                 places.append({
                     "name": name,
-                    "type": "sauna" if tags.get("leisure") == "sauna" else "public bath",
+                    "type": "sauna" if (tags.get("leisure") == "sauna" or tags.get("amenity") == "sauna" or tags.get("sauna") == "yes") else "public bath",
                     "address": address or "Address not listed in OpenStreetMap",
                     "distance_km": round(_distance_km(lat, lon, place_lat, place_lon), 1),
                     "latitude": place_lat,
