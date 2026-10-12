@@ -89,6 +89,7 @@ class ChastityNextEventSensor(ChastityCalendarSensorBase):
                 event.end_datetime_local.date() - timedelta(days=1)
             ).isoformat(),
             "description": event.description,
+            "location": getattr(event, "location", "") or "",
         }
 
 
@@ -142,6 +143,7 @@ class ChastityUpcomingEventCountSensor(ChastityCalendarSensorBase):
                     "end_date": (
                         event.end_datetime_local.date() - timedelta(days=1)
                     ).isoformat(),
+                    "location": getattr(event, "location", "") or "",
                 }
                 for event in events
             ],
@@ -174,6 +176,7 @@ class ChastityEventLocationsSensor(ChastityCalendarSensorBase):
             {
                 "name": item.get("summary", "Unnamed event"),
                 "location": item["location"],
+                "address": item.get("address", item["location"]),
                 "start_date": item["start"].date().isoformat()
                 if hasattr(item.get("start"), "date")
                 else str(item.get("start", "")),
