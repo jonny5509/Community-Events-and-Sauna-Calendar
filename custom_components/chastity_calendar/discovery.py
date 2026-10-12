@@ -251,6 +251,21 @@ def _deduplicate(events):
     return sorted(merged.values(), key=lambda item: item["start"])
 
 
+
+def _is_sauna_event(event: dict) -> bool:
+    """Exclude sauna-related listings from every calendar and event sensor."""
+    searchable = [
+        event.get("summary", ""),
+        event.get("description", ""),
+        event.get("category", ""),
+        event.get("url", ""),
+        event.get("source", ""),
+        *event.get("categories", []),
+        *event.get("sources", []),
+    ]
+    return any(re.search(r"\\bsaunas?\\b", str(value), re.IGNORECASE) for value in searchable)
+
+
 def _add_months(value: datetime, months: int) -> datetime:
     """Add calendar months without overflowing short months."""
     month_index = value.month - 1 + months
@@ -352,4 +367,4 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
         location or "unspecified location", country or "unspecified country", len(searches), len(events),
     )
-    return _deduplicate(events)
+    return [event for event in _deduplicate(events) if not _is_sauna_event(event)]
