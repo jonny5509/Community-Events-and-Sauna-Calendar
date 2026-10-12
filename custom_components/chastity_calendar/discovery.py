@@ -304,6 +304,148 @@ async def _geocode_location(session, location: str, country: str):
     return None
 
 
+async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
+    """Read dated and recurring events from Number 52 Sauna's own public pages."""
+    base_url = "https://www.number52sauna.co.uk"
+    page_urls = (
+        f"{base_url}/our-events/",
+        f"{base_url}/our-offers/",
+    )
+
+    async def fetch_page(url: str) -> tuple[str, str]:
+        try:
+            async with asyncio.timeout(12):
+                async with session.get(
+                    url,
+                    headers={"User-Agent": "HomeAssistant-CommunityEventsCalendar/1.9.0"},
+                ) as response:
+                    if response.status != 200:
+                        _LOGGER.debug("Number 52 page returned HTTP %s: %s", response.status, url)
+                        return url, ""
+                    return url, await response.text()
+        except Exception as err:
+            _LOGGER.debug("Could not fetch Number 52 page %s: %s", url, err)
+            return url, ""
+
+    pages = await asyncio.gather(*(fetch_page(url) for url in page_urls))
+    events: list[dict] = []
+    cutoff = today + timedelta(days=730)
+
+    def walk_jsonld(value):
+        """Yield Event objects from JSON-LD graphs and nested arrays."""
+        if isinstance(value, list):
+            for item in value:
+                yield from walk_jsonld(item)
+        elif isinstance(value, dict):
+            types = value.get("@type", [])
+            if isinstance(types, str):
+                types = [types]
+            if any(str(item).casefold() == "event" for item in types):
+                yield value
+            for key, item in value.items():
+                if key not in {"@context"}:
+                    yield from walk_jsonld(item)
+
+    for page_url, body in pages:
+        if not body:
+            continue
+        for raw in re.findall(
+            r'<script\b[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script\s*>',
+            body,
+            flags=re.IGNORECASE | re.DOTALL,
+        ):
+            try:
+                payload = json.loads(html.unescape(raw).strip())
+            except (json.JSONDecodeError, TypeError):
+                continue
+            for item in walk_jsonld(payload):
+                raw_start = item.get("startDate")
+                if not isinstance(raw_start, str):
+                    continue
+                try:
+                    start = datetime.fromisoformat(raw_start.replace("Z", "+00:00")).replace(tzinfo=None)
+                except ValueError:
+                    continue
+                if not today.date() <= start.date() <= cutoff.date():
+                    continue
+                title = str(item.get("name") or "Number 52 Sauna event").strip()
+                if not title:
+                    continue
+                raw_end = item.get("endDate")
+                try:
+                    end = datetime.fromisoformat(raw_end.replace("Z", "+00:00")).replace(tzinfo=None) if isinstance(raw_end, str) else start + timedelta(hours=2)
+                except ValueError:
+                    end = start + timedelta(hours=2)
+                location_data = item.get("location", {})
+                if isinstance(location_data, dict):
+                    address = location_data.get("address", {})
+                    if isinstance(address, dict):
+                        location = ", ".join(str(address.get(key, "")).strip() for key in ("streetAddress", "addressLocality", "addressRegion", "addressCountry") if address.get(key))
+                    else:
+                        location = str(address or "")
+                    location = location or str(location_data.get("name") or "Number 52 Sauna, Newcastle upon Tyne")
+                else:
+                    location = "Number 52 Sauna, Newcastle upon Tyne"
+                event_url = str(item.get("url") or page_url)
+                description = str(item.get("description") or "Event details published by Number 52 Sauna.")
+                record = _record(
+                    title, start, event_url, "sauna",
+                    f"{description} Official Number 52 Sauna listing.",
+                    source="Number 52 Sauna official website", location=location,
+                )
+                record["end"] = max(end, start + timedelta(minutes=1))
+                record["date_confidence"] = "structured"
+                events.append(record)
+
+    # Number 52 advertises these as weekly offers on its official offers page.
+    # Only expand a recurring listing when its title and weekday are present on
+    # the fetched page, so removed/changed offers are not silently invented.
+    offers_url = f"{base_url}/our-offers/"
+    offers_body = next((body for url, body in pages if url == offers_url), "")
+    if offers_body:
+        visible_text = re.sub(r"<(script|style)\b[^>]*>.*?</\1\s*>", " ", offers_body, flags=re.I | re.S)
+        visible_text = html.unescape(re.sub(r"<[^>]+>", " ", visible_text))
+        visible_text = re.sub(r"\s+", " ", visible_text).strip()
+        recurring = (
+            (
+                re.compile(r"30.?s\s*&\s*Under Night.{0,120}?Every Monday.{0,40}?7\s*[–-]\s*10\s*pm", re.I),
+                "30’s & Under Night at Number 52 Sauna", 0, 19, 22,
+            ),
+            (
+                re.compile(r"Dads\s*&\s*Lads Night.{0,120}?Every Tuesday.{0,40}?7\s*[–-]\s*10\s*pm", re.I),
+                "Dads & Lads Night at Number 52 Sauna", 1, 19, 22,
+            ),
+            (
+                re.compile(r"Couples\s*&\s*Bring a Friend Day.{0,120}?Every Wednesday", re.I),
+                "Couples & Bring a Friend Day at Number 52 Sauna", 2, 11, 22,
+            ),
+        )
+        now = dt_util.now().replace(tzinfo=None)
+        for pattern, title, weekday, start_hour, end_hour in recurring:
+            if not pattern.search(visible_text):
+                continue
+            day = today.date()
+            last_day = (today + timedelta(days=180)).date()
+            while day <= last_day:
+                if day.weekday() == weekday:
+                    start = datetime.combine(day, datetime.min.time()).replace(hour=start_hour)
+                    end = datetime.combine(day, datetime.min.time()).replace(hour=end_hour)
+                    if start >= now:
+                        record = _record(
+                            title, start, offers_url, "sauna",
+                            "Recurring schedule published by Number 52 Sauna. Check the official page for current terms and any changes.",
+                            source="Number 52 Sauna official website",
+                            location="Number 52 Sauna, Newcastle upon Tyne, United Kingdom",
+                        )
+                        record["end"] = end
+                        record["date_confidence"] = "structured"
+                        events.append(record)
+                day += timedelta(days=1)
+
+    _LOGGER.info("Number 52 Sauna source returned %s dated or recurring events", len(events))
+    return events
+
+
 async def async_discover_events(hass, country: str = "", location: str = "", ticketmaster_api_key: str = "", region: str = "", county: str = "", city: str = "", area: str = "") -> list[dict]:
     """Search public event sources at several levels of the configured location."""
     session = async_get_clientsession(hass)
@@ -390,9 +532,11 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         session, (ticketmaster_api_key or "").strip(), code, today,
         coordinates=coordinates, radius_km=30,
     )
-    rss, ticketmaster = await asyncio.gather(rss_task, ticketmaster_task)
+    sauna52_task = _fetch_sauna52_events(session, today)
+    rss, ticketmaster, sauna52 = await asyncio.gather(rss_task, ticketmaster_task, sauna52_task)
     events = [item for batch in rss for item in batch]
     events.extend(ticketmaster)
+    events.extend(sauna52)
     _LOGGER.info(
         "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
         location or "unspecified location", country or "unspecified country", len(searches), len(events),
