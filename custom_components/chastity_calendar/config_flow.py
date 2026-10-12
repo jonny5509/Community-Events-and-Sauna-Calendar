@@ -1,4 +1,4 @@
-"""Config and options flow for Chastity Challenge Calendar."""
+"""Config and options flow for Community Events & Sauna Calendar."""
 
 import logging
 from urllib.parse import quote
@@ -188,8 +188,6 @@ async def _cities(hass, country, region, county):
         })
         return regional_cities or [SKIP]
     if not county or county == SKIP:
-        # For countries without a county layer, use the selected region as
-        # the API's state/province value so users can still choose a city.
         data = await _json_request(
             hass, "https://countriesnow.space/api/v0.1/countries/state/cities",
             method="post", payload={"country": country, "state": region},
@@ -263,8 +261,6 @@ def _location_fields(data):
     county = data.get("county", "")
     city = data.get("city", "")
     area = data.get("area", "")
-    # Keep the search location separate from country to avoid duplicate
-    # country terms in location-targeted event discovery.
     location = ", ".join(
         part for part in (area, city, county, region)
         if part and part != SKIP
@@ -288,10 +284,6 @@ def _current_fields(current):
     area = current.get("area", "")
     old_location = str(current.get("location", "") or "").strip()
     if old_location and not any((region, county, city, area)):
-        # Older releases stored a single free-text location. Some newer
-        # intermediate builds stored the whole hierarchy in that field,
-        # including country. Remove the trailing country to avoid repeating
-        # it when the country is appended by discovery/geocoding.
         parts = [part.strip() for part in old_location.split(",") if part.strip()]
         country = str(current.get("country", "") or "").strip()
         if parts and country and parts[-1].casefold() == country.casefold():
@@ -453,7 +445,7 @@ class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domai
 
     def _finish_location(self):
         return self.async_create_entry(
-            title="Chastity Challenge Calendar", data=_location_fields(self._location_data)
+            title="Community Events & Sauna Calendar", data=_location_fields(self._location_data)
         )
 
     @staticmethod
