@@ -138,9 +138,10 @@ def _record(title, start, url, category, description, source="Google News RSS", 
         "date_confidence": "extracted_from_search_snippet",
     }
 
-async def _fetch_rss(session, category, query, country, location, country_code, today):
+async def _fetch_rss(session, category, query, country, location, country_code, today, search_location=None):
     """Fetch one public Google News RSS search."""
-    terms = " ".join(f'"{x}"' if " " in x else x for x in (country, location) if x)
+    # Prefer the specific geographic level for this query, while always retaining country context.
+    terms = " ".join(f'"{x}"' if " " in x else x for x in (country, search_location or location) if x)
     localized = f"{query} {terms}".strip()
     url = "https://news.google.com/rss/search?q=" + quote_plus(localized)
     if country_code:
@@ -526,22 +527,70 @@ out center tags;"""
     ))
     return [event for batch in batches for event in batch]
 
-async def async_discover_events(hass, country: str = "", location: str = "", ticketmaster_api_key: str = "") -> list[dict]:
-    """Search public sources for dated events in the configured country."""
+async def async_discover_events(hass, country: str = "", location: str = "", ticketmaster_api_key: str = "", region: str = "", county: str = "", city: str = "", area: str = "") -> list[dict]:
+    """Search public event sources at several levels of the configured location."""
     session = async_get_clientsession(hass)
-    today = dt_util.now().replace(hour=0,minute=0,second=0,microsecond=0)
+    today = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
     country = (country or "").strip()
     location = (location or "").strip()
     code = await _country_code(session, country)
-    searches = list(SEARCHES)
-    for year in (today.year,today.year+1):
-        searches.extend([("community",f'"community festival" {year} schedule dates'),
-                         ("community",f'convention OR expo OR festival {year} dates'),
-                         ("pride",f'"Pride festival" {year} dates')])
-    rss = await asyncio.gather(*(_fetch_rss(session,cat,q,country,location,code,today) for cat,q in searches))
+
+    # Keep the existing broad searches, then run focused searches against each
+    # configured locality. A city-only query misses county-wide and regional
+    # festivals; a country-only query buries smaller local listings.
+    searches = [(cat, query, location) for cat, query in SEARCHES]
+    locality_levels = []
+    for value in (area, city, county, region, location):
+        value = (value or "").strip()
+        if value and value.casefold() not in {item.casefold() for item in locality_levels}:
+            locality_levels.append(value)
+
+    local_queries = (
+        ("community", 'events calendar festival fair meetup'),
+        ("community", 'what\'s on events this weekend OR next month'),
+        ("community", 'concert theatre comedy exhibition events'),
+        ("community", 'workshop convention expo conference dates'),
+        ("pride", 'LGBTQ Pride events festival parade'),
+        ("gay", 'gay events social meetup dates'),
+        ("lesbian", 'lesbian events meetup festival dates'),
+        ("bisexual", 'bisexual community events dates'),
+        ("transgender", 'trans community events dates'),
+        ("queer", 'queer LGBTQ community events dates'),
+        ("kink", 'kink BDSM fetish event calendar dates'),
+        ("chastity", 'chastity event meetup Locktober dates'),
+        ("adult", 'adults only 18+ public event dates'),
+        ("community", 'site:eventbrite.com events'),
+        ("community", 'site:meetup.com events'),
+        ("community", 'site:facebook.com/events public event'),
+    )
+    for locality in locality_levels:
+        for category, query in local_queries:
+            searches.append((category, query, locality))
+
+    for year in (today.year, today.year + 1):
+        for locality in locality_levels or [location]:
+            searches.extend([
+                ("community", f'festival fair events {year} dates', locality),
+                ("community", f'concert theatre exhibition events {year}', locality),
+                ("pride", f'Pride festival parade {year} dates', locality),
+                ("kink", f'kink fetish convention events {year}', locality),
+            ])
+
+    # Bound concurrent requests so a multi-level location doesn't overload the
+    # user's Home Assistant instance or remote search service.
+    semaphore = asyncio.Semaphore(12)
+    async def fetch_one(category, query, search_location):
+        async with semaphore:
+            return await _fetch_rss(
+                session, category, query, country, location, code, today,
+                search_location=search_location,
+            )
+    rss = await asyncio.gather(*(fetch_one(cat, query, locality) for cat, query, locality in searches))
     events = [item for batch in rss for item in batch]
-    events.extend(await _fetch_ticketmaster(session,(ticketmaster_api_key or "").strip(),code,today))
+    events.extend(await _fetch_ticketmaster(session, (ticketmaster_api_key or "").strip(), code, today))
     events.extend(await _fetch_nearby_sauna_website_events(session, country, location, today))
-    # Repeated source URLs collapse even when the publisher has changed the date;
-    # matching titles/dates from separate sources are merged where possible.
+    _LOGGER.info(
+        "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
+        location or "unspecified location", country or "unspecified country", len(searches), len(events),
+    )
     return _deduplicate(events)
