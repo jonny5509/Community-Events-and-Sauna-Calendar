@@ -135,7 +135,7 @@ class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
     @property
     def native_value(self) -> str:
         event = self._event()
-        return event.summary if event else "No upcoming LGBTQ event"
+        return f"{event.summary} — {event.start_datetime_local.date().isoformat()}" if event else "No upcoming LGBTQ event"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -170,7 +170,7 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
     @property
     def native_value(self) -> str:
         event = self._event()
-        return event.summary if event else f"No upcoming {self.category.title()} event"
+        return f"{event.summary} — {event.start_datetime_local.date().isoformat()}" if event else f"No upcoming {self.category.title()} event"
 
     @property
     def extra_state_attributes(self) -> dict:
