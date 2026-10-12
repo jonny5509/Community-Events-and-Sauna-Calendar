@@ -31,6 +31,14 @@ During setup, choose a country, then narrow the location by region/state and cou
 
 The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
 
+## What's new in 2.0.2
+
+- Fix discovery timeouts leaving the LGBTQ+ and other event calendars empty until the next scheduled six-hour refresh.
+- Increase the overall discovery timeout from 60 to 180 seconds to accommodate the concurrent public-source searches.
+- Automatically retry discovery two minutes after a timeout, retaining any events already loaded and exposing retry status in diagnostics.
+- Log successful discovery counts to make it easier to verify that searches are returning events.
+- Update the integration manifest to 2.0.2.
+
 ## What's new in 2.0.1
 
 - Add a dedicated **LGBTQ+ Events** calendar for discovered gay, lesbian, bisexual, transgender, queer, and Pride listings. These events are filtered out of Monthly Events; sauna-related LGBTQ+ events may appear in both relevant focused calendars.
@@ -47,7 +55,7 @@ The optional **Ticketmaster Discovery API key** enables searches through the [Ti
 
 ## Event data
 
-Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.1. Subsequent scheduled refreshes update the current results.
+Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.2. Subsequent scheduled refreshes update the current results.
 
 ## Transparent limitations
 
