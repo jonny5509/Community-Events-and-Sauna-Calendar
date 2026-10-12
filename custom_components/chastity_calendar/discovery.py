@@ -327,7 +327,7 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
             async with asyncio.timeout(12):
                 async with session.get(
                     url,
-                    headers={"User-Agent": "HomeAssistant-CommunityEventsCalendar/2.0.0"},
+                    headers={"User-Agent": "HomeAssistant-CommunityEventsCalendar/2.0.1"},
                 ) as response:
                     if response.status != 200:
                         _LOGGER.debug("Number 52 page returned HTTP %s: %s", response.status, url)
