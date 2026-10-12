@@ -409,23 +409,23 @@ async def _jsonld_event_records(session, website: str, venue_name: str, venue_lo
             raw_end = item.get("endDate")
             event_url = str(item.get("url") or website).strip()
             description = str(item.get("description") or "").strip()
+            event_duration = None
+            if raw_start and raw_end:
+                try:
+                    original_start = datetime.fromisoformat(str(raw_start).replace("Z", "+00:00"))
+                    original_end = datetime.fromisoformat(str(raw_end).replace("Z", "+00:00"))
+                    if original_start.tzinfo is not None:
+                        original_start = original_start.replace(tzinfo=None)
+                    if original_end.tzinfo is not None:
+                        original_end = original_end.replace(tzinfo=None)
+                    if original_end > original_start:
+                        event_duration = original_end - original_start
+                except (TypeError, ValueError):
+                    pass
             for start in sorted(set(starts)):
                 if not today.date() <= start.date() <= (today + timedelta(days=730)).date():
                     continue
-                end = start + timedelta(days=1)
-                if raw_end:
-                    try:
-                        parsed_end = datetime.fromisoformat(str(raw_end).replace("Z", "+00:00"))
-                        if parsed_end.tzinfo is not None:
-                            parsed_end = parsed_end.replace(tzinfo=None)
-                        # For recurring occurrences preserve the event's duration
-                        # when it is explicitly available as a start/end pair.
-                        if raw_start:
-                            end = max(start + timedelta(days=1), parsed_end)
-                        elif parsed_end > start:
-                            end = max(start + timedelta(days=1), start + (parsed_end - datetime.fromisoformat(str(raw_start).replace("Z", "+00:00"))))
-                    except (TypeError, ValueError):
-                        pass
+                end = max(start + timedelta(days=1), start + event_duration) if event_duration else start + timedelta(days=1)
                 record = _record(
                     title, start, event_url, "sauna",
                     f"Found in Schema.org Event data published by {venue_name}. "
