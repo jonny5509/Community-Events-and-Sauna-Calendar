@@ -157,7 +157,7 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
         # Never silently force searches for unsupported countries into US locale.
         url += "&hl=en"
     try:
-        async with asyncio.timeout(10):
+        async with asyncio.timeout(8):
             async with session.get(url, headers={"User-Agent":"HomeAssistant-ChastityCalendar/1.4"}) as response:
                 if response.status != 200:
                     _LOGGER.debug("Google News RSS HTTP %s for %r", response.status, localized)
@@ -376,16 +376,23 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
 
     # Bound concurrency and each RSS request so a single slow provider cannot
     # hold up the entire search.
-    semaphore = asyncio.Semaphore(16)
+    semaphore = asyncio.Semaphore(20)
     async def fetch_one(category, query, search_location):
         async with semaphore:
             return await _fetch_rss(
                 session, category, query, country, location, code, today,
                 search_location=search_location,
             )
-    rss = await asyncio.gather(*(fetch_one(cat, query, locality) for cat, query, locality in searches))
+    # Run the structured API search alongside RSS instead of making users
+    # wait for two sequential discovery phases.
+    rss_task = asyncio.gather(*(fetch_one(cat, query, locality) for cat, query, locality in searches))
+    ticketmaster_task = _fetch_ticketmaster(
+        session, (ticketmaster_api_key or "").strip(), code, today,
+        coordinates=coordinates, radius_km=30,
+    )
+    rss, ticketmaster = await asyncio.gather(rss_task, ticketmaster_task)
     events = [item for batch in rss for item in batch]
-    events.extend(await _fetch_ticketmaster(session, (ticketmaster_api_key or "").strip(), code, today, coordinates=coordinates, radius_km=30))
+    events.extend(ticketmaster)
     _LOGGER.info(
         "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
         location or "unspecified location", country or "unspecified country", len(searches), len(events),
