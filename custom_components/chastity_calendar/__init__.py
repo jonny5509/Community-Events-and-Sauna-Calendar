@@ -7,6 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, PLATFORMS
 from .discovery import async_discover_events
@@ -20,12 +21,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     preferences = {**entry.data, **entry.options}
 
     async def async_update_data():
+        coordinator.last_discovery_attempt = dt_util.utcnow().isoformat()
         try:
             # Several public RSS endpoints may be slow or unavailable. Put a
             # hard limit on the whole discovery run, not just each HTTP call,
             # so a stalled source cannot hold setup or a refresh indefinitely.
             async with asyncio.timeout(INITIAL_DISCOVERY_TIMEOUT):
-                return await async_discover_events(
+                events = await async_discover_events(
                     hass,
                     country=preferences.get("country", ""),
                     location=preferences.get("location", ""),
@@ -35,7 +37,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     area=preferences.get("area", ""),
                     ticketmaster_api_key=preferences.get("ticketmaster_api_key", ""),
                 )
+            coordinator.last_successful_update = dt_util.utcnow().isoformat()
+            coordinator.last_discovery_status = "success"
+            coordinator.last_discovery_error = None
+            return events
         except TimeoutError:
+            coordinator.last_discovery_status = "timeout"
+            coordinator.last_discovery_error = (
+                f"Discovery exceeded {INITIAL_DISCOVERY_TIMEOUT} seconds; previous results retained."
+            )
             _LOGGER.warning(
                 "Event discovery exceeded %s seconds; keeping the calendar available "
                 "with the events already loaded and trying again at the next refresh",
@@ -43,6 +53,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
             return coordinator.data or []
         except Exception as err:
+            coordinator.last_discovery_status = "failed"
+            coordinator.last_discovery_error = f"{type(err).__name__}: {err}"
             raise UpdateFailed(f"Unable to search public event sources: {err}") from err
 
     coordinator = DataUpdateCoordinator(

@@ -57,6 +57,10 @@ entities:
 
 Exact entity IDs can vary; check **Developer tools → States**.
 
+## Troubleshooting diagnostics
+
+Home Assistant's integration diagnostics download includes the last discovery attempt, last successful update, current discovery status, any top-level discovery error, and event counts by source and category. API keys and other credential-like config fields are excluded. These details help distinguish an empty search result from a timed-out or failed discovery run.
+
 ## Privacy
 
 Configured country/location terms are sent to Google News RSS; if enabled, search terms and country code are sent to Ticketmaster. Do not enter private information in the location field. Do not publish API keys.
