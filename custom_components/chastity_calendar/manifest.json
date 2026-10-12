@@ -1,10 +1,10 @@
 {
   "domain": "chastity_calendar",
-  "name": "Chastity Challenge Calendar",
+  "name": "Community Events & Sauna Calendar",
   "codeowners": [],
   "config_flow": true,
   "documentation": "https://github.com/jonny5509/calendar-events",
   "issue_tracker": "https://github.com/jonny5509/calendar-events/issues",
   "iot_class": "cloud_polling",
-  "version": "1.8.6"
+  "version": "1.8.7"
 }
