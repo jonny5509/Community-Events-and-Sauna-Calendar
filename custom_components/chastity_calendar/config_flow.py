@@ -158,8 +158,23 @@ async def _cities(hass, country, region, county):
         return [SKIP]
     if country == "United Kingdom" and county in UK_COUNTY_CITIES:
         return UK_COUNTY_CITIES[county]
+    if country == "United Kingdom" and (not county or county == SKIP):
+        region_counties = UK_REGION_COUNTIES.get(region, [])
+        regional_cities = sorted({
+            city for county_name in region_counties
+            for city in UK_COUNTY_CITIES.get(county_name, [])
+        })
+        return regional_cities or [SKIP]
     if not county or county == SKIP:
-        return [SKIP]
+        # For countries without a county layer, use the selected region as
+        # the API's state/province value so users can still choose a city.
+        data = await _json_request(
+            hass, "https://countriesnow.space/api/v0.1/countries/state/cities",
+            method="post", payload={"country": country, "state": region},
+        )
+        cities = data.get("data", []) if isinstance(data, dict) else []
+        names = sorted({v.strip() for v in cities if isinstance(v, str) and v.strip()})
+        return names or [SKIP]
     data = await _json_request(
         hass, "https://countriesnow.space/api/v0.1/countries/state/cities",
         method="post", payload={"country": country, "state": region},
@@ -260,7 +275,7 @@ class _LocationFlow:
         if user_input is not None:
             new_country = user_input["country"]
             if new_country != self._location_data.get("country"):
-                self._location_data.update({"region": "", "city": "", "area": ""})
+                self._location_data.update({"region": "", "county": SKIP, "city": SKIP, "area": SKIP})
             self._location_data["country"] = new_country
             return await self._show_region()
         countries = await _countries(self.hass)
@@ -398,6 +413,9 @@ class ChastityCalendarOptionsFlow(_LocationFlow, config_entries.OptionsFlow):
 
     async def async_step_region(self, user_input=None):
         return await self._show_region(user_input)
+
+    async def async_step_county(self, user_input=None):
+        return await self._show_county(user_input)
 
     async def async_step_city(self, user_input=None):
         return await self._show_city(user_input)
