@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install test dependencies
-        run: python -m pip install --upgrade pip pytest pytest-asyncio homeassistant
+        run: python -m pip install --upgrade pip pytest pytest-asyncio pytest-homeassistant-custom-component homeassistant
       - name: Run unit and regression tests
         run: python -m pytest -q --ignore=tests/test_integration_lifecycle.py
 
