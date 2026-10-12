@@ -270,7 +270,7 @@ class ChastityChallengeCalendar(CalendarEntity):
         await super().async_added_to_hass()
         # Recompute the current/next event when time crosses a date boundary,
         # as well as whenever the discovery coordinator publishes new data.
-        self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
+        self.async_on_remove(self.coordinator.async_add_listener(self._handle_coordinator_update))
         self.async_on_remove(
             async_track_time_change(
                 self.hass, self._scheduled_state_refresh,
@@ -278,9 +278,13 @@ class ChastityChallengeCalendar(CalendarEntity):
             )
         )
 
+    def _handle_coordinator_update(self) -> None:
+        """Refresh state when discovery data changes, including after re-enable."""
+        self.async_write_ha_state()
+
     async def _scheduled_state_refresh(self, _now) -> None:
         """Refresh the entity state as upcoming events change over time."""
-        self.async_write_ha_state()
+        self._handle_coordinator_update()
 
     async def async_get_events(self, hass, start_date, end_date):
         """Return all-day events overlapping the requested datetime range."""
