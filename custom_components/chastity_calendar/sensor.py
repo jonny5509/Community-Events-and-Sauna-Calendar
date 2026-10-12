@@ -1,7 +1,7 @@
 """Four focused sensors for monthly and LGBTQ+ observances."""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.util import dt as dt_util
