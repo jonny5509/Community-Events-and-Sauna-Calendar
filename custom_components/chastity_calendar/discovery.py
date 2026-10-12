@@ -504,6 +504,12 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         ("kink", 'kink BDSM fetish event calendar dates'),
         ("chastity", 'chastity event meetup Locktober dates'),
         ("adult", 'adults only 18+ public event dates'),
+        # Source-focused searches complement broad discovery without scraping
+        # sites that do not expose a stable public API. Results still pass through
+        # the same date extraction and cross-source deduplication pipeline.
+        ("lgbtq", 'site:queerldn.uk events'),
+        ("lgbtq", 'site:wherequeersgo.com/london/events LGBTQ'),
+        ("lgbtq", 'site:outsavvy.com LGBTQ events'),
         ("community", 'site:eventbrite.com events'),
         ("community", 'site:meetup.com events'),
         ("community", 'site:facebook.com/events public event'),
