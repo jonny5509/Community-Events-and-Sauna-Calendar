@@ -11,7 +11,8 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration with recur
 - Broad searches for community festivals, conventions, meetups, workshops, arts/music events, kink/fetish and chastity events, Pride/LGBTQ+ listings, and public adult-only listings.
 - Sauna venue lookup uses OpenStreetMap within 30 km first. If OSM returns no nearby venues, it uses a small maintained fallback index based on the [Gay Sauna Guide UK directory](https://www.gaysaunaguide.net/gay-saunas-in-the-uk/) and geocodes only entries matching the configured town/city. Number 52 Sauna in Newcastle also has its own address-based fallback. The directory index is not fetched or scraped at runtime and may need manual updates; the duplicate Number 52 entry has been removed from this index, while its separate Newcastle address-based fallback remains. Fallback results depend on Nominatim geocoding. The sensor refreshes at 00:00, 06:00, 12:00, and 18:00 Home Assistant local time. The sensor uses the configured location, not live device GPS.
 - Google News RSS works without credentials. Optional Ticketmaster Discovery API support provides structured event dates, venue details, and source links.
-- Deduplication merges repeated source URLs and matching title/date listings, retaining category tags and source links.
+- Deduplication merges matching title/date listings while retaining category tags and source links; distinct events on the same venue page remain separate.
+- Number 52 Sauna recurring offers are generated only when the current official offers page still matches the published offer wording. The integration does not assign guessed weekday recurrence to rotating themed nights; those should come from dated official listings.
 
 ## Installation
 

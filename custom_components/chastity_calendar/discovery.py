@@ -417,14 +417,6 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
             (re.compile(r"Under 30.?s.{0,100}?£12 entry every Monday, Tuesday\s*&\s*Wednesday", re.I),
              "Under 30’s £12 Entry at Number 52 Sauna", "weekday", (0, 1, 2), 11, 22),
         )
-        # The venue's published themed-night schedule is documented by the venue
-        # calendar and current public event listings. Add fixed weekday patterns
-        # only where the recurrence is explicit; weekend events remain sourced
-        # from dated listings so we don't guess which Friday/Saturday they occur.
-        themed_recurring = (
-            ("Fetish Night at Number 52 Sauna", (1, 3), 3, 18, 22),
-            ("Sports/Chav Night at Number 52 Sauna", (2, 4), 3, 18, 22),
-        )
         now = dt_util.now().replace(tzinfo=None)
         last_day = (today + timedelta(days=180)).date()
         day = today.date()
@@ -446,24 +438,6 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
                         )
                         record["end"] = end
                         record["date_confidence"] = "structured"
-                        events.append(record)
-            # 1st/3rd Thursday = Fetish Night; 2nd/4th Thursday = Sports/Chav Night.
-            if day.weekday() == 3:
-                occurrence = (day.day - 1) // 7 + 1
-                for title, occurrences, weekday, start_hour, end_hour in themed_recurring:
-                    if occurrence not in occurrences:
-                        continue
-                    start = datetime.combine(day, datetime.min.time()).replace(hour=start_hour)
-                    end = datetime.combine(day, datetime.min.time()).replace(hour=end_hour)
-                    if start >= now:
-                        record = _record(
-                            title, start, f"{base_url}/our-events/", "sauna",
-                            "Recurring themed night listed in public Number 52 Sauna event information. Verify the venue's current calendar for changes.",
-                            source="Number 52 Sauna public event schedule",
-                            location="Number 52 Sauna, Newcastle upon Tyne, United Kingdom",
-                        )
-                        record["end"] = end
-                        record["date_confidence"] = "recurring_schedule"
                         events.append(record)
             day += timedelta(days=1)
 
