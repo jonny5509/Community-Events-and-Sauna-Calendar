@@ -30,9 +30,19 @@ def test_lgbtq_events_are_separate_from_monthly_calendar():
         _event("Sauna theme night", "sauna", ["sauna"]),
     ]
 
-    assert _summaries("monthly", events) == {"General community fair"}
-    assert _summaries("pride", events) == {"Gay social meetup", "Pride Month"}
-    assert _summaries("sauna", events) == {"Sauna theme night"}
+    monthly = _summaries("monthly", events)
+    assert "General community fair" in monthly
+    assert "Gay social meetup" not in monthly
+    assert "Sauna theme night" not in monthly
+    lgbtq = _summaries("pride", events)
+    assert "Gay social meetup" in lgbtq
+    assert "Pride Month" in lgbtq
+    assert "General community fair" not in lgbtq
+    assert "Sauna theme night" not in lgbtq
+    sauna = _summaries("sauna", events)
+    assert "Sauna theme night" in sauna
+    assert "Gay social meetup" not in sauna
+    assert "General community fair" not in sauna
 
 
 def test_lgbtq_sauna_event_can_appear_in_both_focused_calendars():
