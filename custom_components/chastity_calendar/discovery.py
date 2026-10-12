@@ -380,7 +380,19 @@ async def _geocode_location(session, location: str, country: str):
 async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
     """Read dated and recurring events from Number 52 Sauna's own public pages."""
     base_url = "https://www.number52sauna.co.uk"
-    page_urls = (f"{base_url}/our-events/", f"{base_url}/our-offers/")
+    # The main calendar and individual repeating-event pages are both checked.
+    # The latter often expose dated instances in Schema.org JSON-LD even when
+    # the JavaScript calendar itself is not rendered by Home Assistant.
+    page_urls = (
+        f"{base_url}/our-events/",
+        f"{base_url}/our-offers/",
+        f"{base_url}/event/fetish-night/var/ri-2.l-L1/",
+        f"{base_url}/event/sports-chav-night/var/ri-2.l-L1/",
+        f"{base_url}/event/dare-to-bare/var/ri-2.l-L1/",
+        f"{base_url}/event/blackout/var/ri-2.l-L1/",
+        f"{base_url}/event/top-vers-bottom-night/var/ri-2.l-L1/",
+        f"{base_url}/event/jocks-n-cocks/var/ri-2.l-L1/",
+    )
 
     async def fetch_page(url: str) -> tuple[str, str]:
         try:
@@ -513,6 +525,36 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
                         record["date_confidence"] = "structured"
                         events.append(record)
             day += timedelta(days=1)
+
+    # The venue's published recurring schedule identifies Fetish Night on
+    # the 1st/3rd Thursday and Sports/Chav Night on the 2nd/4th Thursday.
+    # Rotating Friday/Saturday themes are taken from their individual event
+    # pages above rather than assigning invented weekdays to them.
+    for offset in range(0, 181):
+        day = (today + timedelta(days=offset)).date()
+        if day.weekday() != 3:
+            continue
+        occurrence = (day.day - 1) // 7 + 1
+        if occurrence not in (1, 2, 3, 4):
+            continue
+        if occurrence in (1, 3):
+            title = "Fetish Night at Number 52 Sauna"
+        else:
+            title = "Sports/Chav Night at Number 52 Sauna"
+        start = datetime.combine(day, datetime.min.time()).replace(hour=18)
+        end = start + timedelta(hours=4)
+        if start < dt_util.now().replace(tzinfo=None):
+            continue
+        record = _record(
+            title, start, f"{base_url}/our-events/", "sauna",
+            "Recurring themed night listed in public Number 52 Sauna event information. "
+            "Confirm the date with the venue before travelling.",
+            source="Number 52 Sauna published recurring schedule",
+            location="Number 52 Sauna, Newcastle upon Tyne, United Kingdom",
+        )
+        record["end"] = end
+        record["date_confidence"] = "structured"
+        events.append(record)
 
     _LOGGER.info("Number 52 Sauna source returned %s dated or recurring events", len(events))
     return events
