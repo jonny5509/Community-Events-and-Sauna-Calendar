@@ -234,6 +234,7 @@ class ChastityChallengeCalendar(CalendarEntity):
                     start=event_start,
                     end=event_end,
                     description=item["description"],
+                    location=item.get("location") or "",
                 ))
         return sorted(events, key=lambda event: event.start)
 
