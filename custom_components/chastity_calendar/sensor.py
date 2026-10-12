@@ -62,14 +62,22 @@ class ChastityNextEventSensor(ChastityCalendarSensorBase):
         self._attr_unique_id = f"{DOMAIN}_next_event"
 
     def _next_event(self):
-        """Find the first event that has not yet ended."""
+        """Find the first event that is ongoing or upcoming."""
         now = dt_util.now()
         today = now.date()
         events = self._events_between(today, date(today.year + 2, 1, 1))
-        return next(
-            (event for event in events if event.end_datetime_local > now),
-            None,
-        )
+
+        for event in events:
+            # All-day events use date bounds; timed events use datetime bounds.
+            # Compare matching types so all-day events stay visible through
+            # their final calendar day.
+            if isinstance(event.end, datetime):
+                end = dt_util.as_local(event.end) if event.end.tzinfo else event.end
+                if end > now:
+                    return event
+            elif event.end > today:
+                return event
+        return None
 
     @property
     def native_value(self) -> str | None:
