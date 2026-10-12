@@ -481,4 +481,80 @@ out center tags;"""
     except Exception as err:
         _LOGGER.debug("Could not resolve Number 52 fallback listing: %s", err)
 
+    # Last-resort UK directory fallback. This is a small maintained index based on
+    # the public Gay Sauna Guide UK directory; it is not scraped at runtime.
+    # Only geocode entries matching the configured town/city to avoid bulk
+    # geocoding and to keep the nearest-distance estimate tied to a venue result.
+    if not found and (country or "").strip().casefold() in {"uk", "united kingdom", "great britain"}:
+        directory_url = "https://www.gaysaunaguide.net/gay-saunas-in-the-uk/"
+        uk_venues = (
+            ("Number 52 Sauna", "Newcastle upon Tyne"),
+            ("Basement", "Manchester"),
+            ("Dolphin Sauna", "Wallasey"),
+            ("Heat Sauna", "Stockport"),
+            ("Nero's Sauna", "Bury"),
+            ("Sauna Sauna", "Northwich"),
+            ("Gentry Hull", "Hull"),
+            ("Plastic Ivy Sauna", "Dewsbury"),
+            ("Steam Complex", "Leeds"),
+            ("The Boiler Room", "Sheffield"),
+            ("Club Zeus", "Mansfield"),
+            ("Greenhouse Sauna Darlaston", "Darlaston"),
+            ("Heroes Health Club", "Stourbridge"),
+            ("Just For You", "Birmingham"),
+            ("ME1 Sauna & Steam", "Rochester"),
+            ("The Brighton Sauna", "Brighton"),
+            ("The Boiler Room Sauna", "Brighton"),
+            ("Tropics Day Spa", "Portsmouth"),
+            ("Manticore Spa", "Plymouth"),
+            ("Saunabar", "Bournemouth"),
+            ("Steamer Quay", "Torquay"),
+            ("Touch Sauna", "Swindon"),
+            ("Greenhouse Sauna Luton", "Luton"),
+            ("Steamworks Sauna", "Edinburgh"),
+            ("The Pipeworks", "Glasgow"),
+            ("Greenhouse Sauna Newport", "Newport"),
+        )
+        normalise_place = lambda value: re.sub(r"[^a-z0-9]+", " ", (value or "").casefold()).strip()
+        configured_place = normalise_place(location)
+        # Accept common shortened forms such as "Newcastle" for "Newcastle upon Tyne".
+        candidates = [
+            (name, city) for name, city in uk_venues
+            if configured_place and (
+                configured_place == normalise_place(city)
+                or configured_place in normalise_place(city).split()
+                or normalise_place(city) in configured_place
+            )
+        ]
+        for name, city in candidates[:2]:
+            try:
+                async with asyncio.timeout(10):
+                    async with session.get(
+                        "https://nominatim.openstreetmap.org/search",
+                        params={"q": f"{name}, {city}, United Kingdom", "format": "jsonv2", "limit": "1"},
+                        headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.8.5 (sauna discovery)"},
+                    ) as response:
+                        if response.status != 200:
+                            continue
+                        matches = await response.json()
+                if not matches:
+                    continue
+                venue_lat, venue_lon = float(matches[0]["lat"]), float(matches[0]["lon"])
+                venue_distance = distance_km(lat, lon, venue_lat, venue_lon)
+                if venue_distance <= 30:
+                    found.append({
+                        "name": name,
+                        "distance_km": round(venue_distance, 1),
+                        "address": city + ", United Kingdom",
+                        "website": "",
+                        "phone": "",
+                        "latitude": venue_lat,
+                        "longitude": venue_lon,
+                        "osm_url": directory_url,
+                        "source": "Gay Sauna Guide UK directory",
+                        "source_url": directory_url,
+                    })
+            except Exception as err:
+                _LOGGER.debug("Could not resolve UK directory sauna %r: %s", name, err)
+
     return sorted(found, key=lambda sauna: sauna["distance_km"])
