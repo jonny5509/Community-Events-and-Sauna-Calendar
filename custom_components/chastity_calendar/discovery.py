@@ -488,7 +488,6 @@ out center tags;"""
     if not found and (country or "").strip().casefold() in {"uk", "united kingdom", "great britain"}:
         directory_url = "https://www.gaysaunaguide.net/gay-saunas-in-the-uk/"
         uk_venues = (
-            ("Number 52 Sauna", "Newcastle upon Tyne"),
             ("Basement", "Manchester"),
             ("Dolphin Sauna", "Wallasey"),
             ("Heat Sauna", "Stockport"),
