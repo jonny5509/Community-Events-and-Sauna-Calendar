@@ -117,12 +117,25 @@ class ChastityUpcomingEventCountSensor(ChastityCalendarSensorBase):
         today = now.date()
         horizon = now + timedelta(days=COUNT_WINDOW_DAYS)
         events = self._events_between(today, horizon.date() + timedelta(days=1))
-        return [
-            event
-            for event in events
-            if event.end_datetime_local > now
-            and event.start_datetime_local < horizon
-        ]
+        upcoming = []
+        for event in events:
+            # All-day events carry date bounds; timed events carry datetimes.
+            # Use date comparisons for all-day events to avoid timezone-boundary
+            # issues and include events that are active today.
+            if isinstance(event.start, datetime):
+                start = dt_util.as_local(event.start) if event.start.tzinfo else event.start
+                if isinstance(event.end, datetime):
+                    end = dt_util.as_local(event.end) if event.end.tzinfo else event.end
+                else:
+                    end = event.end
+                active = end > now if isinstance(end, datetime) else end > today
+                in_window = start < horizon
+            else:
+                active = event.end > today
+                in_window = event.start < horizon.date()
+            if active and in_window:
+                upcoming.append(event)
+        return upcoming
 
     @property
     def native_value(self) -> str:
