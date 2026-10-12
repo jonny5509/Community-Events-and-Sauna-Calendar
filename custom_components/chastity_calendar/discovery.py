@@ -6,7 +6,7 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
-from urllib.parse import quote_plus, urlsplit, urlunsplit
+from urllib.parse import quote, quote_plus, urlsplit, urlunsplit
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
@@ -19,6 +19,38 @@ COUNTRY_CODES = {
     "south africa":"ZA","south korea":"KR","spain":"ES","sweden":"SE",
     "switzerland":"CH","united kingdom":"GB","uk":"GB","united states":"US","usa":"US",
 }
+
+_COUNTRY_CODE_CACHE: dict[str, str] = {}
+
+
+async def _country_code(session, country: str) -> str:
+    """Resolve ISO country codes for countries outside the built-in aliases."""
+    normalized = (country or "").strip().casefold()
+    if not normalized:
+        return ""
+    if normalized in COUNTRY_CODES:
+        return COUNTRY_CODES[normalized]
+    if normalized in _COUNTRY_CODE_CACHE:
+        return _COUNTRY_CODE_CACHE[normalized]
+    try:
+        url = f"https://restcountries.com/v3.1/name/{quote(country.strip(), safe='')}?fields=cca2"
+        async with asyncio.timeout(8):
+            async with session.get(url, headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.6"}) as response:
+                if response.status != 200:
+                    return ""
+                payload = await response.json()
+        code = next(
+            (item.get("cca2", "") for item in payload if isinstance(item, dict) and item.get("cca2")),
+            "",
+        ) if isinstance(payload, list) else ""
+        code = str(code).upper()
+        if len(code) == 2:
+            _COUNTRY_CODE_CACHE[normalized] = code
+            return code
+    except Exception as err:
+        _LOGGER.debug("Could not resolve ISO country code for %r: %s", country, err)
+    return ""
+
 SEARCHES = (
     ("community", '"community events" festival meetup dates'),
     ("community", '"community festival" OR "community fair" events'),
@@ -108,8 +140,12 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
     """Fetch one public Google News RSS search."""
     terms = " ".join(f'"{x}"' if " " in x else x for x in (country, location) if x)
     localized = f"{query} {terms}".strip()
-    gl = country_code or "US"
-    url = "https://news.google.com/rss/search?q=" + quote_plus(localized) + f"&hl=en-{gl}&gl={gl}&ceid={gl}:en"
+    url = "https://news.google.com/rss/search?q=" + quote_plus(localized)
+    if country_code:
+        url += f"&hl=en-{country_code}&gl={country_code}&ceid={country_code}:en"
+    else:
+        # Never silently force searches for unsupported countries into US locale.
+        url += "&hl=en"
     try:
         async with asyncio.timeout(20):
             async with session.get(url, headers={"User-Agent":"HomeAssistant-ChastityCalendar/1.4"}) as response:
@@ -214,7 +250,7 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
     today = dt_util.now().replace(hour=0,minute=0,second=0,microsecond=0)
     country = (country or "").strip()
     location = (location or "").strip()
-    code = COUNTRY_CODES.get(country.casefold(),"")
+    code = await _country_code(session, country)
     searches = list(SEARCHES)
     for year in (today.year,today.year+1):
         searches.extend([("community",f'"community festival" {year} schedule dates'),
