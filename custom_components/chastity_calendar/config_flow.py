@@ -263,9 +263,8 @@ def _location_fields(data):
     county = data.get("county", "")
     city = data.get("city", "")
     area = data.get("area", "")
-    # Keep the search location separate from country: discovery and the
-    # sauna geocoder append/use country independently. Duplicating it here
-    # makes queries less precise (for example, "London, UK, UK").
+    # Keep the search location separate from country to avoid duplicate
+    # country terms in location-targeted event discovery.
     location = ", ".join(
         part for part in (area, city, county, region)
         if part and part != SKIP
