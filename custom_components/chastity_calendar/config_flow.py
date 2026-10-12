@@ -128,8 +128,24 @@ async def _countries(hass):
     return COUNTRY_FALLBACK
 
 
+def _is_united_kingdom(country):
+    """Match common display-name variants for the United Kingdom."""
+    normalized = " ".join(str(country or "").strip().casefold().split())
+    return normalized in {
+        "united kingdom",
+        "uk",
+        "great britain",
+        "united kingdom of great britain and northern ireland",
+    }
+
+
 async def _regions(hass, country):
     """Fetch regions and provinces for the selected country."""
+    # Use our curated UK region names so each choice maps directly to a
+    # county list. The external API may return a different administrative
+    # hierarchy (for example, just England, Scotland, Wales and N. Ireland).
+    if _is_united_kingdom(country):
+        return COUNTRY_REGIONS["United Kingdom"]
     data = await _json_request(
         hass, "https://countriesnow.space/api/v0.1/countries/states",
         method="post", payload={"country": country},
@@ -139,14 +155,18 @@ async def _regions(hass, country):
         item.get("name", "").strip() for item in states
         if isinstance(item, dict) and item.get("name", "").strip()
     })
-    extra = COUNTRY_REGIONS.get(country, [])
-    return sorted(set(names + extra)) or [SKIP]
+    return names or [SKIP]
 
 
 async def _counties(hass, country, region):
     """Load a county/sub-region dropdown; UK regions use curated county lists."""
-    if country == "United Kingdom" and region in UK_REGION_COUNTIES:
-        return UK_REGION_COUNTIES[region]
+    normalized_region = " ".join(str(region or "").strip().casefold().split())
+    region_key = next(
+        (name for name in UK_REGION_COUNTIES if name.casefold() == normalized_region),
+        None,
+    )
+    if _is_united_kingdom(country) and region_key:
+        return UK_REGION_COUNTIES[region_key]
     # Many countries do not have a standard county layer in the source API.
     # Keep the level optional there instead of showing misleading matches.
     return [SKIP]
