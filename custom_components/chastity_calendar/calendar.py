@@ -176,6 +176,16 @@ PRIDE_EVENTS = [
 ]
 
 
+def _is_lgbtq_event(item: dict) -> bool:
+    """Return whether discovered metadata identifies an LGBTQ+ event."""
+    lgbtq_categories = {
+        "pride", "lgbtq", "gay", "lesbian", "bisexual", "transgender", "queer"
+    }
+    categories = {str(value).casefold() for value in item.get("categories", [])}
+    category = str(item.get("category", "")).casefold()
+    return category in lgbtq_categories or bool(categories.intersection(lgbtq_categories))
+
+
 def _event_for_year(item: dict, year: int) -> CalendarEvent:
     """Build an all-day event using dates and an exclusive end date."""
     start_month, start_day = item["start"]
@@ -201,7 +211,7 @@ class ChastityChallengeCalendar(CalendarEntity):
         self.coordinator = coordinator
         self.calendar_type = calendar_type
         if calendar_type == "pride":
-            self._attr_name = "Pride EC Events"
+            self._attr_name = "LGBTQ+ Events"
             self._attr_icon = "mdi:flag"
         elif calendar_type == "sauna":
             self._attr_name = "Sauna Events"
@@ -227,16 +237,19 @@ class ChastityChallengeCalendar(CalendarEntity):
         for item in (self.coordinator.data or []):
             # Keep sauna listings in their own calendar rather than mixing them
             # into Monthly Events. Pride remains a separate focused calendar.
-            categories = set(item.get("categories", []))
-            is_sauna = item.get("category") == "sauna" or "sauna" in categories
-            if self.calendar_type == "monthly" and is_sauna:
+            categories = {str(value).casefold() for value in item.get("categories", [])}
+            category = str(item.get("category", "")).casefold()
+            is_sauna = category == "sauna" or "sauna" in categories
+            is_lgbtq = _is_lgbtq_event(item)
+
+            # Keep focused discoveries out of the general monthly calendar.
+            # The focused calendars use independent filters, so an event that
+            # is both LGBTQ+ and sauna-related can appear in both relevant views.
+            if self.calendar_type == "monthly" and (is_sauna or is_lgbtq):
                 continue
             if self.calendar_type == "sauna" and not is_sauna:
                 continue
-            if self.calendar_type == "pride" and not (
-                item.get("category") in {"pride", "gay", "lesbian", "bisexual", "transgender", "queer", "lgbtq"}
-                or categories.intersection({"pride", "lgbtq", "gay", "lesbian", "bisexual", "transgender", "queer"})
-            ):
+            if self.calendar_type == "pride" and not is_lgbtq:
                 continue
             raw_start = item["start"]
             raw_end = item["end"]
@@ -302,7 +315,7 @@ class ChastityChallengeCalendar(CalendarEntity):
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up monthly, Pride, and sauna event calendars."""
+    """Set up monthly, LGBTQ+, and sauna event calendars."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
         ChastityChallengeCalendar(coordinator, "monthly"),
