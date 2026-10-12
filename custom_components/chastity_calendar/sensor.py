@@ -165,7 +165,19 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
             event for event in events
             if event.summary in matching_titles and event.end_datetime_local.date() > today
         ]
-        return min(upcoming, key=lambda event: event.start_datetime_local) if upcoming else None
+        if upcoming:
+            return min(upcoming, key=lambda event: event.start_datetime_local)
+
+        # Do not leave category sensors empty just because no event was tagged
+        # for that category: fall back to the next recurring LGBTQ+ observance.
+        # The general event title makes clear this is an observance, not a
+        # confirmed category-specific meetup or festival.
+        observances = [
+            event for event in events
+            if event.end_datetime_local.date() > today
+            and event.summary not in matching_titles
+        ]
+        return min(observances, key=lambda event: event.start_datetime_local) if observances else None
 
     @property
     def native_value(self) -> str:
