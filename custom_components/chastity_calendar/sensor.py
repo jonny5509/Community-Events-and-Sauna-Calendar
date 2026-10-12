@@ -1,18 +1,13 @@
-"""Upcoming-event sensors for Chastity Challenge Calendar."""
+"""Four focused sensors for monthly and LGBTQ+ observances."""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.util import dt as dt_util
 
 from .calendar import ChastityChallengeCalendar
 from .const import DOMAIN
-from .sauna_sensor import NearbySaunasSensor
-
-
-COUNT_WINDOW_DAYS = 30
-MAX_STATE_LENGTH = 250
 
 
 class ChastityCalendarSensorBase(SensorEntity):
@@ -20,293 +15,140 @@ class ChastityCalendarSensorBase(SensorEntity):
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator) -> None:
-        """Initialize the sensor and retain the shared discovery coordinator."""
+    def __init__(self, coordinator, entry_id: str) -> None:
         self.coordinator = coordinator
+        self._attr_unique_id = f"{DOMAIN}_{entry_id}_{self._attr_name.lower().replace(' ', '_')}"
 
     async def async_added_to_hass(self) -> None:
-        """Refresh sensor state whenever discovered events are updated."""
         await super().async_added_to_hass()
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
-    def _events_between(self, start_day: date, end_day: date):
-        """Return built-in and discovered events from both calendars."""
-        monthly = ChastityChallengeCalendar(self.coordinator, "monthly")
-        pride = ChastityChallengeCalendar(self.coordinator, "pride")
-        events = (
-            monthly._events_between(start_day, end_day)
-            + pride._events_between(start_day, end_day)
-        )
-        unique = {}
-        for event in events:
-            key = (
-                event.summary,
-                event.start_datetime_local.date(),
-                event.end_datetime_local.date(),
-            )
-            unique[key] = event
-        return sorted(unique.values(), key=lambda event: event.start_datetime_local)
+    def _events(self, calendar_type: str, start_day: date, end_day: date):
+        calendar = ChastityChallengeCalendar(self.coordinator, calendar_type)
+        return calendar._events_between(start_day, end_day)
 
-
-class ChastityNextEventSensor(ChastityCalendarSensorBase):
-    """Expose the name and date of the next current/upcoming event."""
-
-    _attr_name = "Next Event"
-    _attr_icon = "mdi:calendar-arrow-right"
-
-    def __init__(self, coordinator) -> None:
-        """Initialize the next-event sensor."""
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{DOMAIN}_next_event"
-
-    def _next_event(self):
-        """Find the first event that is ongoing or upcoming."""
-        now = dt_util.now()
-        today = now.date()
-        events = self._events_between(today, date(today.year + 2, 1, 1))
-
-        for event in events:
-            # All-day events use date bounds; timed events use datetime bounds.
-            # Compare matching types so all-day events remain visible through
-            # their final calendar day.
-            if isinstance(event.end, datetime):
-                end = dt_util.as_local(event.end) if event.end.tzinfo else event.end
-                if end > now:
-                    return event
-            elif event.end > today:
-                return event
-        return None
-
-    @property
-    def native_value(self) -> str | None:
-        """Return the next event's summary, or None if no event is available."""
-        event = self._next_event()
-        return event.summary if event else None
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Expose useful event details for dashboards and automations."""
-        event = self._next_event()
-        if event is None:
-            return {}
+    @staticmethod
+    def _details(event) -> dict:
         return {
+            "event": event.summary,
             "start_date": event.start_datetime_local.date().isoformat(),
-            "end_date": (
-                event.end_datetime_local.date() - timedelta(days=1)
-            ).isoformat(),
-            "description": event.description,
+            "end_date": (event.end_datetime_local.date() - timedelta(days=1)).isoformat(),
+            "description": event.description or "",
             "location": getattr(event, "location", "") or "",
         }
 
 
-class ChastityUpcomingEventCountSensor(ChastityCalendarSensorBase):
-    """Show upcoming event names and expose their count and dates."""
+class ChastityOngoingMonthEventSensor(ChastityCalendarSensorBase):
+    """Show a monthly challenge event that is active today."""
 
-    _attr_name = "Upcoming Events"
-    _attr_icon = "mdi:calendar-multiple"
+    _attr_name = "Ongoing Month Event"
+    _attr_icon = "mdi:calendar-heart"
 
-    def __init__(self, coordinator) -> None:
-        """Initialize the upcoming-events sensor."""
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{DOMAIN}_upcoming_event_count"
+    def __init__(self, coordinator, entry_id: str) -> None:
+        super().__init__(coordinator, entry_id)
 
-    def _upcoming_events(self):
-        """Return events active or starting in the next 30 days."""
-        now = dt_util.now()
-        today = now.date()
-        horizon = now + timedelta(days=COUNT_WINDOW_DAYS)
-        events = self._events_between(today, horizon.date() + timedelta(days=1))
-        upcoming = []
-        for event in events:
-            # All-day events carry date bounds; timed events carry datetimes.
-            # Use date comparisons for all-day events to avoid timezone-boundary
-            # issues and include events that are active today.
-            if isinstance(event.start, datetime):
-                start = dt_util.as_local(event.start) if event.start.tzinfo else event.start
-                if isinstance(event.end, datetime):
-                    end = dt_util.as_local(event.end) if event.end.tzinfo else event.end
-                    active = end > now
-                else:
-                    active = event.end > today
-                in_window = start < horizon
-            else:
-                active = event.end > today
-                in_window = event.start < horizon.date()
-            if active and in_window:
-                upcoming.append(event)
-        return upcoming
+    def _event(self):
+        today = dt_util.now().date()
+        return next(iter(self._events("monthly", today, today + timedelta(days=1))), None)
 
     @property
     def native_value(self) -> str:
-        """Show event names in the sensor state instead of a numeric count."""
-        names = list(dict.fromkeys(event.summary for event in self._upcoming_events()))
-        if not names:
-            return "No upcoming events"
-        state = ", ".join(names)
-        if len(state) > MAX_STATE_LENGTH:
-            state = state[: MAX_STATE_LENGTH - 1].rstrip(", ") + "…"
-        return state
+        event = self._event()
+        return event.summary if event else "No ongoing month event"
 
     @property
     def extra_state_attributes(self) -> dict:
-        """Expose the count and complete list of upcoming event names and dates."""
-        events = self._upcoming_events()
-        return {
-            "count": len(events),
-            "window_days": COUNT_WINDOW_DAYS,
-            "window_description": "Current and upcoming events over the next 30 days",
-            "upcoming_events": [
-                {
-                    "name": event.summary,
-                    "start_date": event.start_datetime_local.date().isoformat(),
-                    "end_date": (
-                        event.end_datetime_local.date() - timedelta(days=1)
-                    ).isoformat(),
-                    "location": getattr(event, "location", "") or "",
-                }
-                for event in events
-            ],
-        }
+        event = self._event()
+        return self._details(event) if event else {}
 
 
-class ChastityEventLocationsSensor(ChastityCalendarSensorBase):
-    """Show the configured search area and any explicit event locations."""
+class ChastityNextMonthEventSensor(ChastityCalendarSensorBase):
+    """Show the first event starting in the next calendar month."""
 
-    _attr_name = "Event Locations"
-    _attr_icon = "mdi:map-marker-multiple"
+    _attr_name = "Next Month Event"
+    _attr_icon = "mdi:calendar-arrow-right"
 
-    def __init__(self, coordinator, country: str, location: str) -> None:
-        """Initialize location sensor with the configured search area."""
-        super().__init__(coordinator)
-        self.country = country.strip()
-        self.location = location.strip()
-        self._attr_unique_id = f"{DOMAIN}_event_locations"
+    def __init__(self, coordinator, entry_id: str) -> None:
+        super().__init__(coordinator, entry_id)
+
+    def _event(self):
+        today = dt_util.now().date()
+        next_month_start = date(today.year + (today.month == 12), 1 if today.month == 12 else today.month + 1, 1)
+        following_month = date(next_month_start.year + (next_month_start.month == 12), 1 if next_month_start.month == 12 else next_month_start.month + 1, 1)
+        events = self._events("monthly", next_month_start, following_month)
+        return events[0] if events else None
 
     @property
     def native_value(self) -> str:
-        """Show the configured search area, not an inferred event venue."""
-        return ", ".join(part for part in (self.location, self.country) if part) or "Not configured"
+        event = self._event()
+        return event.summary if event else "No event next month"
 
     @property
     def extra_state_attributes(self) -> dict:
-        """Separate the configured search area from explicitly supplied venues."""
-        discovered = self.coordinator.data or []
-        event_locations = [
-            {
-                "name": item.get("summary", "Unnamed event"),
-                "location": item["location"],
-                "address": item.get("address", item["location"]),
-                "start_date": item["start"].date().isoformat()
-                if hasattr(item.get("start"), "date")
-                else str(item.get("start", "")),
-                "source": item.get("url", ""),
-            }
-            for item in discovered
-            if item.get("location")
-        ]
-        return {
-            "configured_search_area": {
-                "city_or_region": self.location or None,
-                "country": self.country or None,
-            },
-            "event_locations": event_locations,
-            "event_locations_count": len(event_locations),
-            "location_note": (
-                "Only explicit event locations are listed here. Current RSS discovery "
-                "does not reliably extract venue locations, so this list may be empty. "
-                "The configured search area is not proof that an event takes place there."
-            ),
-        }
+        event = self._event()
+        return self._details(event) if event else {}
 
 
-class ChastityCategoryEventsSensor(ChastityCalendarSensorBase):
-    """Show discovered events matching one LGBTQ+ category."""
+class ChastityPastLGBTQEventSensor(ChastityCalendarSensorBase):
+    """Show the most recent LGBTQ+ event that has ended."""
 
-    def __init__(self, coordinator, entry_id: str, category: str, name: str, icon: str) -> None:
-        """Initialize a category-specific event sensor."""
-        super().__init__(coordinator)
-        self.category = category
-        self._attr_name = name
-        self._attr_icon = icon
-        # Include the config entry so multiple calendar locations do not collide.
-        self._attr_unique_id = f"{DOMAIN}_{entry_id}_{category}_events"
+    _attr_name = "Past LGBTQ Event"
+    _attr_icon = "mdi:flag"
 
-    def _category_events(self):
-        """Return upcoming discovered events tagged with this category."""
-        now = dt_util.now()
-        discovered = self.coordinator.data or []
-        return sorted(
-            (
-                item for item in discovered
-                if item.get("category") == self.category
-                and item.get("start") is not None
-                and item["start"].date() >= now.date()
-            ),
-            key=lambda item: item["start"],
-        )
+    def __init__(self, coordinator, entry_id: str) -> None:
+        super().__init__(coordinator, entry_id)
+
+    def _event(self):
+        today = dt_util.now().date()
+        events = self._events("pride", date(today.year - 2, 1, 1), today + timedelta(days=1))
+        past = [event for event in events if event.end_datetime_local.date() <= today]
+        return max(past, key=lambda event: event.end_datetime_local) if past else None
 
     @property
-    def native_value(self) -> int:
-        """Return the number of matching discovered events."""
-        return len(self._category_events())
+    def native_value(self) -> str:
+        event = self._event()
+        return event.summary if event else "No past LGBTQ event"
 
     @property
     def extra_state_attributes(self) -> dict:
-        """Expose matching event names, dates, and source links."""
-        events = self._category_events()
-        return {
-            "count": len(events),
-            "category": self.category,
-            "events": [
-                {
-                    "name": item.get("summary", "Unnamed event"),
-                    "date": item["start"].date().isoformat(),
-                    "source": item.get("url", ""),
-                }
-                for item in events
-            ],
-            "note": "Best-effort, unverified public RSS discoveries; this is not a complete event directory.",
-        }
+        event = self._event()
+        return self._details(event) if event else {}
 
 
+class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
+    """Show the next ongoing or upcoming LGBTQ+ event."""
+
+    _attr_name = "Next LGBTQ Event"
+    _attr_icon = "mdi:calendar-star"
+
+    def __init__(self, coordinator, entry_id: str) -> None:
+        super().__init__(coordinator, entry_id)
+
+    def _event(self):
+        today = dt_util.now().date()
+        events = self._events("pride", today, date(today.year + 2, 1, 1))
+        upcoming = [event for event in events if event.end_datetime_local.date() > today]
+        return min(upcoming, key=lambda event: event.start_datetime_local) if upcoming else None
+
+    @property
+    def native_value(self) -> str:
+        event = self._event()
+        return event.summary if event else "No upcoming LGBTQ event"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        event = self._event()
+        return self._details(event) if event else {}
 
 
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
-    """Set up event, upcoming-event, and location sensors."""
+    """Set up exactly four focused event sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    preferences = {**entry.data, **entry.options}
-    async_add_entities(
-        [
-            NearbySaunasSensor(
-                hass,
-                preferences.get("country", ""),
-                preferences.get("location", ""),
-                ", ".join(
-                    part for part in (
-                        preferences.get("area", ""),
-                        preferences.get("city", ""),
-                    ) if part and part != "— Skip this level —"
-                ) or ", ".join(
-                    part for part in (
-                        preferences.get("county", ""),
-                        preferences.get("region", ""),
-                    ) if part and part != "— Skip this level —"
-                ),
-            ),
-            ChastityNextEventSensor(coordinator),
-            ChastityUpcomingEventCountSensor(coordinator),
-            ChastityEventLocationsSensor(
-                coordinator,
-                preferences.get("country", ""),
-                preferences.get("location", ""),
-            ),
-            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "gay", "Gay Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "lesbian", "Lesbian Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "bisexual", "Bisexual Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "transgender", "Transgender Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "queer", "Queer Events", "mdi:account-group"),
-            ChastityCategoryEventsSensor(coordinator, entry.entry_id, "lgbtq", "LGBTQ+ Events", "mdi:calendar-star"),
-        ]
-    )
+    async_add_entities([
+        ChastityOngoingMonthEventSensor(coordinator, entry.entry_id),
+        ChastityNextMonthEventSensor(coordinator, entry.entry_id),
+        ChastityPastLGBTQEventSensor(coordinator, entry.entry_id),
+        ChastityNextLGBTQEventSensor(coordinator, entry.entry_id),
+    ])

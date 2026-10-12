@@ -7,12 +7,10 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration with recur
 ## Features
 
 - Monthly challenge and Pride/observance calendars.
-- Next Event, Upcoming Events, Event Locations, Nearby Saunas, and LGBTQ+ category sensors.
+- Exactly four focused sensors: Ongoing Month Event, Next Month Event, Past LGBTQ Event, and Next LGBTQ Event. Each sensor exposes the event dates and available details as attributes.
 - Broad searches for community festivals, conventions, meetups, workshops, arts/music events, kink/fetish and chastity events, Pride/LGBTQ+ listings, and public adult-only listings.
 - Google News RSS works without credentials. Optional Ticketmaster Discovery API support provides structured event dates, venue details, and source links.
 - Deduplication merges repeated source URLs and matching title/date listings, retaining category tags and source links.
-- Automatic event refresh every six hours; nearby sauna lookup refreshes every 24 hours.
-- Nearby Saunas sensor geocodes the configured city/region and lists mapped sauna/public-bath venues within 20 km, nearest first, including distance, address when mapped, and website/map links where available.
 
 ## Installation
 
@@ -27,7 +25,7 @@ Copy `custom_components/chastity_calendar` to `config/custom_components/`, resta
 
 ## Configuration
 
-During setup, choose a country, then narrow the location by region/state and county/sub-region where available. Enter the city or town as free text so small towns, rural locations, and places missing from third-party lists can still be configured. The optional district/neighbourhood list is looked up using OpenStreetMap Nominatim/Overpass and uses the city, county, region, and country to disambiguate the search. Country and region lists use online services with built-in country fallbacks; if a service is unavailable, skip the optional region/county/area levels and enter the city manually. Existing configurations with the older free-text location are retained. The combined location is used for event relevance and as the centre for the Nearby Saunas sensor. Sauna discovery searches a 20 km radius and refreshes daily; map coverage is best-effort, not a complete adult-venue directory.
+During setup, choose a country, then narrow the location by region/state and county/sub-region where available. Enter the city or town as free text so small towns, rural locations, and places missing from third-party lists can still be configured. The optional district/neighbourhood list is looked up using OpenStreetMap Nominatim/Overpass and uses the city, county, region, and country to disambiguate the search. Country and region lists use online services with built-in country fallbacks; if a service is unavailable, skip the optional region/county/area levels and enter the city manually. Existing configurations with the older free-text location are retained. The combined location is used for event relevance.
 
 The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
 
@@ -43,7 +41,6 @@ Events can expose `category`, overlapping `categories`, `source`, `sources`, `ur
 - Keyword-derived categories may overlap or be incorrect.
 - Country search terms improve relevance but do not guarantee the event is physically in the country. Venue details are shown only when supplied by a source.
 - Adult-only events are included when publicly indexed, but eligibility and age restrictions must be checked with the organiser.
-- Nearby sauna coverage depends on OpenStreetMap tagging; adult-only venues and venue events may be missing, and the integration does not verify opening hours, age rules, or events hosted at each sauna.
 - Zero results means no matching dated listing was found, not that no events exist.
 
 ## Dashboard
