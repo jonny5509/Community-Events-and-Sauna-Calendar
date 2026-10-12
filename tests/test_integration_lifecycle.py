@@ -2,12 +2,14 @@
 
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from homeassistant.config_entries import ConfigEntryState
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.chastity_calendar.const import DOMAIN
 
 
+@pytest.mark.asyncio
 async def test_config_entry_setup_creates_entities_and_unloads_cleanly(
     hass, enable_custom_integrations
 ):
