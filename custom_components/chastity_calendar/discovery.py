@@ -462,7 +462,7 @@ out center tags;"""
                         venue_distance = distance_km(lat, lon, venue_lat, venue_lon)
                         if venue_distance <= 30 and not any(
                             "number 52" in venue["name"].casefold()
-                            or "newcastle" in venue.get("address", "").casefold()
+                            or "scotswood road" in venue.get("address", "").casefold()
                             for venue in found
                         ):
                             found.append({
