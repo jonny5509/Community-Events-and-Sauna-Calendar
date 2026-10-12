@@ -1,4 +1,4 @@
-# Chastity Challenge Calendar
+# Community Events & Sauna Calendar
 
 A custom [Home Assistant](https://www.home-assistant.io/) integration with recurring challenge and LGBTQ+ observance calendars, sensors, and best-effort discovery of public events across the configured country.
 
@@ -22,7 +22,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration with recur
 4. Add it from **Settings → Devices & services → Add integration**.
 
 ### Manual
-Copy `custom_components/chastity_calendar` to `config/custom_components/`, restart Home Assistant, and add the integration.
+Copy `custom_components/chastity_calendar` to `config/custom_components/`, restart Home Assistant, and add the integration. The internal domain remains `chastity_calendar` to preserve existing configuration and entity IDs.
 
 ## Configuration
 
