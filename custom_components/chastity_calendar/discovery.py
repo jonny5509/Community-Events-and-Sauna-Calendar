@@ -123,7 +123,7 @@ def _category_tags(category: str, title: str, description: str) -> list[str]:
         "kink": ("kink","bdsm","fetish","leather","puppy play"),
         "chastity": ("chastity","locktober","no nut november"),
         "adult": ("adult-only","adults only","18+","fetish","bdsm","erotic"),
-        "sauna": ("sauna","steam room","theme night","themed night"),
+        "sauna": ("sauna","steam room","number 52 sauna"),
         "festival": ("festival","parade","fair","carnival"),
         "arts_music": ("music","concert","arts","theatre","theater","gallery"),
     }
@@ -135,11 +135,24 @@ def _record(title, start, url, category, description, source="Google News RSS", 
     """Create a consistent discovery record."""
     title = html.unescape(re.sub(r"<[^>]+>", "", title)).strip()
     description = html.unescape(re.sub(r"<[^>]+>", "", description)).strip()
+    # A sauna search query is not evidence that every returned article is a
+    # sauna event. Require explicit venue/topic context before routing it to
+    # the dedicated sauna calendar.
+    sauna_context = re.search(
+        r"\bsaunas?\b|\bsteam room\b|\bnumber\s*52\b",
+        f"{title} {description} {url} {location}",
+        re.IGNORECASE,
+    )
+    record_category = (
+        "sauna" if category == "sauna" and sauna_context
+        else "community" if category == "sauna"
+        else category
+    )
     return {
         "summary": title[:180] or "Possible event",
         "start": start, "end": start + timedelta(days=1),
-        "description": description[:1200], "url": url, "category": category,
-        "categories": _category_tags(category, title, description),
+        "description": description[:1200], "url": url, "category": record_category,
+        "categories": _category_tags(record_category, title, description),
         "location": location, "source": source, "sources": [source],
         "source_links": [url] if url else [], "last_seen": dt_util.now().isoformat(),
         "date_confidence": "extracted_from_search_snippet",
@@ -260,7 +273,7 @@ def _deduplicate(events):
 
 
 def _is_sauna_event(event: dict) -> bool:
-    """Exclude sauna-related listings from every calendar and event sensor."""
+    """Return whether event metadata explicitly identifies a sauna listing."""
     searchable = [
         event.get("summary", ""),
         event.get("description", ""),

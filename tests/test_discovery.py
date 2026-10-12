@@ -3,8 +3,10 @@ from datetime import datetime
 
 from custom_components.chastity_calendar.discovery import (
     _add_months,
+    _category_tags,
     _deduplicate,
     _is_sauna_event,
+    _record,
 )
 
 
@@ -54,6 +56,49 @@ def test_sauna_detection_uses_event_metadata():
     assert _is_sauna_event({"summary": "Number 52 Sauna event"})
     assert not _is_sauna_event({"summary": "Pride Festival", "category": "community"})
 
+
+
+def test_generic_theme_night_is_not_misclassified_as_sauna():
+    """Generic themed events should not be hidden from the monthly calendar."""
+    tags = _category_tags("community", "80s Theme Night", "A themed social event with music.")
+
+    assert "sauna" not in tags
+
+
+def test_sauna_context_still_classifies_sauna_events():
+    """Explicit sauna wording continues to route events to the sauna calendar."""
+    tags = _category_tags("community", "Theme Night at Number 52 Sauna", "Steam room event.")
+
+    assert "sauna" in tags
+
+
+
+def test_sauna_search_result_without_sauna_context_is_not_routed_to_sauna_calendar():
+    """A broad search query alone must not classify generic themed nights."""
+    event = _record(
+        "80s Theme Night",
+        datetime(2027, 6, 12),
+        "https://example.test/events/theme-night",
+        "sauna",
+        "A themed social event with music.",
+    )
+
+    assert event["category"] == "community"
+    assert "sauna" not in event["categories"]
+
+
+def test_sauna_search_result_with_explicit_context_is_routed_to_sauna_calendar():
+    """Explicit sauna context remains classified as a sauna event."""
+    event = _record(
+        "Theme Night at Number 52 Sauna",
+        datetime(2027, 6, 12),
+        "https://www.number52sauna.co.uk/our-events/",
+        "sauna",
+        "A themed social event.",
+    )
+
+    assert event["category"] == "sauna"
+    assert "sauna" in event["categories"]
 
 def test_add_months_clamps_end_of_month():
     assert _add_months(datetime(2027, 1, 31), 1) == datetime(2027, 2, 28)
