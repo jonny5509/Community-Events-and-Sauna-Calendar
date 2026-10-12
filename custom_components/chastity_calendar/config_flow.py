@@ -14,6 +14,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 SKIP = "— Skip this level —"
+MANUAL_CITY = "Other (enter manually…)"
 COUNTRY_FALLBACK = [
     "Australia", "Austria", "Belgium", "Brazil", "Canada", "Denmark",
     "Finland", "France", "Germany", "India", "Ireland", "Italy", "Japan",
@@ -349,24 +350,37 @@ class _LocationFlow:
 
     async def _show_city(self, user_input=None):
         if user_input is not None:
-            # A free-text city avoids incomplete or stale third-party city lists
-            # and works for small towns, rural areas, and countries worldwide.
-            new_city = str(user_input.get("city", "")).strip() or SKIP
+            selected_city = user_input["city"]
+            if selected_city == MANUAL_CITY:
+                return await self._show_city_manual()
+            new_city = selected_city
             if new_city != self._location_data.get("city", SKIP):
                 self._location_data["area"] = SKIP
             self._location_data["city"] = new_city
             return await self._show_area()
 
+        options = await _cities(
+            self.hass,
+            self._location_data.get("country", ""),
+            self._location_data.get("region", ""),
+            self._location_data.get("county", ""),
+        )
+        choices = [SKIP, *[value for value in options if value not in (SKIP, MANUAL_CITY)], MANUAL_CITY]
+        marker, field = _dropdown("city", choices, self._location_data.get("city", SKIP))
+        return self.async_show_form(step_id="city", data_schema=vol.Schema({marker: field}))
+
+    async def _show_city_manual(self, user_input=None):
+        if user_input is not None:
+            new_city = str(user_input.get("city", "")).strip() or SKIP
+            if new_city != self._location_data.get("city", SKIP):
+                self._location_data["area"] = SKIP
+            self._location_data["city"] = new_city
+            return await self._show_area()
         current_city = self._location_data.get("city", "")
-        default_city = "" if not current_city or current_city == SKIP else current_city
+        default_city = "" if not current_city or current_city in (SKIP, MANUAL_CITY) else current_city
         return self.async_show_form(
-            step_id="city",
+            step_id="city_manual",
             data_schema=vol.Schema({vol.Required("city", default=default_city): str}),
-            description_placeholders={
-                "country": self._location_data.get("country", ""),
-                "region": "" if self._location_data.get("region") == SKIP else self._location_data.get("region", ""),
-                "county": "" if self._location_data.get("county") == SKIP else self._location_data.get("county", ""),
-            },
         )
 
     async def _show_area(self, user_input=None):
@@ -414,6 +428,9 @@ class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domai
     async def async_step_city(self, user_input=None):
         return await self._show_city(user_input)
 
+    async def async_step_city_manual(self, user_input=None):
+        return await self._show_city_manual(user_input)
+
     async def async_step_area(self, user_input=None):
         return await self._show_area(user_input)
 
@@ -456,6 +473,9 @@ class ChastityCalendarOptionsFlow(_LocationFlow, config_entries.OptionsFlow):
 
     async def async_step_city(self, user_input=None):
         return await self._show_city(user_input)
+
+    async def async_step_city_manual(self, user_input=None):
+        return await self._show_city_manual(user_input)
 
     async def async_step_area(self, user_input=None):
         return await self._show_area(user_input)
