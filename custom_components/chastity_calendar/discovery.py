@@ -263,7 +263,7 @@ def _is_sauna_event(event: dict) -> bool:
         *event.get("categories", []),
         *event.get("sources", []),
     ]
-    return any(re.search(r"\\bsaunas?\\b", str(value), re.IGNORECASE) for value in searchable)
+    return any(re.search(r"\bsaunas?\b, str(value), re.IGNORECASE) for value in searchable)
 
 
 def _add_months(value: datetime, months: int) -> datetime:
