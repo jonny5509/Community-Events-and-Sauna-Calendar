@@ -23,7 +23,7 @@ class ChastityCalendarSensorBase(SensorEntity):
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
         )
         # These sensors derive their values from the current date and shared
         # discovery data. Re-evaluate on the same cadence as discovery so
@@ -35,9 +35,13 @@ class ChastityCalendarSensorBase(SensorEntity):
             )
         )
 
+    def _handle_coordinator_update(self) -> None:
+        """Refresh sensor state when discovery data changes."""
+        self.async_write_ha_state()
+
     async def _scheduled_state_refresh(self, _now) -> None:
         """Refresh sensor state when the event window changes."""
-        self.async_write_ha_state()
+        self._handle_coordinator_update()
 
     def _events(self, calendar_type: str, start_day: date, end_day: date):
         calendar = ChastityChallengeCalendar(self.coordinator, calendar_type)
