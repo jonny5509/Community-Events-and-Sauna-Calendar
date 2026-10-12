@@ -436,6 +436,7 @@ async def _jsonld_event_records(session, website: str, venue_name: str, venue_lo
                     location=venue_location or venue_name,
                 )
                 record["end"] = end
+                record["address"] = venue_location or venue_name
                 record["date_confidence"] = "structured"
                 found.append(record)
     return found
@@ -506,7 +507,13 @@ out center tags;"""
             continue
         seen.add(website)
         address = ", ".join(part for part in (
-            tags.get("addr:city") or tags.get("addr:town") or tags.get("addr:suburb"),
+            " ".join(filter(None, (
+                tags.get("addr:housenumber"),
+                tags.get("addr:street"),
+            ))),
+            tags.get("addr:suburb") or tags.get("addr:city") or tags.get("addr:town"),
+            tags.get("addr:county"),
+            tags.get("addr:postcode"),
             tags.get("addr:country"),
         ) if part)
         venues.append((website, name, address or name))
