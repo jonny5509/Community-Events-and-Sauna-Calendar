@@ -123,7 +123,7 @@ def _category_tags(category: str, title: str, description: str) -> list[str]:
         "kink": ("kink","bdsm","fetish","leather","puppy play"),
         "chastity": ("chastity","locktober","no nut november"),
         "adult": ("adult-only","adults only","18+","fetish","bdsm","erotic"),
-        "sauna": ("sauna","steam room","theme night","themed night"),
+        "sauna": ("sauna","steam room","number 52 sauna"),
         "festival": ("festival","parade","fair","carnival"),
         "arts_music": ("music","concert","arts","theatre","theater","gallery"),
     }
