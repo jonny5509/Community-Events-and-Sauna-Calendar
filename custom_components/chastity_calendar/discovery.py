@@ -382,3 +382,62 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
     # Sauna events are intentionally retained: venues often publish themed days
     # and recurring sessions that users want alongside other local events.
     return _deduplicate(events)
+
+
+async def async_discover_nearest_saunas(hass, country: str = "", location: str = "") -> list[dict]:
+    """Find public sauna venues within 30 km of the configured location via OpenStreetMap."""
+    session = async_get_clientsession(hass)
+    coordinates = await _geocode_location(session, location, country)
+    if not coordinates:
+        return []
+    lat, lon = coordinates
+    query = f"""[out:json][timeout:20];
+(
+  nwr(around:30000,{lat},{lon})["leisure"="sauna"];
+  nwr(around:30000,{lat},{lon})["amenity"="sauna"];
+  nwr(around:30000,{lat},{lon})["building"="sauna"];
+);
+out center tags;"""
+    try:
+        async with asyncio.timeout(25):
+            async with session.post(
+                "https://overpass-api.de/api/interpreter",
+                data={"data": query},
+                headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.8.3"},
+            ) as response:
+                if response.status != 200:
+                    _LOGGER.debug("OpenStreetMap Overpass returned HTTP %s", response.status)
+                    return []
+                payload = await response.json()
+    except Exception as err:
+        _LOGGER.debug("Could not discover nearby saunas: %s", err)
+        return []
+
+    def distance_km(lat1, lon1, lat2, lon2):
+        from math import asin, cos, radians, sin, sqrt
+        dlat, dlon = radians(lat2 - lat1), radians(lon2 - lon1)
+        value = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+        return 6371 * 2 * asin(sqrt(min(1, value)))
+
+    found = []
+    for item in payload.get("elements", []):
+        tags = item.get("tags", {})
+        center = item.get("center", {})
+        sauna_lat = item.get("lat", center.get("lat"))
+        sauna_lon = item.get("lon", center.get("lon"))
+        if sauna_lat is None or sauna_lon is None:
+            continue
+        address = ", ".join(str(tags[key]) for key in (
+            "addr:housenumber", "addr:street", "addr:city", "addr:postcode"
+        ) if tags.get(key))
+        found.append({
+            "name": tags.get("name") or tags.get("brand") or "Unnamed sauna",
+            "distance_km": round(distance_km(lat, lon, float(sauna_lat), float(sauna_lon)), 1),
+            "address": address,
+            "website": tags.get("website") or tags.get("contact:website") or "",
+            "phone": tags.get("phone") or tags.get("contact:phone") or "",
+            "latitude": float(sauna_lat),
+            "longitude": float(sauna_lon),
+            "osm_url": f"https://www.openstreetmap.org/{item.get('type', 'node')}/{item.get('id')}",
+        })
+    return sorted(found, key=lambda sauna: sauna["distance_km"])
