@@ -31,6 +31,14 @@ During setup, choose a country, then narrow the location by region/state and cou
 
 The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
 
+## What's new in 2.0.3
+
+- Improve LGBTQ+ event discovery when search snippets omit dates by inspecting up to four linked results per LGBTQ+ search for explicit Schema.org `Event.startDate` or `event:start_time` metadata.
+- Never substitute generic article publication dates for event dates; listings without a reliable future event date remain excluded.
+- Bound each page lookup to six seconds and cap lookups per query to limit added latency.
+- Retain the 2.0.2 timeout/retry protection.
+- Update the integration manifest to 2.0.3.
+
 ## What's new in 2.0.2
 
 - Fix discovery timeouts leaving the LGBTQ+ and other event calendars empty until the next scheduled six-hour refresh.
@@ -55,7 +63,7 @@ The optional **Ticketmaster Discovery API key** enables searches through the [Ti
 
 ## Event data
 
-Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.2. Subsequent scheduled refreshes update the current results.
+Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.3. Subsequent scheduled refreshes update the current results.
 
 ## Transparent limitations
 
