@@ -75,6 +75,9 @@ SEARCHES = (
     ("bisexual", 'bisexual OR "bi pride" community events dates'),
     ("transgender", '"trans pride" OR transgender community events dates'),
     ("queer", 'queer LGBTQ festival OR community event dates'),
+    ("sauna", '"gay sauna" events calendar dates'),
+    ("sauna", '"sauna event" OR "sauna theme night" dates'),
+    ("sauna", '"gay sauna" themed nights events 2026 OR 2027'),
     ("lgbtq", 'LGBTQ events nightlife social festival dates'),
 )
 MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December"
@@ -120,6 +123,7 @@ def _category_tags(category: str, title: str, description: str) -> list[str]:
         "kink": ("kink","bdsm","fetish","leather","puppy play"),
         "chastity": ("chastity","locktober","no nut november"),
         "adult": ("adult-only","adults only","18+","fetish","bdsm","erotic"),
+        "sauna": ("sauna","steam room","theme night","themed night"),
         "festival": ("festival","parade","fair","carnival"),
         "arts_music": ("music","concert","arts","theatre","theater","gallery"),
     }
@@ -337,6 +341,8 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         ("bisexual", 'bisexual community events dates'),
         ("transgender", 'trans community events dates'),
         ("queer", 'queer LGBTQ community events dates'),
+        ("sauna", '"gay sauna" events calendar'),
+        ("sauna", '"sauna" themed nights event dates'),
         ("kink", 'kink BDSM fetish event calendar dates'),
         ("chastity", 'chastity event meetup Locktober dates'),
         ("adult", 'adults only 18+ public event dates'),
@@ -373,4 +379,6 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
         location or "unspecified location", country or "unspecified country", len(searches), len(events),
     )
-    return [event for event in _deduplicate(events) if not _is_sauna_event(event)]
+    # Sauna events are intentionally retained: venues often publish themed days
+    # and recurring sessions that users want alongside other local events.
+    return _deduplicate(events)
