@@ -31,6 +31,11 @@ During setup, choose a country, then narrow the location by region/state and cou
 
 The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
 
+## What's new in 1.9.9
+
+- Expand LGBTQ+ event discovery with focused searches for Queer LDN, wherequeersgo, and OutSavvy.
+- Continue using the existing date extraction and duplicate-merging pipeline; results are best-effort and should be verified against the original listing.
+
 ## Event data
 
 Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 1.9.8. Subsequent scheduled refreshes update the current results.
