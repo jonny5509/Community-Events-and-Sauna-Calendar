@@ -62,14 +62,22 @@ class ChastityNextEventSensor(ChastityCalendarSensorBase):
         self._attr_unique_id = f"{DOMAIN}_next_event"
 
     def _next_event(self):
-        """Find the first event that has not yet ended."""
+        """Find the first event that is ongoing or upcoming."""
         now = dt_util.now()
         today = now.date()
         events = self._events_between(today, date(today.year + 2, 1, 1))
-        return next(
-            (event for event in events if event.end_datetime_local > now),
-            None,
-        )
+
+        for event in events:
+            # All-day events use date bounds; timed events use datetime bounds.
+            # Compare matching types so all-day events remain visible through
+            # their final calendar day.
+            if isinstance(event.end, datetime):
+                end = dt_util.as_local(event.end) if event.end.tzinfo else event.end
+                if end > now:
+                    return event
+            elif event.end > today:
+                return event
+        return None
 
     @property
     def native_value(self) -> str | None:
@@ -110,12 +118,25 @@ class ChastityUpcomingEventCountSensor(ChastityCalendarSensorBase):
         today = now.date()
         horizon = now + timedelta(days=COUNT_WINDOW_DAYS)
         events = self._events_between(today, horizon.date() + timedelta(days=1))
-        return [
-            event
-            for event in events
-            if event.end_datetime_local > now
-            and event.start_datetime_local < horizon
-        ]
+        upcoming = []
+        for event in events:
+            # All-day events carry date bounds; timed events carry datetimes.
+            # Use date comparisons for all-day events to avoid timezone-boundary
+            # issues and include events that are active today.
+            if isinstance(event.start, datetime):
+                start = dt_util.as_local(event.start) if event.start.tzinfo else event.start
+                if isinstance(event.end, datetime):
+                    end = dt_util.as_local(event.end) if event.end.tzinfo else event.end
+                    active = end > now
+                else:
+                    active = event.end > today
+                in_window = start < horizon
+            else:
+                active = event.end > today
+                in_window = event.start < horizon.date()
+            if active and in_window:
+                upcoming.append(event)
+        return upcoming
 
     @property
     def native_value(self) -> str:
