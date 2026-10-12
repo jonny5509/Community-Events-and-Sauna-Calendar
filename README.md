@@ -7,7 +7,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration with recur
 ## Features
 
 - Monthly challenge and Pride/observance calendars.
-- Next Event, Upcoming Events, Event Locations, and LGBTQ+ category sensors.
+- Exactly four focused sensors: Ongoing Month Event, Next Month Event, Past LGBTQ Event, and Next LGBTQ Event. Each sensor exposes the event dates and available details as attributes.
 - Broad searches for community festivals, conventions, meetups, workshops, arts/music events, kink/fetish and chastity events, Pride/LGBTQ+ listings, and public adult-only listings.
 - Google News RSS works without credentials. Optional Ticketmaster Discovery API support provides structured event dates, venue details, and source links.
 - Deduplication merges repeated source URLs and matching title/date listings, retaining category tags and source links.
