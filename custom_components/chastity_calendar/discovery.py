@@ -440,4 +440,42 @@ out center tags;"""
             "longitude": float(sauna_lon),
             "osm_url": f"https://www.openstreetmap.org/{item.get('type', 'node')}/{item.get('id')}",
         })
+    # Number 52 is a known sauna in Newcastle. Some map records may not carry
+    # one of the sauna tags queried above, so look it up by its published address
+    # as a fallback rather than silently omitting it.
+    try:
+        async with asyncio.timeout(10):
+            async with session.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={
+                    "q": "Number 52 Sauna, 52 Scotswood Road, Newcastle upon Tyne, NE4 7JB, United Kingdom",
+                    "format": "jsonv2",
+                    "limit": "1",
+                },
+                headers={"User-Agent": "HomeAssistant-ChastityCalendar/1.8.3"},
+            ) as response:
+                if response.status == 200:
+                    venue_matches = await response.json()
+                    if venue_matches:
+                        venue_lat = float(venue_matches[0]["lat"])
+                        venue_lon = float(venue_matches[0]["lon"])
+                        venue_distance = distance_km(lat, lon, venue_lat, venue_lon)
+                        if venue_distance <= 30 and not any(
+                            "number 52" in venue["name"].casefold()
+                            or "newcastle" in venue.get("address", "").casefold()
+                            for venue in found
+                        ):
+                            found.append({
+                                "name": "Number 52 Sauna",
+                                "distance_km": round(venue_distance, 1),
+                                "address": "52 Scotswood Road, Newcastle upon Tyne, NE4 7JB",
+                                "website": "https://www.number52sauna.co.uk/",
+                                "phone": "0191 2212189",
+                                "latitude": venue_lat,
+                                "longitude": venue_lon,
+                                "osm_url": "https://www.openstreetmap.org/search?query=Number%2052%20Sauna%2C%20Newcastle",
+                            })
+    except Exception as err:
+        _LOGGER.debug("Could not resolve Number 52 fallback listing: %s", err)
+
     return sorted(found, key=lambda sauna: sauna["distance_km"])
