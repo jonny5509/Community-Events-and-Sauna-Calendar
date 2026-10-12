@@ -12,7 +12,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration with recur
 - Sauna venue lookup uses OpenStreetMap within 30 km first. If OSM returns no nearby venues, it uses a small maintained fallback index based on the [Gay Sauna Guide UK directory](https://www.gaysaunaguide.net/gay-saunas-in-the-uk/) and geocodes only entries matching the configured town/city. Number 52 Sauna in Newcastle also has its own address-based fallback. The directory index is not fetched or scraped at runtime and may need manual updates; the duplicate Number 52 entry has been removed from this index, while its separate Newcastle address-based fallback remains. Fallback results depend on Nominatim geocoding. The sensor refreshes at 00:00, 06:00, 12:00, and 18:00 Home Assistant local time. The sensor uses the configured location, not live device GPS.
 - Google News RSS works without credentials. Optional Ticketmaster Discovery API support provides structured event dates, venue details, and source links.
 - Deduplication merges matching title/date listings while retaining category tags and source links; distinct events on the same venue page remain separate.
-- Number 52 Sauna recurring offers are generated only when the current official offers page still matches the published offer wording. The integration does not assign guessed weekday recurrence to rotating themed nights; those should come from dated official listings.
+- Number 52 Sauna discovery checks its main events calendar, offers page, and individual repeating-event pages for its published themed nights. It also generates the published 1st/3rd Thursday and 2nd/4th Thursday schedules, plus recurring offers when the official offers page still matches. Rotating Friday/Saturday themes are taken from dated event-page data where available; verify dates with the venue.
 
 ## Installation
 
@@ -30,6 +30,13 @@ Copy `custom_components/chastity_calendar` to `config/custom_components/`, resta
 During setup, choose a country, then narrow the location by region/state and county/sub-region where available. Enter the city or town as free text so small towns, rural locations, and places missing from third-party lists can still be configured. The optional district/neighbourhood list is looked up using OpenStreetMap Nominatim/Overpass and uses the city, county, region, and country to disambiguate the search. Country and region lists use online services with built-in country fallbacks; if a service is unavailable, skip the optional region/county/area levels and enter the city manually. Existing configurations with the older free-text location are retained. The combined location is used for event relevance.
 
 The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
+
+## What's new in 2.0.5
+
+- Expand Number 52 discovery to individual repeating-event pages for its published themed nights.
+- Generate the published 1st/3rd Thursday and 2nd/4th Thursday occurrences while retaining dated event-page listings for rotating Friday/Saturday themes.
+- Keep the nearest-sauna filter from 2.0.4; Number 52 events are still included only when Number 52 is the nearest mapped sauna.
+- Update the integration manifest to 2.0.5.
 
 ## What's new in 2.0.4
 
@@ -70,7 +77,7 @@ The optional **Ticketmaster Discovery API key** enables searches through the [Ti
 
 ## Event data
 
-Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.3. Subsequent scheduled refreshes update the current results.
+Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.5. Subsequent scheduled refreshes update the current results.
 
 ## Transparent limitations
 
