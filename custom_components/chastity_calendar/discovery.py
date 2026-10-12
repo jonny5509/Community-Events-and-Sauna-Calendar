@@ -1,6 +1,7 @@
 """Best-effort multi-source discovery of public, dated community events."""
 from __future__ import annotations
 import asyncio
+import calendar as _calendar
 import html
 import json
 import logging
@@ -245,6 +246,93 @@ def _deduplicate(events):
     return sorted(merged.values(), key=lambda item: item["start"])
 
 
+def _add_months(value: datetime, months: int) -> datetime:
+    """Add calendar months without overflowing short months."""
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, _calendar.monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
+
+
+def _schedule_occurrences(schedule: dict, today: datetime, horizon: datetime) -> list[datetime]:
+    """Expand a conservative subset of Schema.org EventSchedule recurrence data."""
+    raw_start = schedule.get("startDate")
+    if not raw_start:
+        return []
+    try:
+        start = datetime.fromisoformat(str(raw_start).replace("Z", "+00:00"))
+        if start.tzinfo is not None:
+            start = start.replace(tzinfo=None)
+    except (TypeError, ValueError):
+        return []
+
+    schedule_end = horizon
+    raw_end = schedule.get("endDate")
+    if raw_end:
+        try:
+            parsed_end = datetime.fromisoformat(str(raw_end).replace("Z", "+00:00"))
+            if parsed_end.tzinfo is not None:
+                parsed_end = parsed_end.replace(tzinfo=None)
+            schedule_end = min(schedule_end, parsed_end)
+        except (TypeError, ValueError):
+            pass
+
+    frequency = str(schedule.get("repeatFrequency") or "").strip().upper()
+    match = re.fullmatch(r"P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?", frequency)
+    if not match or not any(match.groups()):
+        return [start] if today.date() <= start.date() <= horizon.date() else []
+    years, months, weeks, days = (int(value or 0) for value in match.groups())
+    step_days = weeks * 7 + days
+    by_day = schedule.get("byDay", [])
+    if isinstance(by_day, str):
+        by_day = [by_day]
+    weekday_names = {
+        "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+        "friday": 4, "saturday": 5, "sunday": 6,
+    }
+    weekdays = {
+        weekday_names[str(item).rsplit("/", 1)[-1].casefold()]
+        for item in by_day if isinstance(by_day, list)
+        if str(item).rsplit("/", 1)[-1].casefold() in weekday_names
+    } if isinstance(by_day, list) else set()
+
+    occurrences = []
+    # When weekdays are specified for a weekly schedule, inspect each day in
+    # the active weeks so multi-day schedules (e.g. Tue and Thu) are preserved.
+    if weekdays and weeks and not (years or months or days):
+        current = start
+        for _ in range(730):
+            if current > schedule_end or current > horizon:
+                break
+            week_number = (current.date() - start.date()).days // 7
+            if (week_number % weeks == 0 and current.weekday() in weekdays
+                    and current.date() >= start.date()):
+                occurrences.append(current)
+            current += timedelta(days=1)
+            if len(occurrences) >= 366:
+                break
+        return occurrences
+
+    current = start
+    for _ in range(800):
+        if current > schedule_end or current > horizon:
+            break
+        if current.date() >= today.date() and (not weekdays or current.weekday() in weekdays):
+            occurrences.append(current)
+            if len(occurrences) >= 366:
+                break
+        if years:
+            current = _add_months(current, years * 12)
+        elif months:
+            current = _add_months(current, months)
+        elif step_days:
+            current += timedelta(days=step_days)
+        else:
+            break
+    return occurrences
+
+
 async def _jsonld_event_records(session, website: str, venue_name: str, venue_location: str, today: datetime):
     """Extract future Event records from a venue website's Schema.org JSON-LD."""
     try:
@@ -292,43 +380,64 @@ async def _jsonld_event_records(session, website: str, venue_name: str, venue_lo
         except (json.JSONDecodeError, TypeError):
             continue
         for item in walk(payload):
-            title = str(item.get("name") or "").strip()
+            # Some publishers expose an EventSchedule instead of one Event per
+            # date. Support explicit Schema.org recurrence rather than guessing
+            # dates from arbitrary page text.
+            raw_schedules = item.get("eventSchedule") or item.get("eventSchedules") or []
+            schedules = raw_schedules if isinstance(raw_schedules, list) else [raw_schedules]
+            schedules = [value for value in schedules if isinstance(value, dict)]
+            starts = []
             raw_start = item.get("startDate")
-            if not title or not raw_start:
-                continue
-            try:
-                start = datetime.fromisoformat(str(raw_start).replace("Z", "+00:00"))
-                if start.tzinfo is not None:
-                    start = start.replace(tzinfo=None)
-            except ValueError:
-                continue
-            if not today.date() <= start.date() <= (today + timedelta(days=730)).date():
-                continue
-            raw_end = item.get("endDate")
-            end = start + timedelta(days=1)
-            if raw_end:
+            if raw_start:
                 try:
-                    parsed_end = datetime.fromisoformat(str(raw_end).replace("Z", "+00:00"))
-                    if parsed_end.tzinfo is not None:
-                        parsed_end = parsed_end.replace(tzinfo=None)
-                    # Home Assistant all-day calendar events use an exclusive end date.
-                    end = max(start + timedelta(days=1), parsed_end)
-                except ValueError:
+                    start = datetime.fromisoformat(str(raw_start).replace("Z", "+00:00"))
+                    if start.tzinfo is not None:
+                        start = start.replace(tzinfo=None)
+                    starts.append(start)
+                except (TypeError, ValueError):
                     pass
-            description = str(item.get("description") or "").strip()
+            for schedule in schedules:
+                starts.extend(_schedule_occurrences(
+                    schedule, today, today + timedelta(days=730)
+                ))
+            # An event without a name still deserves a calendar entry. Use the
+            # venue name as a clear fallback instead of silently dropping it.
+            title = str(item.get("name") or "").strip() or venue_name.strip()
+            if not title or not starts:
+                continue
+
+            raw_end = item.get("endDate")
             event_url = str(item.get("url") or website).strip()
-            record = _record(
-                title, start, event_url, "sauna",
-                f"Found in Schema.org Event data published by {venue_name}. "
-                f"Venue: {venue_location or venue_name}. "
-                "Automatically collected from the venue website; confirm details with the organiser. "
-                f"{description}",
-                source=f"Sauna website: {venue_name}",
-                location=venue_location or venue_name,
-            )
-            record["end"] = end
-            record["date_confidence"] = "structured"
-            found.append(record)
+            description = str(item.get("description") or "").strip()
+            event_duration = None
+            if raw_start and raw_end:
+                try:
+                    original_start = datetime.fromisoformat(str(raw_start).replace("Z", "+00:00"))
+                    original_end = datetime.fromisoformat(str(raw_end).replace("Z", "+00:00"))
+                    if original_start.tzinfo is not None:
+                        original_start = original_start.replace(tzinfo=None)
+                    if original_end.tzinfo is not None:
+                        original_end = original_end.replace(tzinfo=None)
+                    if original_end > original_start:
+                        event_duration = original_end - original_start
+                except (TypeError, ValueError):
+                    pass
+            for start in sorted(set(starts)):
+                if not today.date() <= start.date() <= (today + timedelta(days=730)).date():
+                    continue
+                end = max(start + timedelta(days=1), start + event_duration) if event_duration else start + timedelta(days=1)
+                record = _record(
+                    title, start, event_url, "sauna",
+                    f"Found in Schema.org Event data published by {venue_name}. "
+                    f"Venue: {venue_location or venue_name}. "
+                    "Automatically collected from the venue website; confirm details with the organiser. "
+                    f"{description}",
+                    source=f"Sauna website: {venue_name}",
+                    location=venue_location or venue_name,
+                )
+                record["end"] = end
+                record["date_confidence"] = "structured"
+                found.append(record)
     return found
 
 
