@@ -2,34 +2,54 @@
   "config": {
     "step": {
       "user": {
-        "title": "Chastity Challenge Calendar",
-        "description": "Choose a country, then optionally narrow the search by region, city, and local area or postcode.",
+        "title": "Choose country",
+        "description": "Choose a country. The next steps load matching regions, cities, and local areas from online location services.",
+        "data": {"country": "Country"}
+      },
+      "region": {
+        "title": "Choose region",
+        "description": "Regions are loaded for the selected country. Choose the skip option if you want to search the whole country.",
+        "data": {"region": "State / Province / Region"}
+      },
+      "city": {
+        "title": "Choose city",
+        "description": "Cities are loaded for the selected region.",
+        "data": {"city": "City / Town"}
+      },
+      "area": {
+        "title": "Choose local area",
+        "description": "Neighbourhoods and districts are looked up from OpenStreetMap. The local area is optional. You can also enter a Ticketmaster API key.",
         "data": {
-          "country": "Country",
-          "region": "State / Province / Region",
-          "city": "City / Town",
-          "area": "District / Area / Postcode",
+          "area": "District / Area",
           "ticketmaster_api_key": "Optional Ticketmaster API key"
         }
       }
     },
-    "error": {
-      "required": "Please choose a country."
-    },
-    "abort": {
-      "already_configured": "This calendar is already configured."
-    }
+    "error": {"required": "Please choose a value."},
+    "abort": {"already_configured": "This calendar is already configured."}
   },
   "options": {
     "step": {
       "init": {
-        "title": "Event and nearby sauna search area",
-        "description": "Enter the location from broad to specific: country, region, city, then district/area/postcode. You can leave lower levels blank.",
+        "title": "Choose country",
+        "description": "Choose a country, then select from its online region, city, and area lists.",
+        "data": {"country": "Country"}
+      },
+      "region": {
+        "title": "Choose region",
+        "description": "Choose a region or skip this level.",
+        "data": {"region": "State / Province / Region"}
+      },
+      "city": {
+        "title": "Choose city",
+        "description": "Choose a city or skip this level.",
+        "data": {"city": "City / Town"}
+      },
+      "area": {
+        "title": "Choose local area",
+        "description": "Choose an available neighbourhood or district, or skip this level.",
         "data": {
-          "country": "Country",
-          "region": "State / Province / Region",
-          "city": "City / Town",
-          "area": "District / Area / Postcode",
+          "area": "District / Area",
           "ticketmaster_api_key": "Optional Ticketmaster API key"
         }
       }
