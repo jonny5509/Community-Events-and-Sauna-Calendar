@@ -32,7 +32,7 @@
       },
       "county": {
         "title": "Choose county or sub-region",
-        "description": "Choose a county or local sub-region within the selected region, or skip this level where county data is unavailable.",
+        "description": "Choose a county from the list where available. If county data is missing for your region, choose manual entry or skip this level.",
         "data": {
           "county": "County / Sub-region"
         }
@@ -42,6 +42,13 @@
         "description": "Enter a city or town not present in the dropdown.",
         "data": {
           "city": "City / Town"
+        }
+      },
+      "county_manual": {
+        "title": "Enter county or sub-region",
+        "description": "Enter a county or local sub-region not present in the dropdown.",
+        "data": {
+          "county": "County / Sub-region"
         }
       }
     },
@@ -85,7 +92,7 @@
       },
       "county": {
         "title": "Choose county or sub-region",
-        "description": "Choose a county or local sub-region within the selected region, or skip this level where county data is unavailable.",
+        "description": "Choose a county from the list where available. If county data is missing for your region, choose manual entry or skip this level.",
         "data": {
           "county": "County / Sub-region"
         }
@@ -95,6 +102,13 @@
         "description": "Enter a city or town not present in the dropdown.",
         "data": {
           "city": "City / Town"
+        }
+      },
+      "county_manual": {
+        "title": "Enter county or sub-region",
+        "description": "Enter a county or local sub-region not present in the dropdown.",
+        "data": {
+          "county": "County / Sub-region"
         }
       }
     }
