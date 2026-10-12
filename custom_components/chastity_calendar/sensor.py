@@ -155,26 +155,41 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
     def _event(self):
         today = dt_util.now().date()
         events = self._events("pride", today, date(today.year + 2, 1, 1))
-        matching_titles = set()
+
+        # Match the event's own title/description, not just the search query's
+        # category tag. Search-source tags can label a generic result as "gay"
+        # or "lesbian", which made every sensor select the same event.
+        category_terms = {
+            "gay": ("gay", "harvey milk", "gay men"),
+            "lesbian": ("lesbian", "sapphic"),
+            "bisexual": ("bisexual", "bi visibility", "bi pride"),
+            "transgender": (
+                "transgender", "trans day of visibility",
+                "transgender day of visibility", "trans day of remembrance",
+                "transgender day of remembrance", "trans pride",
+            ),
+            "queer": ("queer",),
+        }
+        terms = category_terms.get(self.category, (self.category,))
+        matching_summaries = set()
         for item in self.coordinator.data or []:
-            tags = {str(tag).casefold() for tag in item.get("categories", [])}
-            category = str(item.get("category", "")).casefold()
-            if self.category in tags or category == self.category:
-                matching_titles.add(item.get("summary", ""))
+            text = " ".join((
+                str(item.get("summary", "")),
+                str(item.get("description", "")),
+            )).casefold()
+            if any(term in text for term in terms):
+                matching_summaries.add(item.get("summary", ""))
+
         upcoming = [
             event for event in events
-            if event.summary in matching_titles and event.end_datetime_local.date() > today
-        ]
-        if upcoming:
-            return min(upcoming, key=lambda event: event.start_datetime_local)
-
-        # If no event is tagged for this category, still show the next annual
-        # LGBTQ+ observance rather than an empty "No upcoming..." state.
-        observances = [
-            event for event in events
             if event.end_datetime_local.date() > today
+            and (
+                event.summary in matching_summaries
+                or any(term in f"{event.summary} {event.description or ''}".casefold()
+                       for term in terms)
+            )
         ]
-        return min(observances, key=lambda event: event.start_datetime_local) if observances else None
+        return min(upcoming, key=lambda event: event.start_datetime_local) if upcoming else None
 
     @property
     def native_value(self) -> str:
