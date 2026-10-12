@@ -68,6 +68,9 @@ SEARCHES = (
     ("adult", '"18+" fetish event OR adult social dates'),
     ("pride", 'LGBTQ OR LGBTQIA Pride festival parade events dates'),
     ("gay", '"gay men" OR "gay pride" festival meetup dates'),
+    ("gay", '"gay events" calendar social dates'),
+    ("gay", '"gay men" social event festival 2026 OR 2027'),
+    ("gay", '"gay community" event calendar meetup'),
     ("lesbian", 'lesbian festival OR meetup OR pride events dates'),
     ("bisexual", 'bisexual OR "bi pride" community events dates'),
     ("transgender", '"trans pride" OR transgender community events dates'),
@@ -180,7 +183,7 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
 async def _fetch_ticketmaster(session, api_key, country_code, today, coordinates=None, radius_km=30):
     """Search Ticketmaster's structured catalogue within the configured radius when possible."""
     if not api_key or not country_code: return []
-    terms = ("LGBTQ Pride","community festival","community event","convention","kink fetish",
+    terms = ("LGBTQ Pride","gay events","gay men social","gay pride festival","community festival","community event","convention","kink fetish",
              "chastity","adult only","gay lesbian queer","music arts festival","workshop meetup")
     async def fetch_term(term):
         params = {"apikey":api_key,"countryCode":country_code,"keyword":term,"size":"100","page":"0","sort":"date,asc"}
@@ -327,6 +330,9 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         ("community", 'workshop convention expo conference dates'),
         ("pride", 'LGBTQ Pride events festival parade'),
         ("gay", 'gay events social meetup dates'),
+        ("gay", '"gay events" calendar near me dates'),
+        ("gay", '"gay men" social event meetup dates'),
+        ("gay", 'gay pride festival parade 2026 OR 2027 dates'),
         ("lesbian", 'lesbian events meetup festival dates'),
         ("bisexual", 'bisexual community events dates'),
         ("transgender", 'trans community events dates'),
