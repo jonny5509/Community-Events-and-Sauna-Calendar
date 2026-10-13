@@ -23,7 +23,7 @@ views:
           - entity: button.community_events_sauna_calendar_next_sauna_event_directions
             name: Next sauna event directions
       - type: entities
-        title: Upcoming event highlights
+        title: Event overview
         show_header_toggle: false
         entities:
           - entity: sensor.next_lgbtq_event
@@ -32,6 +32,26 @@ views:
             name: Next sauna event
           - entity: sensor.nearest_sauna
             name: Nearest sauna
+          - entity: sensor.ongoing_month_event
+            name: Ongoing monthly event
+          - entity: sensor.next_month_event
+            name: Next month's event
+          - entity: sensor.past_lgbtq_event
+            name: Most recent past LGBTQ+ event
+      - type: entities
+        title: LGBTQ+ category highlights
+        show_header_toggle: false
+        entities:
+          - entity: sensor.next_gay_event
+            name: Next gay event
+          - entity: sensor.next_lesbian_event
+            name: Next lesbian event
+          - entity: sensor.next_bisexual_event
+            name: Next bisexual event
+          - entity: sensor.next_transgender_event
+            name: Next transgender event
+          - entity: sensor.next_queer_event
+            name: Next queer event
       - type: calendar
         title: Monthly and LGBTQ+ events
         initial_view: listWeek
