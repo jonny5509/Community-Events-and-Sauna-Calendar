@@ -31,6 +31,14 @@ During setup, choose a country, then narrow the location by region/state and cou
 
 The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
 
+## What's new in 2.0.7
+
+- Ensure discovered timed events use timezone-aware datetimes before constructing Home Assistant calendar events, preventing calendar state updates from failing validation.
+- Compare timed events with timezone-aware range bounds and sort mixed all-day/timed events consistently.
+- Correct escaped regular expressions in future-date parsing so yearless, abbreviated-month, and UK numeric dates are recognised.
+- Add regression coverage for calendar timezone handling and date parsing.
+- Update the integration manifest to 2.0.7.
+
 ## What's new in 2.0.6
 
 - Fix missed upcoming LGBTQ+ listings when search snippets show dates without a year, use abbreviated month names, or use UK numeric date formats.
@@ -84,7 +92,7 @@ The optional **Ticketmaster Discovery API key** enables searches through the [Ti
 
 ## Event data
 
-Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.6. Subsequent scheduled refreshes update the current results.
+Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.7. Subsequent scheduled refreshes update the current results.
 
 ## Transparent limitations
 

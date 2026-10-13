@@ -176,6 +176,18 @@ PRIDE_EVENTS = [
 ]
 
 
+def _as_aware_local(value: datetime) -> datetime:
+    """Return a datetime with Home Assistant's local timezone attached.
+
+    Naive source datetimes are treated as local wall time. Attaching the
+    configured timezone before conversion avoids silently interpreting an
+    event's displayed local time as UTC.
+    """
+    if value.tzinfo is None or value.utcoffset() is None:
+        value = value.replace(tzinfo=dt_util.get_default_time_zone())
+    return dt_util.as_local(value)
+
+
 def _is_lgbtq_event(item: dict) -> bool:
     """Return whether discovered metadata identifies an LGBTQ+ event."""
     lgbtq_categories = {
@@ -258,16 +270,19 @@ class ChastityChallengeCalendar(CalendarEntity):
             # converting them to dates made same-day events fail the exclusive
             # end-date overlap check and disappear from the calendar.
             if isinstance(raw_start, datetime) or isinstance(raw_end, datetime):
-                event_start = (
+                # Home Assistant requires timezone-aware datetimes in every
+                # CalendarEvent. Discovery currently provides naive datetimes
+                # for some sources, so interpret those in HA's local timezone.
+                event_start = _as_aware_local(
                     raw_start if isinstance(raw_start, datetime)
                     else datetime.combine(raw_start, datetime.min.time())
                 )
-                event_end = (
+                event_end = _as_aware_local(
                     raw_end if isinstance(raw_end, datetime)
                     else datetime.combine(raw_end, datetime.min.time())
                 )
-                range_start = datetime.combine(start_day, datetime.min.time())
-                range_end = datetime.combine(end_day, datetime.min.time())
+                range_start = _as_aware_local(datetime.combine(start_day, datetime.min.time()))
+                range_end = _as_aware_local(datetime.combine(end_day, datetime.min.time()))
                 overlaps = event_end > range_start and event_start < range_end
             else:
                 event_start = raw_start
@@ -281,7 +296,7 @@ class ChastityChallengeCalendar(CalendarEntity):
                     description=item["description"],
                     location=item.get("location") or "",
                 ))
-        return sorted(events, key=lambda event: event.start)
+        return sorted(events, key=lambda event: event.start_datetime_local)
 
     @property
     def event(self) -> CalendarEvent | None:
