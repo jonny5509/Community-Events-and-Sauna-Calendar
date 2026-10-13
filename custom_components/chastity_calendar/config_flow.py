@@ -278,6 +278,10 @@ def _location_fields(data):
         "chastify_dev_token": data.get("chastify_dev_token", "").strip(),
         "chastify_lock_id": data.get("chastify_lock_id", "").strip(),
         "chaster_access_token": data.get("chaster_access_token", "").strip(),
+        "participation_providers": [
+            provider for provider in data.get("participation_providers", [])
+            if provider in {"emlalock", "chastify", "chaster"}
+        ],
     }
 
 
@@ -415,6 +419,18 @@ class _LocationFlow:
             self._location_data.get("area", SKIP),
         )
         schema = {marker: field}
+        schema[vol.Optional(
+            "participation_providers",
+            default=self._location_data.get("participation_providers", []),
+        )] = selector.SelectSelector(selector.SelectSelectorConfig(
+            options=[
+                {"value": "emlalock", "label": "EmlaLock"},
+                {"value": "chastify", "label": "Chastify"},
+                {"value": "chaster", "label": "Chaster"},
+            ],
+            multiple=True,
+            mode=selector.SelectSelectorMode.LIST,
+        ))
         for key in (
             "ticketmaster_api_key", "emlalock_userid", "emlalock_api_key",
             "chastify_dev_token", "chastify_lock_id", "chaster_access_token",
@@ -441,6 +457,7 @@ class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domai
                 "chastify_dev_token": "",
                 "chastify_lock_id": "",
                 "chaster_access_token": "",
+                "participation_providers": [],
             }
         return await self._show_country(user_input)
 
@@ -493,6 +510,7 @@ class ChastityCalendarOptionsFlow(_LocationFlow, config_entries.OptionsFlow):
             "chastify_dev_token": current.get("chastify_dev_token", ""),
             "chastify_lock_id": current.get("chastify_lock_id", ""),
             "chaster_access_token": current.get("chaster_access_token", ""),
+            "participation_providers": current.get("participation_providers", []),
         }
 
     async def async_step_init(self, user_input=None):
