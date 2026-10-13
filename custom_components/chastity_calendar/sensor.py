@@ -104,7 +104,7 @@ class ChastityNextMonthEventSensor(ChastityCalendarSensorBase):
     @property
     def extra_state_attributes(self) -> dict:
         event = self._event()
-        return self._details(event) if event else {}
+        return {}
 
 
 class ChastityPastLGBTQEventSensor(ChastityCalendarSensorBase):
@@ -130,7 +130,7 @@ class ChastityPastLGBTQEventSensor(ChastityCalendarSensorBase):
     @property
     def extra_state_attributes(self) -> dict:
         event = self._event()
-        return self._details(event) if event else {}
+        return {}
 
 
 class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
@@ -156,7 +156,7 @@ class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
     @property
     def extra_state_attributes(self) -> dict:
         event = self._event()
-        return self._details(event) if event else {}
+        return {}
 
 
 class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
@@ -215,7 +215,7 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
     @property
     def extra_state_attributes(self) -> dict:
         event = self._event()
-        return self._details(event) if event else {}
+        return {}
 
 
 class ChastityNextGayEventSensor(ChastityNextCategoryEventSensor):
