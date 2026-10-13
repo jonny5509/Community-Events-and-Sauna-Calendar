@@ -100,10 +100,10 @@ def _find_future_date(text: str, today: datetime):
     month_names = "January|February|March|April|May|June|July|August|September|October|November|December"
     month_abbrevs = "Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?"
     patterns = (
-        re.compile(rf"\\b({month_names}|{month_abbrevs})\\.?\\s+(\\d{{1,2}})(?:st|nd|rd|th)?[,]?\\s*(20\\d{{2}})?\\b", re.I),
-        re.compile(rf"\\b(\\d{{1,2}})(?:st|nd|rd|th)?\\s+({month_names}|{month_abbrevs})\\.?[,]?\\s*(20\\d{{2}})?\\b", re.I),
-        re.compile(r"\\b(\\d{1,2})[/.](\\d{1,2})[/.](20\\d{2}|\\d{2})\\b"),
-        re.compile(r"\\b(20\\d{2})-(\\d{2})-(\\d{2})\\b"),
+        re.compile(rf"\b({month_names}|{month_abbrevs})\.?\.+(\d{{1,2}})(?:st|nd|rd|th)?[,]?\.*(20\d{{2}})?\.", re.I),
+        re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\.+({month_names}|{month_abbrevs})\.?[,]?\.*(20\d{{2}})?\.", re.I),
+        re.compile(r"\b(\d{1,2})[/.](\d{1,2})[/.](20\d{2}|\d{2})\."),
+        re.compile(r"\b(20\d{2})-(\d{2})-(\d{2})\."),
     )
     for pattern_index, pattern in enumerate(patterns):
         for match in pattern.finditer(text):
