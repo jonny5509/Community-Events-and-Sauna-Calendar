@@ -51,3 +51,35 @@ def test_lgbtq_sauna_event_can_appear_in_both_focused_calendars():
     assert "Queer sauna social" not in _summaries("monthly", [event])
     assert "Queer sauna social" in _summaries("pride", [event])
     assert "Queer sauna social" in _summaries("sauna", [event])
+
+
+
+def test_timed_discovered_events_are_timezone_aware():
+    """Naive source datetimes must not make Home Assistant reject CalendarEvent."""
+    event = _event("Sauna session", "sauna", ["sauna"])
+    sauna = ChastityChallengeCalendar(SimpleNamespace(data=[event]), "sauna")
+    result = sauna._events_between(date(2027, 6, 1), date(2027, 7, 1))
+
+    assert len(result) == 1
+    assert result[0].start.tzinfo is not None
+    assert result[0].end.tzinfo is not None
+
+
+def test_mixed_all_day_and_timed_events_sort_without_type_error():
+    """All-day dates and timed datetimes can coexist in one calendar result."""
+    events = [
+        _event("Timed sauna session", "sauna", ["sauna"]),
+        {
+            "summary": "All-day sauna event",
+            "start": date(2027, 6, 14),
+            "end": date(2027, 6, 15),
+            "description": "All day",
+            "category": "sauna",
+            "categories": ["sauna"],
+            "location": "",
+        },
+    ]
+    sauna = ChastityChallengeCalendar(SimpleNamespace(data=events), "sauna")
+    result = sauna._events_between(date(2027, 6, 1), date(2027, 7, 1))
+
+    assert {event.summary for event in result} == {"Timed sauna session", "All-day sauna event"}
