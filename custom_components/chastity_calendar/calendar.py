@@ -321,6 +321,29 @@ class ChastityChallengeCalendar(CalendarEntity):
                         ),
                         location="",
                     ))
+        # Split multi-day all-day LGBTQ+ events into one-day entries. Home
+        # Assistant calendar cards can then render a marker on each covered
+        # date instead of drawing one continuous multi-day bar. Keep timed
+        # events intact, since splitting them would alter their time semantics.
+        if self.calendar_type == "pride":
+            daily_events = []
+            for event in events:
+                if (isinstance(event.start, date) and not isinstance(event.start, datetime)
+                        and isinstance(event.end, date) and not isinstance(event.end, datetime)):
+                    day = event.start
+                    while day < event.end:
+                        daily_events.append(CalendarEvent(
+                            summary=event.summary,
+                            start=day,
+                            end=day + timedelta(days=1),
+                            description=event.description,
+                            location=getattr(event, "location", "") or "",
+                        ))
+                        day += timedelta(days=1)
+                else:
+                    daily_events.append(event)
+            events = daily_events
+
         return sorted(events, key=lambda event: event.start_datetime_local)
 
     @property
