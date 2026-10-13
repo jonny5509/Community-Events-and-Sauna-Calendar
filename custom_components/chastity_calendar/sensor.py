@@ -33,9 +33,9 @@ class ChastityCalendarSensorBase(SensorEntity):
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{self._attr_name.lower().replace(' ', '_')}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
-            name="Community Events & Sauna Calendar",
-            manufacturer="Community Events & Sauna Calendar",
-            configuration_url="https://github.com/jonny5509/Community-Events-and-Sauna-Calendar",
+            name="Chastity Events",
+            manufacturer="Chastity Events",
+            configuration_url="https://github.com/jonny5509/Chastity-Events",
         )
 
     async def async_added_to_hass(self) -> None:
@@ -283,9 +283,9 @@ class ChastityNearestSaunaSensor(SensorEntity):
         self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_nearest_sauna"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
-            name="Community Events & Sauna Calendar",
-            manufacturer="Community Events & Sauna Calendar",
-            configuration_url="https://github.com/jonny5509/Community-Events-and-Sauna-Calendar",
+            name="Chastity Events",
+            manufacturer="Chastity Events",
+            configuration_url="https://github.com/jonny5509/Chastity-Events",
         )
         self._saunas = []
         self._unsub_refresh = None
