@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+import re
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.event import async_track_time_change
 
@@ -10,6 +11,15 @@ from homeassistant.util import dt as dt_util
 
 from .calendar import ChastityChallengeCalendar
 from .const import DOMAIN
+
+
+def _sensor_event_name(summary: str) -> str:
+    """Strip ticketing/date/time text appended by event-listing sources.
+
+    The original summary remains untouched in the calendar entity; this helper
+    only shortens the event name displayed as a sensor state.
+    """
+    return re.sub(r"\s+Tickets?\s*,.*$", "", summary, flags=re.IGNORECASE).strip()
 
 
 class ChastityCalendarSensorBase(SensorEntity):
@@ -72,7 +82,7 @@ class ChastityOngoingMonthEventSensor(ChastityCalendarSensorBase):
     @property
     def native_value(self) -> str:
         event = self._event()
-        return event.summary if event else "No ongoing month event"
+        return _sensor_event_name(event.summary) if event else "No ongoing month event"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -368,7 +378,7 @@ class ChastityNextSaunaEventSensor(ChastityCalendarSensorBase):
             return "No upcoming sauna event found"
         start = event.get("start")
         event_date = start.date().isoformat() if hasattr(start, "date") else str(start)[:10]
-        return event.get("summary", "Sauna event")
+        return _sensor_event_name(event.get("summary", "Sauna event"))
 
     @property
     def extra_state_attributes(self) -> dict:
