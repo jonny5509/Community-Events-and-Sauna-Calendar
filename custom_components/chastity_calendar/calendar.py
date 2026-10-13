@@ -289,13 +289,30 @@ class ChastityChallengeCalendar(CalendarEntity):
                 event_end = raw_end
                 overlaps = event_end > start_day and event_start < end_day
             if overlaps:
-                events.append(CalendarEvent(
-                    summary=item["summary"],
-                    start=event_start,
-                    end=event_end,
-                    description=item["description"],
-                    location=item.get("location") or "",
-                ))
+                # Only split discovered multi-day LGBTQ+ all-day events into
+                # daily entries. Annual observances (including Pride Month)
+                # are defined above and intentionally retain their original span.
+                if (self.calendar_type == "pride"
+                        and isinstance(raw_start, date) and not isinstance(raw_start, datetime)
+                        and isinstance(raw_end, date) and not isinstance(raw_end, datetime)):
+                    day = raw_start
+                    while day < raw_end:
+                        events.append(CalendarEvent(
+                            summary=item["summary"],
+                            start=day,
+                            end=day + timedelta(days=1),
+                            description=item["description"],
+                            location=item.get("location") or "",
+                        ))
+                        day += timedelta(days=1)
+                else:
+                    events.append(CalendarEvent(
+                        summary=item["summary"],
+                        start=event_start,
+                        end=event_end,
+                        description=item["description"],
+                        location=item.get("location") or "",
+                    ))
         # Daily crowns appear only on the monthly challenge calendar. A crown
         # means an active session was verified at least once on that local date;
         # it does not claim uninterrupted activity for the entire day.
@@ -321,29 +338,6 @@ class ChastityChallengeCalendar(CalendarEntity):
                         ),
                         location="",
                     ))
-        # Split multi-day all-day LGBTQ+ events into one-day entries. Home
-        # Assistant calendar cards can then render a marker on each covered
-        # date instead of drawing one continuous multi-day bar. Keep timed
-        # events intact, since splitting them would alter their time semantics.
-        if self.calendar_type == "pride":
-            daily_events = []
-            for event in events:
-                if (isinstance(event.start, date) and not isinstance(event.start, datetime)
-                        and isinstance(event.end, date) and not isinstance(event.end, datetime)):
-                    day = event.start
-                    while day < event.end:
-                        daily_events.append(CalendarEvent(
-                            summary=event.summary,
-                            start=day,
-                            end=day + timedelta(days=1),
-                            description=event.description,
-                            location=getattr(event, "location", "") or "",
-                        ))
-                        day += timedelta(days=1)
-                else:
-                    daily_events.append(event)
-            events = daily_events
-
         return sorted(events, key=lambda event: event.start_datetime_local)
 
     @property
