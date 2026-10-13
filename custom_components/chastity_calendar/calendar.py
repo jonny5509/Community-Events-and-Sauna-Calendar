@@ -225,9 +225,9 @@ class ChastityChallengeCalendar(CalendarEntity):
         self.calendar_type = calendar_type
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
-            name="Community Events & Sauna Calendar",
-            manufacturer="Community Events & Sauna Calendar",
-            configuration_url="https://github.com/jonny5509/Community-Events-and-Sauna-Calendar",
+            name="Chastity Events",
+            manufacturer="Chastity Events",
+            configuration_url="https://github.com/jonny5509/Chastity-Events",
         )
         if calendar_type == "pride":
             self._attr_name = "LGBTQ+ Events"
