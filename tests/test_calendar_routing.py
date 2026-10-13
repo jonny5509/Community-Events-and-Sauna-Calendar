@@ -105,3 +105,20 @@ def test_mixed_date_and_naive_datetime_endpoints_are_normalized():
     assert result[0].start.utcoffset() is not None
     assert result[0].end.tzinfo is not None
     assert result[0].end.utcoffset() is not None
+
+
+
+def test_verified_crown_days_appear_only_on_monthly_calendar():
+    coordinator = SimpleNamespace(data=[], crown_days={"2027-06-12"})
+    monthly = ChastityChallengeCalendar(coordinator, "monthly")
+    monthly_events = monthly._events_between(date(2027, 6, 1), date(2027, 7, 1))
+    crowns = [event for event in monthly_events if "participation crown" in event.summary]
+
+    assert len(crowns) == 1
+    assert crowns[0].summary == "👑 Summer Chastity Challenge participation crown"
+    assert crowns[0].start == date(2027, 6, 12)
+    assert crowns[0].end == date(2027, 6, 13)
+
+    sauna = ChastityChallengeCalendar(coordinator, "sauna")
+    sauna_events = sauna._events_between(date(2027, 6, 1), date(2027, 7, 1))
+    assert not any("participation crown" in event.summary for event in sauna_events)
