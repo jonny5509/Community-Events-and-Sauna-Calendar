@@ -2,4 +2,4 @@
 from homeassistant.const import Platform
 
 DOMAIN = "chastity_calendar"
-PLATFORMS = [Platform.CALENDAR, Platform.SENSOR]
+PLATFORMS = [Platform.CALENDAR, Platform.SENSOR, Platform.BUTTON]
