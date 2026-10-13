@@ -19,7 +19,7 @@ def _sensor_event_name(summary: str) -> str:
     The original summary remains untouched in the calendar entity; this helper
     only shortens the event name displayed as a sensor state.
     """
-    return re.sub(r"\s+Tickets?\b.*$", "", str(summary or ""), flags=re.IGNORECASE).strip()
+    return re.sub(r"\s+Tickets?\s*(?:,|:|[-–—•]).*$", "", str(summary or ""), flags=re.IGNORECASE).strip()
 
 
 class ChastityCalendarSensorBase(SensorEntity):
