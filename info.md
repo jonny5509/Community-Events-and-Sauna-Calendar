@@ -1,4 +1,4 @@
-# Community Events & Sauna Calendar
+# Chastity Events
 
 A Home Assistant custom integration with monthly challenge and LGBTQ+ observance calendars, discovered community/LGBTQ+/sauna event calendars, focused event sensors, a nearest-sauna venue sensor, and Event Hub notification/directions buttons.
 
