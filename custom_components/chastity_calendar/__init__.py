@@ -11,6 +11,11 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, PLATFORMS
 from .discovery import async_discover_events
+from .participation import (
+    async_has_verified_active_session,
+    async_load_crown_days,
+    async_save_crown_days,
+)
 
 _LOGGER = logging.getLogger(__name__)
 INITIAL_DISCOVERY_TIMEOUT = 180
@@ -81,6 +86,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=None,
     )
 
+    # Crown history is persisted separately from remote event discovery.
+    coordinator.crown_days = await async_load_crown_days(hass, entry.entry_id)
+
+    async def async_check_crowns(_now=None):
+        """Record at most one crown per local day after a verified active session."""
+        try:
+            if not await async_has_verified_active_session(hass, preferences):
+                return
+            today = dt_util.now().date().isoformat()
+            if today in coordinator.crown_days:
+                return
+            coordinator.crown_days.add(today)
+            await async_save_crown_days(hass, entry.entry_id, coordinator.crown_days)
+            # Notify calendar entities so the new all-day crown appears immediately.
+            coordinator.async_set_updated_data(coordinator.data or [])
+            _LOGGER.info("Recorded a verified participation crown for %s", today)
+        except Exception:
+            # A provider/storage failure must never create a crown.
+            _LOGGER.warning("Unable to verify or record today's participation crown")
+
     # Set up entities immediately; remote discovery runs in the background.
     coordinator.async_set_updated_data([])
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
@@ -96,6 +121,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(
         async_track_time_change(hass, async_scheduled_refresh, hour=[0, 6, 12, 18], minute=0, second=0)
+    )
+    # Check periodically so a session that starts during the day can be recorded.
+    entry.async_on_unload(
+        async_track_time_change(hass, async_check_crowns, minute=[0, 30], second=0)
+    )
+    hass.async_create_task(
+        async_check_crowns(), name=f"{DOMAIN} active-session crown check"
     )
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
