@@ -1,4 +1,4 @@
-"""Four focused sensors for monthly and LGBTQ+ observances."""
+"""Focused event sensors and the nearest-sauna venue sensor."""
 from __future__ import annotations
 
 from datetime import date, timedelta
