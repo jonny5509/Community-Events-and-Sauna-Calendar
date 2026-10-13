@@ -401,6 +401,10 @@ class _LocationFlow:
     async def _show_area(self, user_input=None):
         if user_input is not None:
             self._location_data["area"] = user_input["area"]
+            self._location_data["participation_providers"] = [
+                provider for provider in user_input.get("participation_providers", [])
+                if provider in {"emlalock", "chastify", "chaster"}
+            ]
             for key in (
                 "ticketmaster_api_key", "emlalock_userid", "emlalock_api_key",
                 "chastify_dev_token", "chastify_lock_id", "chaster_access_token",
