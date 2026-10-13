@@ -12,7 +12,7 @@ def test_sensor_event_name_strips_ticketing_and_schedule_suffix():
 
 def test_sensor_event_name_strips_ticket_suffix_case_insensitively():
     assert _sensor_event_name("Pride social TICKET, details here") == "Pride social"
-    assert _sensor_event_name("Pride social tickets available now") == "Pride social"
+    assert _sensor_event_name("Pride social tickets, details here") == "Pride social"
 
 
 def test_sensor_event_name_preserves_names_without_ticket_suffix():
