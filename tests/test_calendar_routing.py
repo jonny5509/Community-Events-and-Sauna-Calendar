@@ -83,3 +83,25 @@ def test_mixed_all_day_and_timed_events_sort_without_type_error():
     result = sauna._events_between(date(2027, 6, 1), date(2027, 7, 1))
 
     assert {event.summary for event in result} == {"Timed sauna session", "All-day sauna event"}
+
+
+
+def test_mixed_date_and_naive_datetime_endpoints_are_normalized():
+    """A mixed endpoint pair must still satisfy Home Assistant's schema."""
+    event = {
+        "summary": "Sauna session with date end",
+        "start": datetime(2027, 6, 12, 19, 30),
+        "end": date(2027, 6, 13),
+        "description": "Test event",
+        "category": "sauna",
+        "categories": ["sauna"],
+        "location": "",
+    }
+    sauna = ChastityChallengeCalendar(SimpleNamespace(data=[event]), "sauna")
+    result = sauna._events_between(date(2027, 6, 1), date(2027, 7, 1))
+
+    assert len(result) == 1
+    assert result[0].start.tzinfo is not None
+    assert result[0].start.utcoffset() is not None
+    assert result[0].end.tzinfo is not None
+    assert result[0].end.utcoffset() is not None
