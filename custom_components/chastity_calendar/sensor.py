@@ -19,7 +19,7 @@ def _sensor_event_name(summary: str) -> str:
     The original summary remains untouched in the calendar entity; this helper
     only shortens the event name displayed as a sensor state.
     """
-    return re.sub(r"\s+Tickets?\s*,.*$", "", summary, flags=re.IGNORECASE).strip()
+    return re.sub(r"\s+Tickets?\b.*$", "", str(summary or ""), flags=re.IGNORECASE).strip()
 
 
 class ChastityCalendarSensorBase(SensorEntity):
@@ -109,7 +109,7 @@ class ChastityNextMonthEventSensor(ChastityCalendarSensorBase):
     @property
     def native_value(self) -> str:
         event = self._event()
-        return event.summary if event else "No event next month"
+        return _sensor_event_name(event.summary) if event else "No event next month"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -135,7 +135,7 @@ class ChastityPastLGBTQEventSensor(ChastityCalendarSensorBase):
     @property
     def native_value(self) -> str:
         event = self._event()
-        return event.summary if event else "No past LGBTQ event"
+        return _sensor_event_name(event.summary) if event else "No past LGBTQ event"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -161,7 +161,7 @@ class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
     @property
     def native_value(self) -> str:
         event = self._event()
-        return event.summary if event else "No upcoming LGBTQ event"
+        return _sensor_event_name(event.summary) if event else "No upcoming LGBTQ event"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -220,7 +220,7 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
     @property
     def native_value(self) -> str:
         event = self._event()
-        return event.summary if event else f"No upcoming {self.category.title()} event"
+        return _sensor_event_name(event.summary) if event else f"No upcoming {self.category.title()} event"
 
     @property
     def extra_state_attributes(self) -> dict:
