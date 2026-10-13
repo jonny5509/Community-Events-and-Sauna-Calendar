@@ -177,9 +177,14 @@ PRIDE_EVENTS = [
 
 
 def _as_aware_local(value: datetime) -> datetime:
-    """Return a datetime with Home Assistant's local timezone attached."""
-    if value.tzinfo is None:
-        return dt_util.as_local(dt_util.as_utc(value))
+    """Return a datetime with Home Assistant's local timezone attached.
+
+    Naive source datetimes are treated as local wall time. Attaching the
+    configured timezone before conversion avoids silently interpreting an
+    event's displayed local time as UTC.
+    """
+    if value.tzinfo is None or value.utcoffset() is None:
+        value = value.replace(tzinfo=dt_util.get_default_time_zone())
     return dt_util.as_local(value)
 
 
