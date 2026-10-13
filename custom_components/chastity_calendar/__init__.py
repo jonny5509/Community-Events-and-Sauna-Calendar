@@ -97,8 +97,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             today = dt_util.now().date().isoformat()
             if today in coordinator.crown_days:
                 return
-            coordinator.crown_days.add(today)
-            await async_save_crown_days(hass, entry.entry_id, coordinator.crown_days)
+            updated_days = set(coordinator.crown_days)
+            updated_days.add(today)
+            await async_save_crown_days(hass, entry.entry_id, updated_days)
+            coordinator.crown_days = updated_days
             # Notify calendar entities so the new all-day crown appears immediately.
             coordinator.async_set_updated_data(coordinator.data or [])
             _LOGGER.info("Recorded a verified participation crown for %s", today)
