@@ -253,9 +253,27 @@ class ChastityChallengeCalendar(CalendarEntity):
                 continue
             raw_start = item["start"]
             raw_end = item["end"]
-            event_start = raw_start.date() if isinstance(raw_start, datetime) else raw_start
-            event_end = raw_end.date() if isinstance(raw_end, datetime) else raw_end
-            if event_end > start_day and event_start < end_day:
+            # Discovered events can be timed events (not all-day entries).
+            # Preserve their datetimes and compare them against datetime bounds;
+            # converting them to dates made same-day events fail the exclusive
+            # end-date overlap check and disappear from the calendar.
+            if isinstance(raw_start, datetime) or isinstance(raw_end, datetime):
+                event_start = (
+                    raw_start if isinstance(raw_start, datetime)
+                    else datetime.combine(raw_start, datetime.min.time())
+                )
+                event_end = (
+                    raw_end if isinstance(raw_end, datetime)
+                    else datetime.combine(raw_end, datetime.min.time())
+                )
+                range_start = datetime.combine(start_day, datetime.min.time())
+                range_end = datetime.combine(end_day, datetime.min.time())
+                overlaps = event_end > range_start and event_start < range_end
+            else:
+                event_start = raw_start
+                event_end = raw_end
+                overlaps = event_end > start_day and event_start < end_day
+            if overlaps:
                 events.append(CalendarEvent(
                     summary=item["summary"],
                     start=event_start,
