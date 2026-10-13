@@ -401,18 +401,15 @@ class _LocationFlow:
     async def _show_area(self, user_input=None):
         if user_input is not None:
             self._location_data["area"] = user_input["area"]
+            self._location_data["ticketmaster_api_key"] = str(
+                user_input.get("ticketmaster_api_key", self._location_data.get("ticketmaster_api_key", "")) or ""
+            ).strip()
             self._location_data["participation_providers"] = [
                 provider for provider in user_input.get("participation_providers", [])
                 if provider in {"emlalock", "chastify", "chaster"}
             ]
-            for key in (
-                "ticketmaster_api_key", "emlalock_userid", "emlalock_api_key",
-                "chastify_dev_token", "chastify_lock_id", "chaster_access_token",
-            ):
-                self._location_data[key] = str(
-                    user_input.get(key, self._location_data.get(key, "")) or ""
-                ).strip()
-            return self._finish_location()
+            return await self._show_participation_credentials()
+
         options = await _areas(
             self.hass, self._location_data["country"],
             self._location_data.get("region", ""), self._location_data.get("city", ""),
@@ -435,15 +432,48 @@ class _LocationFlow:
             multiple=True,
             mode=selector.SelectSelectorMode.LIST,
         ))
-        for key in (
-            "ticketmaster_api_key", "emlalock_userid", "emlalock_api_key",
-            "chastify_dev_token", "chastify_lock_id", "chaster_access_token",
-        ):
-            schema[vol.Optional(
-                key,
-                description={"suggested_value": self._location_data.get(key, "")},
-            )] = str
+        schema[vol.Optional(
+            "ticketmaster_api_key",
+            description={"suggested_value": self._location_data.get("ticketmaster_api_key", "")},
+        )] = str
         return self.async_show_form(step_id="area", data_schema=vol.Schema(schema))
+
+    async def _show_participation_credentials(self, user_input=None):
+        providers = self._location_data.get("participation_providers", [])
+        provider_fields = {
+            "emlalock": ("emlalock_userid", "emlalock_api_key"),
+            "chastify": ("chastify_dev_token", "chastify_lock_id"),
+            "chaster": ("chaster_access_token",),
+        }
+        if user_input is not None:
+            for provider, keys in provider_fields.items():
+                if provider in providers:
+                    for key in keys:
+                        self._location_data[key] = str(
+                            user_input.get(key, self._location_data.get(key, "")) or ""
+                        ).strip()
+                else:
+                    for key in keys:
+                        self._location_data[key] = ""
+            return self._finish_location()
+
+        if not providers:
+            for keys in provider_fields.values():
+                for key in keys:
+                    self._location_data[key] = ""
+            return self._finish_location()
+
+        schema = {}
+        for provider in providers:
+            for key in provider_fields[provider]:
+                schema[vol.Optional(
+                    key,
+                    description={"suggested_value": self._location_data.get(key, "")},
+                )] = str
+        return self.async_show_form(
+            step_id="participation_credentials",
+            data_schema=vol.Schema(schema),
+        )
 
 
 class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domain=DOMAIN):
@@ -482,6 +512,9 @@ class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domai
 
     async def async_step_area(self, user_input=None):
         return await self._show_area(user_input)
+
+    async def async_step_participation_credentials(self, user_input=None):
+        return await self._show_participation_credentials(user_input)
 
     def _finish_location(self):
         return self.async_create_entry(
@@ -537,6 +570,9 @@ class ChastityCalendarOptionsFlow(_LocationFlow, config_entries.OptionsFlow):
 
     async def async_step_area(self, user_input=None):
         return await self._show_area(user_input)
+
+    async def async_step_participation_credentials(self, user_input=None):
+        return await self._show_participation_credentials(user_input)
 
     def _finish_location(self):
         return self.async_create_entry(title="", data=_location_fields(self._location_data))
