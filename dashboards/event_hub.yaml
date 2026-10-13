@@ -36,10 +36,10 @@ views:
         title: Monthly and LGBTQ+ events
         initial_view: listWeek
         entities:
-          - calendar.chastity_calendar_monthly
-          - calendar.chastity_calendar_pride
+          - calendar.monthly_events
+          - calendar.lgbtq_events
       - type: calendar
         title: Sauna events
         initial_view: listWeek
         entities:
-          - calendar.chastity_calendar_sauna
+          - calendar.sauna_events
