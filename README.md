@@ -124,6 +124,12 @@ The Event Hub adds four Home Assistant button entities associated with a dedicat
 
 The buttons use current coordinator data, skip expired or undated records, and show a helpful notification when no matching event or source URL is available. They do not fabricate event addresses or links. The controls appear as buttons on the integration's device page after Home Assistant reloads the integration.
 
+### What's new in 2.2.6
+
+- Refresh the LGBTQ+ Events, Monthly Events, and Sauna Events calendar entities every minute so their Home Assistant on/off state catches event start/end transitions promptly instead of waiting for the next six-hour refresh.
+- Keep calendar state semantics unchanged: on means an event is active now; off does not mean there are no upcoming events. Use the calendar event attributes or the Next Event sensors to see future listings.
+- Update the integration manifest version to 2.2.6.
+
 ### What's new in 2.2.5
 
 - Fix six calendar-routing regression tests that still used the old calendar constructor and failed with a missing `entry_id` argument.
