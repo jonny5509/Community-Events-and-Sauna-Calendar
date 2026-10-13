@@ -79,7 +79,10 @@ class EventHubButton(ButtonEntity):
         url = str(item.get("url") or "").strip()
         if not url:
             links = item.get("source_links") or []
-            url = str(links[0]).strip() if links else ""
+            if isinstance(links, str):
+                url = links.strip()
+            elif isinstance(links, (list, tuple)) and links:
+                url = str(links[0]).strip()
         description = str(item.get("description") or "").strip()
         parts = [f"**{title}**"]
         if start:
