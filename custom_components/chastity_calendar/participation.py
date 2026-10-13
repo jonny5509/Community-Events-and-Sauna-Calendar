@@ -23,7 +23,12 @@ def emlalock_session_active(payload: object) -> bool:
         return False
     # EmlaLock's /info response includes chastitysession when in a session.
     # closedate=0 is the documented response shape for an unclosed session.
-    return session.get("closedate") == 0 and session.get("startdate", 0) > 0
+    startdate = session.get("startdate")
+    return (
+        session.get("closedate") == 0
+        and isinstance(startdate, (int, float))
+        and startdate > 0
+    )
 
 
 def chastify_session_active(payload: object) -> bool:
