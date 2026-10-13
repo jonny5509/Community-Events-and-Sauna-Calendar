@@ -39,10 +39,10 @@ class EventHubButton(ButtonEntity):
         self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_{self.event_kind}_{self.action}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
-            name="Community Events & Sauna Calendar",
-            manufacturer="Community Events & Sauna Calendar",
+            name="Chastity Events",
+            manufacturer="Chastity Events",
             entry_type=None,
-            configuration_url="https://github.com/jonny5509/Community-Events-and-Sauna-Calendar",
+            configuration_url="https://github.com/jonny5509/Chastity-Events",
         )
 
     def _next_record(self) -> dict | None:
