@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.util import dt as dt_util
 
@@ -218,10 +219,16 @@ class ChastityChallengeCalendar(CalendarEntity):
     _attr_has_entity_name = True
     _attr_icon = "mdi:calendar-heart"
 
-    def __init__(self, coordinator, calendar_type: str) -> None:
+    def __init__(self, coordinator, calendar_type: str, entry_id: str) -> None:
         """Initialize one of the integration's separate calendars."""
         self.coordinator = coordinator
         self.calendar_type = calendar_type
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry_id)},
+            name="Community Events & Sauna Calendar",
+            manufacturer="Community Events & Sauna Calendar",
+            configuration_url="https://github.com/jonny5509/Community-Events-and-Sauna-Calendar",
+        )
         if calendar_type == "pride":
             self._attr_name = "LGBTQ+ Events"
             self._attr_icon = "mdi:flag"
@@ -393,7 +400,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Set up monthly, LGBTQ+, and sauna event calendars."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
-        ChastityChallengeCalendar(coordinator, "monthly"),
-        ChastityChallengeCalendar(coordinator, "pride"),
-        ChastityChallengeCalendar(coordinator, "sauna"),
+        ChastityChallengeCalendar(coordinator, "monthly", entry.entry_id),
+        ChastityChallengeCalendar(coordinator, "pride", entry.entry_id),
+        ChastityChallengeCalendar(coordinator, "sauna", entry.entry_id),
     ])
