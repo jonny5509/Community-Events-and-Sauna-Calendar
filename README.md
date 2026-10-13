@@ -1,4 +1,4 @@
-# Community Events & Sauna Calendar
+# Chastity Events
 
 A custom [Home Assistant](https://www.home-assistant.io/) integration with recurring challenge and LGBTQ+ observance calendars, sensors, and best-effort discovery of public events across the configured country.
 
@@ -18,7 +18,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration with recur
 
 ### HACS
 1. Open HACS and choose **Custom repositories**.
-2. Add `jonny5509/Community-Events-and-Sauna-Calendar` as an **Integration**.
+2. Add `jonny5509/Chastity-Events` as an **Integration**.
 3. Download the integration and restart Home Assistant.
 4. Add it from **Settings → Devices & services → Add integration**.
 
@@ -115,7 +115,7 @@ Events can expose `category`, overlapping `categories`, `source`, `sources`, `ur
 
 ## Event Hub (2.2.5)
 
-The Event Hub adds four Home Assistant button entities associated with a dedicated **Community Events & Sauna Calendar** device. In 2.2.1, all calendar and sensor entities also declare this same device association, so the integration's entities appear together on the device page instead of under **Ungrouped**:
+The Event Hub adds four Home Assistant button entities associated with a dedicated **Chastity Events** device. In 2.2.1, all calendar and sensor entities also declare this same device association, so the integration's entities appear together on the device page instead of under **Ungrouped**:
 
 - **Next Event Information** — creates/updates a persistent notification with the next discovered event's date, description, source and real source URL when available.
 - **Next Event Directions** — creates a notification with a Google Maps search link when the event has a location; otherwise it explains that location data is missing.
