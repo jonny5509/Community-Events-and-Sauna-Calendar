@@ -273,6 +273,11 @@ def _location_fields(data):
         "area": "" if area == SKIP else area,
         "location": location,
         "ticketmaster_api_key": data.get("ticketmaster_api_key", "").strip(),
+        "emlalock_userid": data.get("emlalock_userid", "").strip(),
+        "emlalock_api_key": data.get("emlalock_api_key", "").strip(),
+        "chastify_dev_token": data.get("chastify_dev_token", "").strip(),
+        "chastify_lock_id": data.get("chastify_lock_id", "").strip(),
+        "chaster_access_token": data.get("chaster_access_token", "").strip(),
     }
 
 
@@ -392,9 +397,13 @@ class _LocationFlow:
     async def _show_area(self, user_input=None):
         if user_input is not None:
             self._location_data["area"] = user_input["area"]
-            self._location_data["ticketmaster_api_key"] = user_input.get(
-                "ticketmaster_api_key", self._location_data.get("ticketmaster_api_key", "")
-            ).strip()
+            for key in (
+                "ticketmaster_api_key", "emlalock_userid", "emlalock_api_key",
+                "chastify_dev_token", "chastify_lock_id", "chaster_access_token",
+            ):
+                self._location_data[key] = str(
+                    user_input.get(key, self._location_data.get(key, "")) or ""
+                ).strip()
             return self._finish_location()
         options = await _areas(
             self.hass, self._location_data["country"],
@@ -405,14 +414,16 @@ class _LocationFlow:
             "area", [SKIP, *[v for v in options if v != SKIP]],
             self._location_data.get("area", SKIP),
         )
-        api_marker = vol.Optional(
-            "ticketmaster_api_key",
-            description={"suggested_value": self._location_data.get("ticketmaster_api_key", "")},
-        )
-        return self.async_show_form(
-            step_id="area",
-            data_schema=vol.Schema({marker: field, api_marker: str}),
-        )
+        schema = {marker: field}
+        for key in (
+            "ticketmaster_api_key", "emlalock_userid", "emlalock_api_key",
+            "chastify_dev_token", "chastify_lock_id", "chaster_access_token",
+        ):
+            schema[vol.Optional(
+                key,
+                description={"suggested_value": self._location_data.get(key, "")},
+            )] = str
+        return self.async_show_form(step_id="area", data_schema=vol.Schema(schema))
 
 
 class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domain=DOMAIN):
@@ -422,7 +433,15 @@ class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domai
 
     async def async_step_user(self, user_input=None):
         if not hasattr(self, "_location_data"):
-            self._location_data = {"country": "United Kingdom", "ticketmaster_api_key": ""}
+            self._location_data = {
+                "country": "United Kingdom",
+                "ticketmaster_api_key": "",
+                "emlalock_userid": "",
+                "emlalock_api_key": "",
+                "chastify_dev_token": "",
+                "chastify_lock_id": "",
+                "chaster_access_token": "",
+            }
         return await self._show_country(user_input)
 
     async def async_step_region(self, user_input=None):
@@ -469,6 +488,11 @@ class ChastityCalendarOptionsFlow(_LocationFlow, config_entries.OptionsFlow):
             "city": city or SKIP,
             "area": area or SKIP,
             "ticketmaster_api_key": current.get("ticketmaster_api_key", ""),
+            "emlalock_userid": current.get("emlalock_userid", ""),
+            "emlalock_api_key": current.get("emlalock_api_key", ""),
+            "chastify_dev_token": current.get("chastify_dev_token", ""),
+            "chastify_lock_id": current.get("chastify_lock_id", ""),
+            "chaster_access_token": current.get("chaster_access_token", ""),
         }
 
     async def async_step_init(self, user_input=None):
