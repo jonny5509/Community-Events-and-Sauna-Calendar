@@ -369,7 +369,7 @@ class ChastityChallengeCalendar(CalendarEntity):
         self.async_on_remove(
             async_track_time_change(
                 self.hass, self._scheduled_state_refresh,
-                hour=[0, 6, 12, 18], minute=0, second=0,
+                minute=list(range(60)), second=0,
             )
         )
 
