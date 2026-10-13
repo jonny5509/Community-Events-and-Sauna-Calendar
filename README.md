@@ -113,17 +113,21 @@ Events can expose `category`, overlapping `categories`, `source`, `sources`, `ur
 - Adult-only events are included when publicly indexed, but eligibility and age restrictions must be checked with the organiser.
 - Zero results means no matching dated listing was found, not that no events exist.
 
-## Dashboard
+## Event Hub (2.2.0)
 
-```yaml
-type: calendar
-initial_view: month
-entities:
-  - calendar.chastity_challenge_calendar_monthly
-  - calendar.chastity_challenge_calendar_pride
-```
+The Event Hub adds four Home Assistant button entities associated with a dedicated **Community Events & Sauna Calendar** device:
 
-Exact entity IDs can vary; check **Developer tools → States**.
+- **Next Event Information** — creates/updates a persistent notification with the next discovered event's date, description, source and real source URL when available.
+- **Next Event Directions** — creates a notification with a Google Maps search link when the event has a location; otherwise it explains that location data is missing.
+- **Next Sauna Event Information** — the same event details for the next discovered sauna-related event.
+- **Next Sauna Event Directions** — a map link for the next sauna event when a venue/location is available.
+
+The buttons use current coordinator data, skip expired or undated records, and show a helpful notification when no matching event or source URL is available. They do not fabricate event addresses or links. The controls appear as buttons on the integration's device page after Home Assistant reloads the integration.
+
+### Add the Event Hub dashboard
+
+Home Assistant integrations cannot safely install or modify a user's Lovelace dashboard automatically. Import the example view from [dashboards/event_hub.yaml](dashboards/event_hub.yaml) into a dashboard (Dashboard → Edit dashboard → Raw configuration editor), or copy its cards into an existing dashboard. Check **Developer tools → States** and replace entity IDs in the sample if Home Assistant assigned different IDs. The example includes event calendars, next-event sensors and the four action buttons.
+
 
 ## Troubleshooting diagnostics
 
