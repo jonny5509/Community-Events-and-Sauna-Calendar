@@ -296,6 +296,31 @@ class ChastityChallengeCalendar(CalendarEntity):
                     description=item["description"],
                     location=item.get("location") or "",
                 ))
+        # Daily crowns appear only on the monthly challenge calendar. A crown
+        # means an active session was verified at least once on that local date;
+        # it does not claim uninterrupted activity for the entire day.
+        if self.calendar_type == "monthly":
+            for value in getattr(self.coordinator, "crown_days", set()):
+                try:
+                    crown_day = date.fromisoformat(value)
+                except (TypeError, ValueError):
+                    continue
+                if start_day <= crown_day < end_day:
+                    month_event = next(
+                        (item for item in EVENTS if item["start"][0] == crown_day.month),
+                        None,
+                    )
+                    month_name = month_event["summary"] if month_event else "Monthly challenge"
+                    events.append(CalendarEvent(
+                        summary=f"👑 {month_name} participation crown",
+                        start=crown_day,
+                        end=crown_day + timedelta(days=1),
+                        description=(
+                            "An active lock session was verified through a configured "
+                            "service at least once during this local calendar day."
+                        ),
+                        location="",
+                    ))
         return sorted(events, key=lambda event: event.start_datetime_local)
 
     @property

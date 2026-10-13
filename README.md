@@ -31,13 +31,22 @@ During setup, choose a country, then narrow the location by region/state and cou
 
 The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
 
-## What's new in 2.0.7
+### Optional daily participation crowns
+
+In the configuration form or **Configure** settings, select any combination of **EmlaLock**, **Chastify**, and **Chaster** (including none) to choose which services are checked. Credentials for unselected services are ignored. The form accepts credentials for each service; these are optional and are used only for read-only active-session checks. For Chastify, follow the [Developer API guide](https://docs.chastify.net/developer-api/external-api-programs/) to open Developer API in Chastify and create a user-wide DEV key with `locks:read` permission. EmlaLock uses your user ID and API key; Chastify uses a user-wide Developer API token with read permission (a specific lock ID can optionally be supplied); Chaster uses a developer or OAuth access token with lock-read access. See the official [EmlaLock API](https://about.emlalock.com/docs/api/info/), [Chastify Developer API](https://docs.chastify.net/developer-api/external-api-programs/), and [Chaster Public API](https://docs.chaster.app/api/basics/getting-started/) documentation for how to obtain credentials and required permissions.
+
+When a configured provider explicitly confirms an active session, the integration records at most one 👑 crown for that Home Assistant local calendar day. Crowns appear as all-day entries on **Monthly Events** only. The integration stores only the verified dates, not session details. It does not backfill earlier days, and an API error, missing credentials, or ambiguous response never earns a crown. A crown means a provider confirmed an active session at least once during that day; it does not imply continuous activity for the entire day. Credentials are stored with the Home Assistant config entry, so use only your own credentials and revoke tokens you no longer want to use.
+
+## What's new in 2.0.8
 
 - Ensure discovered timed events use timezone-aware datetimes before constructing Home Assistant calendar events, preventing calendar state updates from failing validation.
 - Compare timed events with timezone-aware range bounds and sort mixed all-day/timed events consistently.
 - Correct escaped regular expressions in future-date parsing so yearless, abbreviated-month, and UK numeric dates are recognised.
 - Add regression coverage for calendar timezone handling and date parsing.
-- Update the integration manifest to 2.0.7.
+- Add optional, read-only active-session checks for EmlaLock, Chastify, and Chaster; users can select none, one, two, or all three providers in setup or Configure settings.
+- Award at most one crown per Home Assistant local calendar day, even if multiple selected providers confirm an active session; display the crown as an all-day entry on Monthly Events only.
+- Never award crowns when a provider check fails or its response does not explicitly verify an active session.
+- Update the integration manifest to 2.0.8.
 
 ## What's new in 2.0.6
 
@@ -92,7 +101,7 @@ The optional **Ticketmaster Discovery API key** enables searches through the [Ti
 
 ## Event data
 
-Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.7. Subsequent scheduled refreshes update the current results.
+Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.8. Subsequent scheduled refreshes update the current results.
 
 ## Transparent limitations
 
