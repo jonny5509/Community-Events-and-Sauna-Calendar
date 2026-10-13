@@ -24,10 +24,15 @@
       },
       "area": {
         "title": "Choose local area",
-        "description": "Neighbourhoods and districts are looked up from OpenStreetMap. The local area is optional. You can also enter a Ticketmaster API key.",
+        "description": "Choose an optional local area and enter any optional API credentials. EmlaLock, Chastify, and Chaster credentials are used only for read-only active-session checks to award daily calendar crowns.",
         "data": {
           "area": "District / Area",
-          "ticketmaster_api_key": "Optional Ticketmaster API key"
+          "ticketmaster_api_key": "Optional Ticketmaster API key",
+          "emlalock_userid": "EmlaLock user ID (optional)",
+          "emlalock_api_key": "EmlaLock API key (optional)",
+          "chastify_dev_token": "Chastify user-wide Developer API token (read-only)",
+          "chastify_lock_id": "Optional Chastify lock ID",
+          "chaster_access_token": "Chaster developer or OAuth access token"
         }
       },
       "county": {
@@ -84,10 +89,15 @@
       },
       "area": {
         "title": "Choose local area",
-        "description": "Choose an available neighbourhood or district, or skip this level.",
+        "description": "Update the local area and optional API credentials. Provider credentials are used only for read-only active-session checks to award daily calendar crowns.",
         "data": {
           "area": "District / Area",
-          "ticketmaster_api_key": "Optional Ticketmaster API key"
+          "ticketmaster_api_key": "Optional Ticketmaster API key",
+          "emlalock_userid": "EmlaLock user ID (optional)",
+          "emlalock_api_key": "EmlaLock API key (optional)",
+          "chastify_dev_token": "Chastify user-wide Developer API token (read-only)",
+          "chastify_lock_id": "Optional Chastify lock ID",
+          "chaster_access_token": "Chaster developer or OAuth access token"
         }
       },
       "county": {
