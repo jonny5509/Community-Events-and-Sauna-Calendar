@@ -89,21 +89,75 @@ DATE_PATTERNS = (
 )
 
 def _find_future_date(text: str, today: datetime):
-    """Extract the earliest explicit date within the next two years."""
+    """Extract the earliest explicit or yearless event date in the next two years.
+
+    Search snippets often show dates such as "Friday 16 October" without a
+    year. Treat those as the next occurrence, rather than dropping the event.
+    Numeric dates use UK-style day/month/year, matching many local event
+    sources; ISO dates remain unambiguous.
+    """
     found_dates = []
-    for m in RANGE_PATTERN.finditer(text):
-        try: found_dates.append(datetime.strptime(f"{m.group(1)} {m.group(2)} {m.group(4)}", "%B %d %Y"))
-        except ValueError: pass
-    for index, pattern in enumerate(DATE_PATTERNS):
-        for m in pattern.finditer(text):
+    month_names = "January|February|March|April|May|June|July|August|September|October|November|December"
+    month_abbrevs = "Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?"
+    patterns = (
+        re.compile(rf"\\b({month_names}|{month_abbrevs})\\.?\\s+(\\d{{1,2}})(?:st|nd|rd|th)?[,]?\\s*(20\\d{{2}})?\\b", re.I),
+        re.compile(rf"\\b(\\d{{1,2}})(?:st|nd|rd|th)?\\s+({month_names}|{month_abbrevs})\\.?[,]?\\s*(20\\d{{2}})?\\b", re.I),
+        re.compile(r"\\b(\\d{1,2})[/.](\\d{1,2})[/.](20\\d{2}|\\d{2})\\b"),
+        re.compile(r"\\b(20\\d{2})-(\\d{2})-(\\d{2})\\b"),
+    )
+    for pattern_index, pattern in enumerate(patterns):
+        for match in pattern.finditer(text):
             try:
-                if index == 0: value = datetime.strptime(f"{m.group(1)} {m.group(2)} {m.group(3)}", "%B %d %Y")
-                elif index == 1: value = datetime.strptime(f"{m.group(2)} {m.group(1)} {m.group(3)}", "%B %d %Y")
-                else: value = datetime.strptime(m.group(0), "%Y-%m-%d")
-                found_dates.append(value)
-            except ValueError: pass
-    eligible = [d for d in found_dates if today.date() <= d.date() <= (today + timedelta(days=730)).date()]
-    return min(eligible, key=lambda d: d.date()) if eligible else None
+                if pattern_index == 0:
+                    month_text, day_text, year_text = match.groups()
+                    month_day = f"{month_text.rstrip('.')} {day_text}"
+                elif pattern_index == 1:
+                    day_text, month_text, year_text = match.groups()
+                    month_day = f"{month_text.rstrip('.')} {day_text}"
+                elif pattern_index == 2:
+                    day_text, month_text, year_text = match.groups()
+                    year_text = ("20" + year_text) if len(year_text) == 2 else year_text
+                    found_dates.append(datetime(int(year_text), int(month_text), int(day_text)))
+                    continue
+                else:
+                    year_text, month_text, day_text = match.groups()
+                    found_dates.append(datetime(int(year_text), int(month_text), int(day_text)))
+                    continue
+
+                if year_text:
+                    fmt = "%B %d %Y" if len(month_text) > 3 else "%b %d %Y"
+                    found_dates.append(datetime.strptime(f"{month_day} {year_text}", fmt))
+                else:
+                    parsed_month_day = None
+                    for fmt in ("%B %d", "%b %d"):
+                        try:
+                            parsed_month_day = datetime.strptime(month_day, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    if parsed_month_day is None:
+                        continue
+                    for year in (today.year, today.year + 1, today.year + 2):
+                        try:
+                            found_dates.append(datetime(year, parsed_month_day.month, parsed_month_day.day))
+                        except ValueError:
+                            pass
+            except (ValueError, TypeError):
+                continue
+
+    # Retain explicit date-range support, e.g. October 16-18, 2026.
+    for match in RANGE_PATTERN.finditer(text):
+        try:
+            found_dates.append(datetime.strptime(
+                f"{match.group(1)} {match.group(2)} {match.group(4)}", "%B %d %Y"
+            ))
+        except ValueError:
+            pass
+
+    lower = today.date()
+    upper = (today + timedelta(days=730)).date()
+    eligible = [value for value in found_dates if lower <= value.date() <= upper]
+    return min(eligible, key=lambda value: value.date()) if eligible else None
 
 def _normalise_url(url: str) -> str:
     """Strip tracking parameters to improve duplicate detection."""
@@ -243,7 +297,7 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
         event_date = _find_future_date(f"{title} {description}", today)
         # Search snippets often omit event dates. Inspect a bounded number of
         # LGBTQ+ result pages for explicit structured event start dates.
-        if event_date is None and category in lgbtq_categories and structured_date_checks < 4:
+        if event_date is None and category in lgbtq_categories and structured_date_checks < 8:
             structured_date_checks += 1
             event_date = await _fetch_structured_event_date(session, link, today)
         if event_date is None:
