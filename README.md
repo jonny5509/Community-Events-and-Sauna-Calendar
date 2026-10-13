@@ -132,7 +132,7 @@ The buttons use current coordinator data, skip expired or undated records, and s
 
 ### Add the Event Hub dashboard
 
-Home Assistant integrations cannot safely install or modify a user's Lovelace dashboard automatically. Import the example view from [dashboards/event_hub.yaml](dashboards/event_hub.yaml) into a dashboard (Dashboard → Edit dashboard → Raw configuration editor), or copy its cards into an existing dashboard. Check **Developer tools → States** and replace entity IDs in the sample if Home Assistant assigned different IDs. The example includes event calendars, next-event sensors and the four action buttons.
+Home Assistant integrations cannot safely install or modify a user's Lovelace dashboard automatically. Import the example view from [dashboards/event_hub.yaml](dashboards/event_hub.yaml) into a dashboard (Dashboard → Edit dashboard → Raw configuration editor), or copy its cards into an existing dashboard. Check **Developer tools → States** and replace entity IDs in the sample if Home Assistant assigned different IDs. The example brings the integration's existing capabilities into one place: all three calendars, every existing event and sauna sensor (including category-specific LGBTQ+ sensors), and all four action buttons. Existing entities are retained rather than replaced. The dashboard YAML is a starting template; if entity IDs differ on your Home Assistant instance, adjust them in the dashboard editor.
 
 
 ## Troubleshooting diagnostics
