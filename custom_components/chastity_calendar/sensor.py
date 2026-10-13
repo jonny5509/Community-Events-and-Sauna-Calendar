@@ -55,16 +55,6 @@ class ChastityCalendarSensorBase(SensorEntity):
         calendar = ChastityChallengeCalendar(self.coordinator, calendar_type, self.entry_id)
         return calendar._events_between(start_day, end_day)
 
-    @staticmethod
-    def _details(event) -> dict:
-        return {
-            "event": event.summary,
-            "start_date": event.start_datetime_local.date().isoformat(),
-            "end_date": (event.end_datetime_local.date() - timedelta(days=1)).isoformat(),
-            "description": event.description or "",
-            "location": getattr(event, "location", "") or "",
-        }
-
 
 class ChastityOngoingMonthEventSensor(ChastityCalendarSensorBase):
     """Show a monthly challenge event that is active today."""
@@ -86,8 +76,8 @@ class ChastityOngoingMonthEventSensor(ChastityCalendarSensorBase):
 
     @property
     def extra_state_attributes(self) -> dict:
-        event = self._event()
-        return self._details(event) if event else {}
+        """Keep event details in the calendar, not duplicated on the sensor."""
+        return {}
 
 
 class ChastityNextMonthEventSensor(ChastityCalendarSensorBase):
@@ -161,7 +151,7 @@ class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
     @property
     def native_value(self) -> str:
         event = self._event()
-        return f"{event.summary} — {event.start_datetime_local.date().isoformat()}" if event else "No upcoming LGBTQ event"
+        return event.summary if event else "No upcoming LGBTQ event"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -220,7 +210,7 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
     @property
     def native_value(self) -> str:
         event = self._event()
-        return f"{event.summary} — {event.start_datetime_local.date().isoformat()}" if event else f"No upcoming {self.category.title()} event"
+        return event.summary if event else f"No upcoming {self.category.title()} event"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -378,7 +368,7 @@ class ChastityNextSaunaEventSensor(ChastityCalendarSensorBase):
             return "No upcoming sauna event found"
         start = event.get("start")
         event_date = start.date().isoformat() if hasattr(start, "date") else str(start)[:10]
-        return f"{event.get('summary', 'Sauna event')} — {event_date}"
+        return event.get("summary", "Sauna event")
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -387,15 +377,8 @@ class ChastityNextSaunaEventSensor(ChastityCalendarSensorBase):
             return {}
         start = event.get("start")
         event_date = start.date().isoformat() if hasattr(start, "date") else str(start)[:10]
-        return {
-            "event": event.get("summary", ""),
-            "start_date": event_date,
-            "location": event.get("location", ""),
-            "description": event.get("description", ""),
-            "url": event.get("url", ""),
-            "source": event.get("source", ""),
-            "date_confidence": event.get("date_confidence", ""),
-        }
+        # Detailed event metadata belongs to the Sauna Events calendar.
+        return {}
 
 
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
