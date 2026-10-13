@@ -1,0 +1,45 @@
+title: Event Hub
+views:
+  - title: Events
+    path: event-hub
+    icon: mdi:calendar-star
+    cards:
+      - type: markdown
+        title: Community Events & Sauna Calendar
+        content: >
+          Browse the calendars below. Use the action controls to show event
+          information and map directions in a persistent notification. Links
+          are only shown when the source provides them.
+      - type: entities
+        title: Event Hub controls
+        show_header_toggle: false
+        entities:
+          - entity: button.community_events_sauna_calendar_next_event_information
+            name: Next event information
+          - entity: button.community_events_sauna_calendar_next_event_directions
+            name: Next event directions
+          - entity: button.community_events_sauna_calendar_next_sauna_event_information
+            name: Next sauna event information
+          - entity: button.community_events_sauna_calendar_next_sauna_event_directions
+            name: Next sauna event directions
+      - type: entities
+        title: Upcoming event highlights
+        show_header_toggle: false
+        entities:
+          - entity: sensor.next_lgbtq_event
+            name: Next LGBTQ+ event
+          - entity: sensor.next_sauna_event
+            name: Next sauna event
+          - entity: sensor.nearest_sauna
+            name: Nearest sauna
+      - type: calendar
+        title: Monthly and LGBTQ+ events
+        initial_view: listWeek
+        entities:
+          - calendar.chastity_calendar_monthly
+          - calendar.chastity_calendar_pride
+      - type: calendar
+        title: Sauna events
+        initial_view: listWeek
+        entities:
+          - calendar.chastity_calendar_sauna
