@@ -28,11 +28,6 @@
         "data": {
           "area": "District / Area",
           "ticketmaster_api_key": "Optional Ticketmaster API key",
-          "emlalock_userid": "EmlaLock user ID (optional)",
-          "emlalock_api_key": "EmlaLock API key (optional)",
-          "chastify_dev_token": "Chastify user-wide Developer API token (read-only)",
-          "chastify_lock_id": "Optional Chastify lock ID",
-          "chaster_access_token": "Chaster developer or OAuth access token",
           "participation_providers": "Services to check for daily crowns (select none, one, two, or all three)"
         }
       },
@@ -41,6 +36,17 @@
         "description": "Choose a county or local sub-region within the selected region, or skip this level where county data is unavailable.",
         "data": {
           "county": "County / Sub-region"
+        }
+      },
+      "participation_credentials": {
+        "title": "Credentials for selected services",
+        "description": "Only services you selected are shown here. Leave a service's credentials blank if you do not want to configure it.",
+        "data": {
+          "emlalock_userid": "EmlaLock user ID (optional)",
+          "emlalock_api_key": "EmlaLock API key (optional)",
+          "chastify_dev_token": "Chastify user-wide Developer API token (read-only)",
+          "chastify_lock_id": "Optional Chastify lock ID",
+          "chaster_access_token": "Chaster developer or OAuth access token"
         }
       }
     },
@@ -80,11 +86,6 @@
         "data": {
           "area": "District / Area",
           "ticketmaster_api_key": "Optional Ticketmaster API key",
-          "emlalock_userid": "EmlaLock user ID (optional)",
-          "emlalock_api_key": "EmlaLock API key (optional)",
-          "chastify_dev_token": "Chastify user-wide Developer API token (read-only)",
-          "chastify_lock_id": "Optional Chastify lock ID",
-          "chaster_access_token": "Chaster developer or OAuth access token",
           "participation_providers": "Services to check for daily crowns (select none, one, two, or all three)"
         }
       },
@@ -93,6 +94,17 @@
         "description": "Choose a county or local sub-region within the selected region, or skip this level where county data is unavailable.",
         "data": {
           "county": "County / Sub-region"
+        }
+      },
+      "participation_credentials": {
+        "title": "Credentials for selected services",
+        "description": "Only services you selected are shown here. Leave a service's credentials blank if you do not want to configure it.",
+        "data": {
+          "emlalock_userid": "EmlaLock user ID (optional)",
+          "emlalock_api_key": "EmlaLock API key (optional)",
+          "chastify_dev_token": "Chastify user-wide Developer API token (read-only)",
+          "chastify_lock_id": "Optional Chastify lock ID",
+          "chaster_access_token": "Chaster developer or OAuth access token"
         }
       }
     }
