@@ -29,6 +29,26 @@ def _event(summary, start, *, source="source A", url="https://example.test/event
     }
 
 
+def test_future_date_accepts_month_day_without_year():
+    result = _find_future_date("Pride social on Friday 16 October", datetime(2026, 10, 13))
+    assert result == datetime(2026, 10, 16)
+
+
+def test_future_date_accepts_abbreviated_month_without_year():
+    result = _find_future_date("Queer meetup: Nov 7", datetime(2026, 10, 13))
+    assert result == datetime(2026, 11, 7)
+
+
+def test_future_date_rolls_yearless_date_forward_when_this_year_has_passed():
+    result = _find_future_date("Gay film night on 3 October", datetime(2026, 10, 13))
+    assert result == datetime(2027, 10, 3)
+
+
+def test_future_date_accepts_uk_numeric_date():
+    result = _find_future_date("Pride event 17/10/2026", datetime(2026, 10, 13))
+    assert result == datetime(2026, 10, 17)
+
+
 def test_deduplicate_merges_same_title_and_date_and_preserves_sources():
     start = datetime(2027, 6, 12)
     first = _event("Pride Festival", start, source="RSS A")
