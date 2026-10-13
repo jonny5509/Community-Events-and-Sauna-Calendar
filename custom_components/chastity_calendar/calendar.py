@@ -259,15 +259,21 @@ class ChastityChallengeCalendar(CalendarEntity):
             # end-date overlap check and disappear from the calendar.
             if isinstance(raw_start, datetime) or isinstance(raw_end, datetime):
                 event_start = (
-                    raw_start if isinstance(raw_start, datetime)
+                    dt_util.as_local(dt_util.as_utc(raw_start))
+                    if isinstance(raw_start, datetime)
                     else datetime.combine(raw_start, datetime.min.time())
                 )
                 event_end = (
-                    raw_end if isinstance(raw_end, datetime)
+                    dt_util.as_local(dt_util.as_utc(raw_end))
+                    if isinstance(raw_end, datetime)
                     else datetime.combine(raw_end, datetime.min.time())
                 )
-                range_start = datetime.combine(start_day, datetime.min.time())
-                range_end = datetime.combine(end_day, datetime.min.time())
+                if isinstance(event_start, datetime) and event_start.tzinfo is None:
+                    event_start = dt_util.as_local(dt_util.as_utc(event_start))
+                if isinstance(event_end, datetime) and event_end.tzinfo is None:
+                    event_end = dt_util.as_local(dt_util.as_utc(event_end))
+                range_start = dt_util.as_local(dt_util.as_utc(datetime.combine(start_day, datetime.min.time())))
+                range_end = dt_util.as_local(dt_util.as_utc(datetime.combine(end_day, datetime.min.time())))
                 overlaps = event_end > range_start and event_start < range_end
             else:
                 event_start = raw_start
