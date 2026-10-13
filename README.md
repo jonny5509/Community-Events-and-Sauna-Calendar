@@ -101,7 +101,7 @@ When a configured provider explicitly confirms an active session, the integratio
 
 ## Event data
 
-Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.0.8. Subsequent scheduled refreshes update the current results.
+Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.2.5. Subsequent scheduled refreshes update the current results.
 
 ## Transparent limitations
 
@@ -113,7 +113,7 @@ Events can expose `category`, overlapping `categories`, `source`, `sources`, `ur
 - Adult-only events are included when publicly indexed, but eligibility and age restrictions must be checked with the organiser.
 - Zero results means no matching dated listing was found, not that no events exist.
 
-## Event Hub (2.2.4)
+## Event Hub (2.2.5)
 
 The Event Hub adds four Home Assistant button entities associated with a dedicated **Community Events & Sauna Calendar** device. In 2.2.1, all calendar and sensor entities also declare this same device association, so the integration's entities appear together on the device page instead of under **Ungrouped**:
 
@@ -123,6 +123,13 @@ The Event Hub adds four Home Assistant button entities associated with a dedicat
 - **Next Sauna Event Directions** — a map link for the next sauna event when a venue/location is available.
 
 The buttons use current coordinator data, skip expired or undated records, and show a helpful notification when no matching event or source URL is available. They do not fabricate event addresses or links. The controls appear as buttons on the integration's device page after Home Assistant reloads the integration.
+
+### What's new in 2.2.5
+
+- Fix six calendar-routing regression tests that still used the old calendar constructor and failed with a missing `entry_id` argument.
+- Keep the v2.2.4 event-sensor title cleanup across all event sensor states while leaving full event details in calendar entities.
+- Keep the Nearest Sauna venue attributes unchanged.
+- Update the integration manifest version to 2.2.5.
 
 ### What's new in 2.2.4
 
