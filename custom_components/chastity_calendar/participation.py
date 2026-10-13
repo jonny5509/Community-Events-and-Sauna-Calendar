@@ -55,10 +55,13 @@ def chaster_has_active_lock(payload: object) -> bool:
 async def async_has_verified_active_session(hass, preferences: dict) -> bool:
     """Check configured services. API failures never count as participation."""
     session = async_get_clientsession(hass)
+    selected = preferences.get("participation_providers", [])
+    if not isinstance(selected, (list, tuple, set)):
+        selected = []
 
     emla_user = str(preferences.get("emlalock_userid", "")).strip()
     emla_key = str(preferences.get("emlalock_api_key", "")).strip()
-    if emla_user and emla_key:
+    if "emlalock" in selected and emla_user and emla_key:
         try:
             async with session.get(
                 "https://api.emlalock.com/info",
@@ -74,7 +77,7 @@ async def async_has_verified_active_session(hass, preferences: dict) -> bool:
             _LOGGER.warning("Unable to verify an EmlaLock session; no crown awarded")
 
     chastify_token = str(preferences.get("chastify_dev_token", "")).strip()
-    if chastify_token:
+    if "chastify" in selected and chastify_token:
         headers = {"Authorization": f"Bearer {chastify_token}"}
         lock_id = str(preferences.get("chastify_lock_id", "")).strip()
         if lock_id:
@@ -93,7 +96,7 @@ async def async_has_verified_active_session(hass, preferences: dict) -> bool:
             _LOGGER.warning("Unable to verify a Chastify session; no crown awarded")
 
     chaster_token = str(preferences.get("chaster_access_token", "")).strip()
-    if chaster_token:
+    if "chaster" in selected and chaster_token:
         try:
             async with session.get(
                 "https://api.chaster.app/locks",
