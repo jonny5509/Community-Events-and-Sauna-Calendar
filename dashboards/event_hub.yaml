@@ -5,7 +5,7 @@ views:
     icon: mdi:calendar-star
     cards:
       - type: markdown
-        title: Community Events & Sauna Calendar
+        title: Chastity Events
         content: >
           Browse the calendars below. Use the action controls to show event
           information and map directions in a persistent notification. Links
