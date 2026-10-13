@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.event import async_track_time_change
 
 from homeassistant.components.sensor import SensorEntity
@@ -18,7 +19,14 @@ class ChastityCalendarSensorBase(SensorEntity):
 
     def __init__(self, coordinator, entry_id: str) -> None:
         self.coordinator = coordinator
+        self.entry_id = entry_id
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{self._attr_name.lower().replace(' ', '_')}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry_id)},
+            name="Community Events & Sauna Calendar",
+            manufacturer="Community Events & Sauna Calendar",
+            configuration_url="https://github.com/jonny5509/Community-Events-and-Sauna-Calendar",
+        )
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -44,7 +52,7 @@ class ChastityCalendarSensorBase(SensorEntity):
         self._handle_coordinator_update()
 
     def _events(self, calendar_type: str, start_day: date, end_day: date):
-        calendar = ChastityChallengeCalendar(self.coordinator, calendar_type)
+        calendar = ChastityChallengeCalendar(self.coordinator, calendar_type, self.entry_id)
         return calendar._events_between(start_day, end_day)
 
     @staticmethod
@@ -273,6 +281,12 @@ class ChastityNearestSaunaSensor(SensorEntity):
         self.hass = hass
         self.preferences = preferences
         self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_nearest_sauna"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name="Community Events & Sauna Calendar",
+            manufacturer="Community Events & Sauna Calendar",
+            configuration_url="https://github.com/jonny5509/Community-Events-and-Sauna-Calendar",
+        )
         self._saunas = []
         self._unsub_refresh = None
 
