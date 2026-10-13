@@ -113,7 +113,7 @@ Events can expose `category`, overlapping `categories`, `source`, `sources`, `ur
 - Adult-only events are included when publicly indexed, but eligibility and age restrictions must be checked with the organiser.
 - Zero results means no matching dated listing was found, not that no events exist.
 
-## Event Hub (2.2.1)
+## Event Hub (2.2.2)
 
 The Event Hub adds four Home Assistant button entities associated with a dedicated **Community Events & Sauna Calendar** device. In 2.2.1, all calendar and sensor entities also declare this same device association, so the integration's entities appear together on the device page instead of under **Ungrouped**:
 
@@ -123,6 +123,13 @@ The Event Hub adds four Home Assistant button entities associated with a dedicat
 - **Next Sauna Event Directions** — a map link for the next sauna event when a venue/location is available.
 
 The buttons use current coordinator data, skip expired or undated records, and show a helpful notification when no matching event or source URL is available. They do not fabricate event addresses or links. The controls appear as buttons on the integration's device page after Home Assistant reloads the integration.
+
+### What's new in 2.2.2
+
+- Keep event sensor state values to the event name only, without appending the date.
+- Remove duplicated event details from event sensor attributes; event dates, descriptions, and locations belong in the calendar entries and Event Hub action notifications.
+- Keep the Nearest Sauna sensor's venue information because it represents a place, not an event summary.
+- Update the integration manifest version to 2.2.2.
 
 ### What's new in 2.2.1
 
