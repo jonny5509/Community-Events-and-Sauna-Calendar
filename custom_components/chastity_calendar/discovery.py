@@ -458,7 +458,7 @@ def _is_target_event(event: dict) -> bool:
         for key in ("summary", "description", "location", "url", "source")
     ).casefold()
     patterns = (
-        r"\blgbtq?\+?\b", r"\blgbtqia\+?\b", r"\bqueer\b",
+        r"\blgbt(?:q|qia)?\+?(?=\W|$)", r"\bqueer\b",
         r"\bpride\b", r"\bgay\b", r"\blesbian\b", r"\bbisexual\b",
         r"\btrans(?:gender)?\b", r"\bsapphic\b", r"\bdrag\b",
         r"\bsaunas?\b", r"\bsteam room\b",
