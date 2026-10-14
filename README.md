@@ -39,11 +39,33 @@ If it is not listed yet:
 
 The internal integration domain remains `chastity_calendar` to preserve existing configuration and entity IDs.
 
+### Upcoming Events dashboard card
+
+The optional **Chastity Upcoming Events** Lovelace card lists upcoming events from selected Chastity Events calendar entities and adds a one-tap **Going** button beside each event. The choice is saved by the integration, and the button changes to **✓ Going** when marked as going.
+
+1. Copy `www/chastity-upcoming-events-card.js` from this repository into your Home Assistant `config/www/chastity-upcoming-events-card.js`.
+2. In Home Assistant, open **Settings → Dashboards → Resources** (advanced mode may be required), add `/local/chastity-upcoming-events-card.js`, and select **JavaScript module**.
+3. Add a **Manual** card to your dashboard with this YAML. Replace entity IDs with the actual calendar entities from your installation:
+
+```yaml
+type: custom:chastity-upcoming-events-card
+title: Upcoming Events
+days: 60
+max_events: 30
+entities:
+  - calendar.chastity_calendar_monthly
+  - calendar.chastity_calendar_pride
+  - calendar.chastity_calendar_sauna
+  - calendar.chastity_calendar_kink
+```
+
+The card uses Home Assistant's calendar event API and the `chastity_calendar.set_event_attendance` service. After adding the resource, refresh the browser if the card does not appear.
+
 ## Configuration
 
 During setup, choose a country and then select any available region, county, or district options. Enter your town or city as free text. If optional location lists are unavailable, skip them and enter the city manually.
 
-The configured location is used to improve event relevance and find nearby sauna venues. The nearest-sauna sensor uses the configured location, **not live device GPS**, and refreshes at 00:00, 06:00, 12:00, and 18:00 Home Assistant local time.
+The configured location is used to improve event relevance and find nearby sauna venues. The nearest-sauna sensor uses the configured location, **not live device GPS**, and refreshes every three hours at 00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, and 21:00 Home Assistant local time.
 
 ### Optional Ticketmaster support
 
