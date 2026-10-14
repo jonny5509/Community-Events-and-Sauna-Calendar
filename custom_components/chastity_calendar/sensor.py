@@ -195,6 +195,13 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
                 "transgender day of remembrance", "trans pride",
             ),
             "queer": ("queer",),
+            "pansexual": ("pansexual", "pan pride"),
+            "non-binary": ("non-binary", "nonbinary", "enby", "genderqueer"),
+            "intersex": ("intersex",),
+            "asexual": ("asexual", "ace community"),
+            "aromantic": ("aromantic", "aro community"),
+            "genderfluid": ("genderfluid",),
+            "sapphic": ("sapphic", "wlw", "lesbian"),
         }
         terms = category_terms.get(self.category, (self.category,))
         matching_summaries = set()
@@ -276,6 +283,63 @@ class ChastityNextQueerEventSensor(ChastityNextCategoryEventSensor):
 
     category = "queer"
     _attr_name = "Next Queer Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+
+class ChastityNextPansexualEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered pansexual community event."""
+
+    category = "pansexual"
+    _attr_name = "Next Pansexual Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextNonBinaryEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered non-binary community event."""
+
+    category = "non-binary"
+    _attr_name = "Next Non-binary Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextIntersexEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered intersex community event."""
+
+    category = "intersex"
+    _attr_name = "Next Intersex Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextAsexualEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered asexual community event."""
+
+    category = "asexual"
+    _attr_name = "Next Asexual Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextAromanticEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered aromantic community event."""
+
+    category = "aromantic"
+    _attr_name = "Next Aromantic Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextGenderfluidEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered genderfluid community event."""
+
+    category = "genderfluid"
+    _attr_name = "Next Genderfluid Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextSapphicEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered sapphic community event."""
+
+    category = "sapphic"
+    _attr_name = "Next Sapphic Event"
     _attr_icon = "mdi:account-multiple"
 
 
@@ -441,4 +505,11 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         ChastityNextBisexualEventSensor(coordinator, entry.entry_id),
         ChastityNextTransgenderEventSensor(coordinator, entry.entry_id),
         ChastityNextQueerEventSensor(coordinator, entry.entry_id),
+        ChastityNextPansexualEventSensor(coordinator, entry.entry_id),
+        ChastityNextNonBinaryEventSensor(coordinator, entry.entry_id),
+        ChastityNextIntersexEventSensor(coordinator, entry.entry_id),
+        ChastityNextAsexualEventSensor(coordinator, entry.entry_id),
+        ChastityNextAromanticEventSensor(coordinator, entry.entry_id),
+        ChastityNextGenderfluidEventSensor(coordinator, entry.entry_id),
+        ChastityNextSapphicEventSensor(coordinator, entry.entry_id),
     ])
