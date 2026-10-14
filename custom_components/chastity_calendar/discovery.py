@@ -874,6 +874,7 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
 
 
 
+
 async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
     """Read public furry event listings from FurryCons and FurDar UK pages."""
     sources = (
@@ -882,6 +883,7 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
     )
     lower = (today - timedelta(days=180)).date()
     upper = (today + timedelta(days=730)).date()
+
     async def fetch_source(source, url):
         try:
             async with asyncio.timeout(12):
@@ -908,15 +910,25 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
                 start = datetime.fromisoformat(raw_start.replace("Z", "+00:00")).replace(tzinfo=None)
             except ValueError:
                 start = _find_future_date(raw_start, today)
-            if start and lower <= start.date() <= upper and re.search(r"furr|furmeet|anthro|scotiacon|confuzzled|aberacon|pawsome|wild north", title + " " + str(item.get("description", "")), re.I):
-                candidates.append((title, start, str(item.get("url") or url), str(item.get("description") or ""), str(item.get("location") or "")))
+            context = title + " " + str(item.get("description", ""))
+            if start and lower <= start.date() <= upper and re.search(
+                r"\bfurr|\bfurmeet\b|\bfursuit\b|\banthro\b|\bscotiacon\b|\bconfuzzled\b|\baberacon\b|\bpawsome\b|\bwild north\b|\bfurcation\b",
+                context, re.I,
+            ):
+                candidates.append((title, start, str(item.get("url") or url), str(item.get("description") or ""), str(item.get("location") or ""), "structured"))
         # FurryCons uses dated table rows; FurDar may use event cards. Parse
         # bounded row/card fragments and require an explicit furry-context match.
-        fragments = re.findall(r"<tr\b[^>]*>.*?</tr\s*>|<article\b[^>]*>.*?</article\s*>|<li\b[^>]*>.*?</li\s*>", body, re.I | re.S)
+        fragments = re.findall(
+            r"<tr\b[^>]*>.*?</tr\s*>|<article\b[^>]*>.*?</article\s*>|<li\b[^>]*>.*?</li\s*>",
+            body, re.I | re.S,
+        )
         for fragment in fragments:
             plain = html.unescape(re.sub(r"<[^>]+>", " ", fragment))
             plain = re.sub(r"\s+", " ", plain).strip()
-            if not re.search(r"furr|furmeet|fursuit|anthro|scotiacon|confuzzled|aberacon|pawsome|wild north|furcation", plain, re.I):
+            if not re.search(
+                r"\bfurr|\bfurmeet\b|\bfursuit\b|\banthro\b|\bscotiacon\b|\bconfuzzled\b|\baberacon\b|\bpawsome\b|\bwild north\b|\bfurcation\b",
+                plain, re.I,
+            ):
                 continue
             start = _find_future_date(plain, today)
             if not start or not lower <= start.date() <= upper:
@@ -928,15 +940,18 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
             for href, label in links:
                 label = html.unescape(re.sub(r"<[^>]+>", " ", label))
                 label = re.sub(r"\s+", " ", label).strip()
-                if label and re.search(r"furr|furmeet|fursuit|anthro|scotiacon|confuzzled|aberacon|pawsome|wild north|furcation", label + " " + plain, re.I):
+                if label and re.search(
+                    r"\bfurr|\bfurmeet\b|\bfursuit\b|\banthro\b|\bscotiacon\b|\bconfuzzled\b|\baberacon\b|\bpawsome\b|\bwild north\b|\bfurcation\b",
+                    label + " " + plain, re.I,
+                ):
                     title = label
                     event_url = href if href.startswith("http") else urlsplit(url)._replace(path=href).geturl()
                     break
             if title:
-                candidates.append((title, start, event_url, plain, ""))
+                candidates.append((title, start, event_url, plain, "", "extracted_from_source_listing"))
         results = []
         seen = set()
-        for title, start, event_url, description, location in candidates:
+        for title, start, event_url, description, location, confidence in candidates:
             key = (re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip(), start.date())
             if key in seen:
                 continue
@@ -944,12 +959,13 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
             record = _record(
                 title, start, event_url, "kink",
                 f"Furry community event listing from {source}. {description[:800]} Verify dates, venue and access details with the organiser.",
-                source=source, location=location, date_confidence="structured" if "startDate" in body else "extracted_from_source_listing",
+                source=source, location=location, date_confidence=confidence,
             )
             record["categories"] = sorted(set(record.get("categories", [])) | {"furry", "community"})
             results.append(record)
         _LOGGER.info("%s yielded %s dated furry events", source, len(results))
         return results
+
     batches = await asyncio.gather(*(fetch_source(source, url) for source, url in sources))
     return [item for batch in batches for item in batch]
 
