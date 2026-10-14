@@ -3,13 +3,17 @@
 import asyncio
 import logging
 
+import voluptuous as vol
+
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_START
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later, async_track_time_change
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, PLATFORMS
+from .attendance import async_setup_attendance, async_unload_attendance
 from .discovery import async_discover_events
 from .participation import (
     async_has_verified_active_session,
@@ -108,6 +112,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # A provider/storage failure must never create a crown.
             _LOGGER.warning("Unable to verify or record today's participation crown")
 
+    # Restore attendance choices and schedule any outstanding 24-hour reminders.
+    await async_setup_attendance(hass, entry, coordinator)
+
     # Set up entities immediately; remote discovery runs in the background.
     coordinator.async_set_updated_data([])
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
@@ -144,5 +151,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload integration platforms."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
+        await async_unload_attendance(hass, entry)
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     return unload_ok
