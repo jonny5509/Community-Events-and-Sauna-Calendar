@@ -162,3 +162,15 @@ def test_kink_category_tags_cover_major_fetish_interests():
     ):
         tags.update(_category_tags("community", title, ""))
     assert "kink" in tags
+
+
+def test_discovery_searches_cover_straight_gay_lesbian_and_other_kink_communities():
+    from custom_components.chastity_calendar.discovery import SEARCHES
+
+    queries = " ".join(query.casefold() for _category, query in SEARCHES)
+    for term in (
+        "straight kink", "gay bdsm", "lesbian kink", "sapphic kink",
+        "bisexual kink", "trans kink", "queer kink", "couples bdsm",
+        "dominatrix", "crossdressing", "impact play", "sensory deprivation",
+    ):
+        assert term in queries
