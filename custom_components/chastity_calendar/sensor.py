@@ -74,6 +74,11 @@ class ChastityCalendarStatusSensor(ChastityCalendarSensorBase):
 
     def __init__(self, coordinator, entry_id: str) -> None:
         super().__init__(coordinator, entry_id)
+        # Preserve the original registry IDs while making the display names
+        # distinct from their same-named calendar entities.
+        self._attr_unique_id = (
+            f"{DOMAIN}_{entry_id}_{self._legacy_entity_name.lower().replace(' ', '_')}"
+        )
 
     @property
     def native_value(self) -> str:
@@ -114,7 +119,8 @@ class ChastityMonthlyEventsStatusSensor(ChastityCalendarStatusSensor):
     """Status of the Monthly Events calendar."""
 
     calendar_type = "monthly"
-    _attr_name = "Monthly Events"
+    _legacy_entity_name = "Monthly Events"
+    _attr_name = "Monthly Events Status"
     _attr_icon = "mdi:calendar-heart"
 
 
@@ -122,7 +128,8 @@ class ChastityLGBTQEventsStatusSensor(ChastityCalendarStatusSensor):
     """Status of the LGBTQ+ Events calendar."""
 
     calendar_type = "pride"
-    _attr_name = "LGBTQ+ Events"
+    _legacy_entity_name = "LGBTQ+ Events"
+    _attr_name = "LGBTQ+ Events Status"
     _attr_icon = "mdi:flag"
 
 
@@ -130,7 +137,8 @@ class ChastitySaunaEventsStatusSensor(ChastityCalendarStatusSensor):
     """Status of the Sauna Events calendar."""
 
     calendar_type = "sauna"
-    _attr_name = "Sauna Events"
+    _legacy_entity_name = "Sauna Events"
+    _attr_name = "Sauna Events Status"
     _attr_icon = "mdi:hot-tub"
 
 
@@ -138,7 +146,8 @@ class ChastityKinkEventsStatusSensor(ChastityCalendarStatusSensor):
     """Status of the Kink & Fetish Events calendar."""
 
     calendar_type = "kink"
-    _attr_name = "Kink & Fetish Events"
+    _legacy_entity_name = "Kink & Fetish Events"
+    _attr_name = "Kink & Fetish Events Status"
     _attr_icon = "mdi:calendar-heart"
 
 
