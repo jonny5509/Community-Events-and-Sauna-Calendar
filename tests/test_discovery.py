@@ -6,6 +6,7 @@ from custom_components.chastity_calendar.discovery import (
     _category_tags,
     _deduplicate,
     _is_sauna_event,
+    _is_target_event,
     _normalise_url,
     _find_future_date,
     _record,
@@ -28,6 +29,39 @@ def _event(summary, start, *, source="source A", url="https://example.test/event
         "date_confidence": "extracted_from_search_snippet",
     }
 
+
+
+def test_target_event_filter_rejects_unrelated_comedy_listing():
+    event = _event(
+        "North Shields Comedy Club: NEW ACT OF THE YEAR Tickets",
+        datetime(2026, 10, 18),
+        url="https://example.test/comedy",
+    )
+    event["description"] = "Stand-up comedy competition at a local venue."
+
+    assert not _is_target_event(event)
+
+
+def test_target_event_filter_keeps_supported_event_topics():
+    start = datetime(2027, 6, 12)
+    cases = [
+        _event("Newcastle Pride Festival", start),
+        _event("Gay Sauna Theme Night", start),
+        _event("Queer BDSM Social", start),
+        _event("Leather and Fetish Market", start),
+        _event("Non-binary Community Meetup", start),
+        _event("Pansexual and Bisexual Social", start),
+        _event("Intersex Awareness Workshop", start),
+        _event("Asexual and Aromantic Meetup", start),
+        _event("Transmasc and Genderfluid Support Group", start),
+        _event("Two-Spirit Community Gathering", start),
+        _event("Queer Film Night", start),
+        _event("Shibari and Rope Workshop", start),
+        _event("Pup Play Social", start),
+        _event("Furry Convention and Furmeet", start),
+    ]
+
+    assert all(_is_target_event(event) for event in cases)
 
 def test_future_date_accepts_month_day_without_year():
     result = _find_future_date("Pride social on Friday 16 October", datetime(2026, 10, 13))
@@ -150,7 +184,7 @@ def test_kink_event_searches_cover_major_fetish_communities():
     from custom_components.chastity_calendar.discovery import SEARCHES
 
     query_text = " ".join(query.casefold() for _category, query in SEARCHES)
-    for term in ("leather", "latex", "shibari", "pup play", "foot fetish", "findom", "furry"):
+    for term in ("leather", "latex", "shibari", "pup play", "foot fetish", "findom", "furry", "furmeet"):
         assert term in query_text
 
 
@@ -158,7 +192,7 @@ def test_kink_category_tags_cover_major_fetish_interests():
     tags = set()
     for title in (
         "Leather Weekend", "Rubber and latex social", "Shibari rope workshop",
-        "Pup play meetup", "Foot fetish night", "Findom community event",
+        "Pup play meetup", "Foot fetish night", "Findom community event", "Furry social",
     ):
         tags.update(_category_tags("community", title, ""))
     assert "kink" in tags

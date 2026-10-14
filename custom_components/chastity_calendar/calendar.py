@@ -247,13 +247,33 @@ def _as_aware_local(value: datetime) -> datetime:
 
 
 def _is_lgbtq_event(item: dict) -> bool:
-    """Return whether discovered metadata identifies an LGBTQ+ event."""
+    """Return whether discovered metadata or the listing itself identifies an LGBTQ+ event."""
     lgbtq_categories = {
-        "pride", "lgbtq", "gay", "lesbian", "bisexual", "transgender", "queer"
+        "pride", "lgbtq", "lgbtq+", "lgbtqia", "gay", "lesbian", "bisexual",
+        "transgender", "queer", "pansexual", "non-binary", "nonbinary",
+        "intersex", "asexual", "aromantic", "genderfluid", "agender", "sapphic",
     }
     categories = {str(value).casefold() for value in item.get("categories", [])}
     category = str(item.get("category", "")).casefold()
-    return category in lgbtq_categories or bool(categories.intersection(lgbtq_categories))
+    if category in lgbtq_categories or categories.intersection(lgbtq_categories):
+        return True
+
+    text = " ".join(str(item.get(key, "")) for key in (
+        "summary", "title", "description", "location", "url"
+    )).casefold()
+    # Use specific phrases/words so short abbreviations like "bi" do not
+    # accidentally classify unrelated events.
+    terms = (
+        "lgbtq", "lgbtqia", "lgbt+", "queer", "pride", "gay", "lesbian",
+        "bisexual", "bi visibility", "pansexual", "omnisexual", "transgender",
+        "transmasc", "transfem", "trans pride", "non-binary", "nonbinary",
+        "genderqueer", "genderfluid", "agender", "intersex", "asexual",
+        "aromantic", "demisexual", "demiromantic", "graysexual", "greysexual",
+        "two-spirit", "two spirit", "sapphic", "wlw", "mlm", "drag show",
+        "drag night", "voguing", "queer film", "queer art", "gender affirming",
+        "hiv awareness", "hiv support",
+    )
+    return any(term in text for term in terms)
 
 
 def _is_kink_event(item: dict) -> bool:
@@ -263,6 +283,7 @@ def _is_kink_event(item: dict) -> bool:
         "rope play", "pup play", "puppy play", "dominatrix", "dominant",
         "submission", "submissive", "power exchange", "locktober", "chastity",
         "adult play party", "fetish market", "fetish social", "dungeon",
+        "furry", "furmeet", "fursuit",
     )
     categories = {str(value).casefold() for value in item.get("categories", [])}
     category = str(item.get("category", "")).casefold()
