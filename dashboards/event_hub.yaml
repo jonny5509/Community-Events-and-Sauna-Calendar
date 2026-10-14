@@ -79,4 +79,4 @@ views:
         title: Kink & Fetish events
         initial_view: listWeek
         entities:
-          - calendar.kink_events
+          - calendar.kink_fetish_events
