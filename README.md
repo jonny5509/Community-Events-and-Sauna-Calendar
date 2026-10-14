@@ -39,6 +39,28 @@ If it is not listed yet:
 
 The internal integration domain remains `chastity_calendar` to preserve existing configuration and entity IDs.
 
+### Upcoming Events dashboard card
+
+The optional **Chastity Upcoming Events** Lovelace card shows upcoming events from your selected Chastity Events calendars and adds a one-tap **Going** button to each event. The choice is saved by the integration, and the button changes to **✓ Going** when the event is marked as going.
+
+1. Copy `www/chastity-upcoming-events-card.js` from this repository into your Home Assistant `config/www/chastity-upcoming-events-card.js`.
+2. In Home Assistant, open **Settings → Dashboards → Resources** (you may need to switch to advanced mode), add `/local/chastity-upcoming-events-card.js`, and select **JavaScript module**.
+3. Add a **Manual** card to your dashboard and use this YAML, replacing entity IDs with the calendar entities created by your installation:
+
+```yaml
+type: custom:chastity-upcoming-events-card
+title: Upcoming Events
+days: 60
+max_events: 30
+entities:
+  - calendar.chastity_calendar_monthly
+  - calendar.chastity_calendar_pride
+  - calendar.chastity_calendar_sauna
+  - calendar.chastity_calendar_kink
+```
+
+The card uses Home Assistant's calendar event API and the `chastity_calendar.set_event_attendance` service. It requires the attendance feature from this branch's integration code. If the card does not appear after adding the resource, refresh the browser and check the browser console for resource errors.
+
 ## Configuration
 
 During setup, choose a country and then select any available region, county, or district options. Enter your town or city as free text. If optional location lists are unavailable, skip them and enter the city manually.
