@@ -62,6 +62,7 @@ def test_lgbtq_identity_events_are_routed_by_listing_text_without_category_tags(
         _event("Asexual and aromantic meetup", "community", ["community"]),
         _event("Genderfluid support group", "community", ["community"]),
         _event("Sapphic film night", "community", ["community"]),
+        _event("Furry community furmeet", "community", ["community"]),
     ]
 
     lgbtq = _summaries("pride", events)
