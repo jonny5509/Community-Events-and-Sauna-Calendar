@@ -682,7 +682,7 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
                         continue
                     start = datetime.combine(day, datetime.min.time()).replace(hour=start_hour)
                     end = datetime.combine(day, datetime.min.time()).replace(hour=end_hour)
-                    if start >= now:
+                    if start >= now - timedelta(days=180):
                         record = _record(
                             title, start, offers_url, "sauna",
                             "Recurring offer published by Number 52 Sauna. Check the official page for current terms and any changes.",
