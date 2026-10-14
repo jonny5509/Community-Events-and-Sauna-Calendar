@@ -167,3 +167,39 @@ def test_verified_crown_days_appear_only_on_monthly_calendar():
     sauna = ChastityChallengeCalendar(coordinator, "sauna", "test-entry")
     sauna_events = sauna._events_between(date(2027, 6, 1), date(2027, 7, 1))
     assert not any("participation crown" in event.summary for event in sauna_events)
+
+
+def test_lgbtq_single_and_multi_day_events_preserve_original_spans():
+    events = [
+        {
+            "summary": "Single-day queer meetup",
+            "start": date(2027, 6, 12),
+            "end": date(2027, 6, 13),
+            "description": "Single day",
+            "category": "community",
+            "categories": ["lgbtq"],
+            "location": "",
+        },
+        {
+            "summary": "Multi-day Pride festival",
+            "start": date(2027, 6, 14),
+            "end": date(2027, 6, 18),
+            "description": "Multi day",
+            "category": "community",
+            "categories": ["lgbtq"],
+            "location": "",
+        },
+    ]
+    calendar = ChastityChallengeCalendar(
+        SimpleNamespace(data=events), "pride", "test-entry"
+    )
+    results = {
+        event.summary: event
+        for event in calendar._events_between(date(2027, 6, 1), date(2027, 7, 1))
+        if event.summary in {"Single-day queer meetup", "Multi-day Pride festival"}
+    }
+
+    assert results["Single-day queer meetup"].start == date(2027, 6, 12)
+    assert results["Single-day queer meetup"].end == date(2027, 6, 13)
+    assert results["Multi-day Pride festival"].start == date(2027, 6, 14)
+    assert results["Multi-day Pride festival"].end == date(2027, 6, 18)
