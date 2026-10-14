@@ -54,6 +54,24 @@ def test_lgbtq_sauna_event_can_appear_in_both_focused_calendars():
 
 
 
+def test_lgbtq_identity_events_are_routed_by_listing_text_without_category_tags():
+    events = [
+        _event("Pansexual community meetup", "community", ["community"]),
+        _event("Non-binary social", "community", ["community"]),
+        _event("Intersex awareness workshop", "community", ["community"]),
+        _event("Asexual and aromantic meetup", "community", ["community"]),
+        _event("Genderfluid support group", "community", ["community"]),
+        _event("Sapphic film night", "community", ["community"]),
+    ]
+
+    lgbtq = _summaries("pride", events)
+    monthly = _summaries("monthly", events)
+
+    assert {event["summary"] for event in events}.issubset(lgbtq)
+    assert not ({event["summary"] for event in events} & monthly)
+
+
+
 def test_timed_discovered_events_are_timezone_aware():
     """Naive source datetimes must not make Home Assistant reject CalendarEvent."""
     event = _event("Sauna session", "sauna", ["sauna"])
