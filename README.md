@@ -37,6 +37,12 @@ In the configuration form or **Configure** settings, select any combination of *
 
 When a configured provider explicitly confirms an active session, the integration records at most one 👑 crown for that Home Assistant local calendar day. Crowns appear as all-day entries on **Monthly Events** only. The integration stores only the verified dates, not session details. It does not backfill earlier days, and an API error, missing credentials, or ambiguous response never earns a crown. A crown means a provider confirmed an active session at least once during that day; it does not imply continuous activity for the entire day. Credentials are stored with the Home Assistant config entry, so use only your own credentials and revoke tokens you no longer want to use.
 
+## Expanded kink and fetish discovery
+
+- Expand public-event searches for leather, rubber/latex, rope and shibari, pup/pet play, fetish conventions and gear socials, foot/boot fetish, power exchange, findom, furry communities, and fetish fashion.
+- Add informational entries for International Fetish Day (third Friday in January) and World BDSM Day, plus suggested consent, rope education, leather/gear, rubber/latex, power-exchange reflection, and community-social reminders.
+- Community-created prompts are labelled as suggestions rather than official observances. Public event listings still require organiser verification.
+
 ## What's new in 2.0.8
 
 - Ensure discovered timed events use timezone-aware datetimes before constructing Home Assistant calendar events, preventing calendar state updates from failing validation.
