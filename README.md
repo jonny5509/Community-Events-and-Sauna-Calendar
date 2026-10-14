@@ -1,179 +1,115 @@
 # Chastity Events
 
-A custom [Home Assistant](https://www.home-assistant.io/) integration with recurring challenge and LGBTQ+ observance calendars, sensors, and best-effort discovery of public events across the configured country.
+A custom [Home Assistant](https://www.home-assistant.io/) integration for discovering public community events and displaying them in focused calendars and sensors.
 
-> **Important:** This is a broad discovery tool, not a complete or verified event directory. Public adult-only listings are included when indexed by the sources. Always verify dates, age restrictions, access requirements, and venues with the organiser.
+> **Please verify listings with the organiser.** Event discovery is best-effort: dates, availability, age restrictions, access requirements, and venue details may be incomplete or change.
 
 ## Features
 
-- Monthly challenge and Pride/observance calendars.
-- Focused event sensors for monthly and LGBTQ+ events, plus **Nearest Sauna** and **Next Sauna Event** sensors. The nearest-sauna sensor looks for OpenStreetMap venues within 30 km of the configured location and exposes distance, address, website, phone, map link, and up to five other nearby listings. The next-sauna-event sensor selects the next dated discovery result that mentions a sauna and exposes its listing details.
-- Broad searches for community festivals, conventions, meetups, workshops, arts/music events, kink/fetish and chastity events, Pride/LGBTQ+ listings, and public adult-only listings.
-- Sauna venue lookup uses OpenStreetMap within 30 km first. If OSM returns no nearby venues, it uses a small maintained fallback index based on the [Gay Sauna Guide UK directory](https://www.gaysaunaguide.net/gay-saunas-in-the-uk/) and geocodes only entries matching the configured town/city. Number 52 Sauna in Newcastle also has its own address-based fallback. The directory index is not fetched or scraped at runtime and may need manual updates; the duplicate Number 52 entry has been removed from this index, while its separate Newcastle address-based fallback remains. Fallback results depend on Nominatim geocoding. The sensor refreshes at 00:00, 06:00, 12:00, and 18:00 Home Assistant local time. The sensor uses the configured location, not live device GPS.
-- Google News RSS works without credentials. Optional Ticketmaster Discovery API support provides structured event dates, venue details, and source links.
-- Deduplication merges matching title/date listings while retaining category tags and source links; distinct events on the same venue page remain separate.
-- Number 52 Sauna discovery checks its main events calendar, offers page, and individual repeating-event pages for its published themed nights. It also generates the published 1st/3rd Thursday and 2nd/4th Thursday schedules, plus recurring offers when the official offers page still matches. Rotating Friday/Saturday themes are taken from dated event-page data where available; verify dates with the venue.
+- **Four calendars:** Monthly Events, LGBTQ+ Events, Sauna Events, and Kink & Fetish Events.
+- **Event sensors:** ongoing and next monthly event, past and next LGBTQ+ event, and focused upcoming-event sensors for lesbian, gay, bisexual, transgender, queer, intersex, asexual, pansexual, non-binary, aromantic, genderfluid, and sapphic communities.
+- **Community-interest sensors:** next furry event, next kink/fetish event, and next sauna event.
+- **Nearest Sauna:** looks for mapped sauna venues within 30 km of the configured location and reports distance, address, website, phone, map link, and other nearby listings when available.
+- **Event Hub buttons:** create notifications with next-event details and map links when source and location data are available.
+- **Multiple discovery sources:** Google News RSS works without credentials. An optional Ticketmaster Discovery API key can add structured event listings and venue details.
+- **Event deduplication:** matching title/date listings are combined where possible while retaining source links and category information.
+- **Optional daily participation crowns:** read-only active-session checks for EmlaLock, Chastify, and Chaster can add at most one crown per local calendar day to Monthly Events.
 
 ## Installation
 
 ### HACS
-- **After acceptance into the HACS default store:** search for **Chastity Events**, download it, restart Home Assistant, then add it from **Settings → Devices & services → Add integration**.
-- **Until it is listed in the default store:** open HACS → **Custom repositories**, add `jonny5509/chastity_calendar` as an **Integration**, download it, restart Home Assistant, then add the integration from **Settings → Devices & services → Add integration**.
 
-### Manual
-Copy `custom_components/chastity_calendar` to `config/custom_components/`, restart Home Assistant, and add the integration. The internal domain remains `chastity_calendar` to preserve existing configuration and entity IDs.
+If the integration is available in the HACS default store, search for **Chastity Events** and download it.
+
+If it is not listed yet:
+
+1. Open **HACS → Custom repositories**.
+2. Add `jonny5509/chastity_calendar` and choose **Integration** as the category.
+3. Download the integration.
+4. Restart Home Assistant.
+5. Go to **Settings → Devices & services → Add integration** and search for **Chastity Events**.
+
+### Manual installation
+
+1. Copy `custom_components/chastity_calendar` into your Home Assistant `config/custom_components/` directory.
+2. Restart Home Assistant.
+3. Open **Settings → Devices & services → Add integration** and add **Chastity Events**.
+
+The internal integration domain remains `chastity_calendar` to preserve existing configuration and entity IDs.
 
 ## Configuration
 
-During setup, choose a country, then narrow the location by region/state and county/sub-region where available. Enter the city or town as free text so small towns, rural locations, and places missing from third-party lists can still be configured. The optional district/neighbourhood list is looked up using OpenStreetMap Nominatim/Overpass and uses the city, county, region, and country to disambiguate the search. Country and region lists use online services with built-in country fallbacks; if a service is unavailable, skip the optional region/county/area levels and enter the city manually. Existing configurations with the older free-text location are retained. The combined location is used for event relevance.
+During setup, choose a country and then select any available region, county, or district options. Enter your town or city as free text. If optional location lists are unavailable, skip them and enter the city manually.
 
-The optional **Ticketmaster Discovery API key** enables searches through the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/). Obtain a key from Ticketmaster and enter it during setup or in **Configure**. If omitted, Google News RSS still runs.
+The configured location is used to improve event relevance and find nearby sauna venues. The nearest-sauna sensor uses the configured location, **not live device GPS**, and refreshes at 00:00, 06:00, 12:00, and 18:00 Home Assistant local time.
+
+### Optional Ticketmaster support
+
+Create an API key in the [Ticketmaster Developer Portal](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/) and enter it during setup or in the integration's **Configure** options. Without a key, Google News RSS discovery still works.
 
 ### Optional daily participation crowns
 
-In the configuration form or **Configure** settings, select any combination of **EmlaLock**, **Chastify**, and **Chaster** (including none) to choose which services are checked. Credentials for unselected services are ignored. The form accepts credentials for each service; these are optional and are used only for read-only active-session checks. For Chastify, follow the [Developer API guide](https://docs.chastify.net/developer-api/external-api-programs/) to open Developer API in Chastify and create a user-wide DEV key with `locks:read` permission. EmlaLock uses your user ID and API key; Chastify uses a user-wide Developer API token with read permission (a specific lock ID can optionally be supplied); Chaster uses a developer or OAuth access token with lock-read access. See the official [EmlaLock API](https://about.emlalock.com/docs/api/info/), [Chastify Developer API](https://docs.chastify.net/developer-api/external-api-programs/), and [Chaster Public API](https://docs.chaster.app/api/basics/getting-started/) documentation for how to obtain credentials and required permissions.
+In setup or **Configure**, select any combination of **EmlaLock**, **Chastify**, and **Chaster**, or select none. Add the credentials for the providers you choose:
 
-When a configured provider explicitly confirms an active session, the integration records at most one 👑 crown for that Home Assistant local calendar day. Crowns appear as all-day entries on **Monthly Events** only. The integration stores only the verified dates, not session details. It does not backfill earlier days, and an API error, missing credentials, or ambiguous response never earns a crown. A crown means a provider confirmed an active session at least once during that day; it does not imply continuous activity for the entire day. Credentials are stored with the Home Assistant config entry, so use only your own credentials and revoke tokens you no longer want to use.
+- [EmlaLock API](https://about.emlalock.com/docs/api/info/) — user ID and API key.
+- [Chastify Developer API](https://docs.chastify.net/developer-api/external-api-programs/) — a user-wide Developer API token with read-only `locks:read` permission. A lock ID may optionally be supplied.
+- [Chaster Public API](https://docs.chaster.app/api/basics/getting-started/) — a developer or OAuth access token with lock-read access.
 
-## Expanded kink and fetish discovery
+Crowns are added only when a selected provider explicitly confirms an active session. At most one all-day crown is recorded per Home Assistant local calendar day, on **Monthly Events** only. The integration does not backfill earlier days or award a crown for errors, missing credentials, or ambiguous responses. A crown confirms activity at least once that day; it does not mean a session lasted all day.
 
-- Expand public-event searches for leather, rubber/latex, rope and shibari, pup/pet play, fetish conventions and gear socials, foot/boot fetish, power exchange, findom, furry communities, and fetish fashion. For kink/fetish, chastity, adult, and LGBTQ+ searches, inspect a bounded number of result pages for structured event start dates when search snippets omit dates. Source-focused searches include the REGULATION UK Fetish Calendar, fetish.events, KinkReady, The Fetish Network, Other Nights, OutSavvy, London Alternative Market, Skiddle, and DICE; indexed-search hints are not direct integrations with those sites.
-- Add informational entries for International Fetish Day (third Friday in January) and World BDSM Day, plus suggested consent, rope education, leather/gear, rubber/latex, power-exchange reflection, and community-social reminders.
-- When a page publishes structured event start-date metadata, use that event date rather than dropping the listing because its search snippet lacks a date. Store whether a date came from a snippet or event-page metadata, and retain the source URL for verification. Community-created prompts are labelled as suggestions rather than official observances. Public event listings still require organiser verification.
+Credentials are stored with the Home Assistant config entry. Use your own credentials and revoke tokens you no longer need.
 
-## What's new in 2.3.1
+## Event discovery and calendars
 
-- Remove the four redundant calendar activity status sensors. The Monthly Events, LGBTQ+ Events, Sauna Events, and Kink & Fetish Events calendars are the single entities for those event groups.
-- Keep the other focused event and sauna sensors, which provide separate information such as the next event or nearest sauna.
-- Bump the integration manifest version to 2.3.1.
+The integration searches for publicly indexed LGBTQ+ and Pride events, community meetups, festivals, conventions, arts and music events, sauna events, and kink/fetish-related events. Searches may include leather, rubber/latex, rope and shibari, pup/pet play, chastity, fetish fashion, furry communities, and related social events.
 
-After upgrading and reloading the integration, Home Assistant may retain an old registry entry for a removed status sensor. If it remains, remove the orphaned sensor entity from **Settings → Devices & services → Entities**; do not remove the corresponding calendar entity.
+Searches can use indexed results from event platforms and community calendars. A source name in a search query does **not** mean the integration directly connects to or officially partners with that site.
 
-## What's new in 2.0.8
+The dedicated **Kink & Fetish Events** calendar keeps matching events separate from the general monthly calendar. LGBTQ+ events are routed to **LGBTQ+ Events**; some events may appear in more than one focused calendar when they fit multiple categories.
 
-- Ensure discovered timed events use timezone-aware datetimes before constructing Home Assistant calendar events, preventing calendar state updates from failing validation.
-- Compare timed events with timezone-aware range bounds and sort mixed all-day/timed events consistently.
-- Correct escaped regular expressions in future-date parsing so yearless, abbreviated-month, and UK numeric dates are recognised.
-- Add regression coverage for calendar timezone handling and date parsing.
-- Add optional, read-only active-session checks for EmlaLock, Chastify, and Chaster; users can select none, one, two, or all three providers in setup or Configure settings.
-- Award at most one crown per Home Assistant local calendar day, even if multiple selected providers confirm an active session; display the crown as an all-day entry on Monthly Events only.
-- Never award crowns when a provider check fails or its response does not explicitly verify an active session.
-- Update the integration manifest to 2.0.8.
+### Event Hub dashboard
 
-## What's new in 2.0.6
+Home Assistant integrations cannot automatically install or modify your dashboard. To use the example dashboard:
 
-- Fix missed upcoming LGBTQ+ listings when search snippets show dates without a year, use abbreviated month names, or use UK numeric date formats.
-- Increase bounded structured-date lookups for LGBTQ+ results from four to eight pages per search when snippets omit dates.
-- Add regression tests for yearless, abbreviated-month, rollover, and UK numeric dates.
-- Update the integration manifest to 2.0.6.
+1. Open [`dashboards/event_hub.yaml`](dashboards/event_hub.yaml).
+2. Import or copy its cards using your dashboard's **Raw configuration editor**.
+3. Check **Developer tools → States** and adjust entity IDs if Home Assistant assigned different ones.
 
-## What's new in 2.0.5
+The example includes the calendars, event and sauna sensors, and Event Hub buttons. It is a starting template; customise it to suit your dashboard.
 
-- Expand Number 52 discovery to individual repeating-event pages for its published themed nights.
-- Generate the published 1st/3rd Thursday and 2nd/4th Thursday occurrences while retaining dated event-page listings for rotating Friday/Saturday themes.
-- Keep the nearest-sauna filter from 2.0.4; Number 52 events are still included only when Number 52 is the nearest mapped sauna.
-- Update the integration manifest to 2.0.5.
+## Sauna lookup details
 
-## What's new in 2.0.4
+The nearest-sauna sensor searches OpenStreetMap within 30 km. If no nearby venue is returned, it can use a small maintained fallback index based on the [Gay Sauna Guide UK directory](https://www.gaysaunaguide.net/gay-saunas-in-the-uk/) and geocode entries matching the configured town or city. Number 52 Sauna in Newcastle also has a separate address-based fallback.
 
-- Include Number 52 Sauna events only when Number 52 is the closest mapped sauna to the configured location within the 30 km sauna-discovery radius.
-- Apply the same rule to Number 52 results from official pages and Google News RSS, so distant listings cannot bypass the nearest-sauna check.
-- Update the integration manifest to 2.0.4.
+Fallback entries are maintained in the integration and are not scraped from the directory at runtime. They may become outdated, and results depend on geocoding services. Venue details should be checked before travelling.
 
-## What's new in 2.0.3
+## Limitations
 
-- Improve LGBTQ+ event discovery when search snippets omit dates by inspecting up to four linked results per LGBTQ+ search for explicit Schema.org `Event.startDate` or `event:start_time` metadata.
-- Never substitute generic article publication dates for event dates; listings without a reliable future event date remain excluded.
-- Bound each page lookup to six seconds and cap lookups per query to limit added latency.
-- Retain the 2.0.2 timeout/retry protection.
-- Only include Number 52 Sauna events when Number 52 is the closest mapped sauna within the configured 30 km sauna-discovery radius; apply the same rule to official-page and RSS results.
-- Update the integration manifest to 2.0.3.
+- Discovery cannot reliably access private groups, login-only posts, closed mailing lists, or websites that are not indexed.
+- RSS results are limited; snippets may omit dates or contain irrelevant dates.
+- Ticketmaster covers only its own catalogue and supported countries.
+- Dates inferred from snippets can be wrong. Structured event dates are used when available, but listings should still be verified.
+- Keyword-based categories can overlap, be incorrect, or miss events whose descriptions do not use expected terms.
+- A configured country improves relevance but does not guarantee that an event physically takes place there.
+- Adult-only listings may appear when publicly indexed. Check age limits and entry requirements with the organiser.
+- No results means no matching dated listing was found; it does not mean no events exist.
 
-## What's new in 2.0.2
+## Troubleshooting
 
-- Fix discovery timeouts leaving the LGBTQ+ and other event calendars empty until the next scheduled six-hour refresh.
-- Increase the overall discovery timeout from 60 to 180 seconds to accommodate the concurrent public-source searches.
-- Automatically retry discovery two minutes after a timeout, retaining any events already loaded and exposing retry status in diagnostics.
-- Log successful discovery counts to make it easier to verify that searches are returning events.
-- Update the integration manifest to 2.0.2.
+If a calendar or sensor is empty, check the integration logs and diagnostics. Diagnostics include discovery status, recent attempts, top-level errors, and event counts by source and category. Credential-like configuration fields are excluded.
 
-## What's new in 2.0.1
+If a removed legacy status sensor remains after an upgrade, open **Settings → Devices & services → Entities** and remove only the orphaned sensor entity. Do not remove its replacement calendar entity.
 
-- Add a dedicated **LGBTQ+ Events** calendar for discovered gay, lesbian, bisexual, transgender, queer, and Pride listings. These events are filtered out of Monthly Events; sauna-related LGBTQ+ events may appear in both relevant focused calendars.
-- Rename the former Pride-focused calendar to **LGBTQ+ Events** while preserving its unique ID for existing installations.
-- Add regression tests for routing LGBTQ+ events away from the general calendar.
-- Update the integration version and discovery user agent to 2.0.1.
-
-## What's new in 2.0.0
-
-- Broaden LGBTQ+ discovery with additional focused searches for OutSavvy, Eventbrite UK, Meetup, Gaydio, and Attitude, alongside Queer LDN and wherequeersgo.
-- Run the added source-focused searches through the same location-aware Google News RSS pipeline; these are indexed-search hints, not direct integrations with those services.
-- Add regression coverage for URL normalisation and date extraction boundaries.
-- Update the integration manifest and source user-agent to 2.0.0.
-
-## Event data
-
-Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for the duplicate status-sensor removal is 2.3.1 (earlier release notes below describe their original releases). Subsequent scheduled refreshes update the current results.
-
-## Transparent limitations
-
-- No source can discover every event or every post. Private groups, login-only social posts, closed mailing lists, and unindexed websites cannot reliably be searched.
-- RSS returns a limited set of indexed results. Snippets may omit dates or include irrelevant dates.
-- Ticketmaster requires an API key and covers only its catalogue and supported countries; it is not a universal event directory.
-- Keyword-derived categories may overlap or be incorrect.
-- Country search terms improve relevance but do not guarantee the event is physically in the country. Venue details are shown only when supplied by a source.
-- Adult-only events are included when publicly indexed, but eligibility and age restrictions must be checked with the organiser.
-- Zero results means no matching dated listing was found, not that no events exist.
-
-## Event Hub (2.2.5)
-
-The Event Hub adds four Home Assistant button entities associated with a dedicated **Chastity Events** device. In 2.2.1, all calendar and sensor entities also declare this same device association, so the integration's entities appear together on the device page instead of under **Ungrouped**:
-
-- **Next Event Information** — creates/updates a persistent notification with the next discovered event's date, description, source and real source URL when available.
-- **Next Event Directions** — creates a notification with a Google Maps search link when the event has a location; otherwise it explains that location data is missing.
-- **Next Sauna Event Information** — the same event details for the next discovered sauna-related event.
-- **Next Sauna Event Directions** — a map link for the next sauna event when a venue/location is available.
-
-The buttons use current coordinator data, skip expired or undated records, and show a helpful notification when no matching event or source URL is available. They do not fabricate event addresses or links. The controls appear as buttons on the integration's device page after Home Assistant reloads the integration.
-
-### What's new in 2.2.5
-
-- Fix six calendar-routing regression tests that still used the old calendar constructor and failed with a missing `entry_id` argument.
-- Keep the v2.2.4 event-sensor title cleanup across all event sensor states while leaving full event details in calendar entities.
-- Keep the Nearest Sauna venue attributes unchanged.
-- Update the integration manifest version to 2.2.5.
-
-### What's new in 2.2.4
-
-- Apply event-title cleanup consistently to all event sensor states, including Next Month Event, Past LGBTQ Event, Next LGBTQ Event, and category-specific event sensors such as Next Queer Event.
-- Remove the appended `Tickets` suffix and the ticketing/date/time text that follows it, case-insensitively.
-- Keep full source event details in calendar entities and preserve the Nearest Sauna venue attributes.
-- Add regression tests for event sensor title cleanup and bump the integration manifest version to 2.2.4.
-
-### What's new in 2.2.1
-
-- Associate all calendar entities and all sensor entities with the same integration device used by the Event Hub buttons, fixing entities appearing under **Ungrouped**.
-- Keep existing unique IDs, sensor logic, calendar logic, discovery, and configuration intact.
-- Update the integration manifest version to 2.2.1.
-
-### Add the Event Hub dashboard
-
-Home Assistant integrations cannot safely install or modify a user's Lovelace dashboard automatically. Import the example view from [dashboards/event_hub.yaml](dashboards/event_hub.yaml) into a dashboard (Dashboard → Edit dashboard → Raw configuration editor), or copy its cards into an existing dashboard. Check **Developer tools → States** and replace entity IDs in the sample if Home Assistant assigned different IDs. The example brings the integration's existing capabilities into one place: all four calendars (including the dedicated Kink & Fetish Events calendar), every existing event and sauna sensor (including category-specific LGBTQ+ sensors), and all four action buttons. Existing entities are retained rather than replaced. The dashboard YAML is a starting template; if entity IDs differ on your Home Assistant instance, adjust them in the dashboard editor.
-
-
-## Troubleshooting diagnostics
-
-Home Assistant's integration diagnostics download includes the last discovery attempt, last successful update, current discovery status, any top-level discovery error, and event counts by source and category. API keys and other credential-like config fields are excluded. These details help distinguish an empty search result from a timed-out or failed discovery run.
+If the dashboard example does not work, confirm the actual entity IDs under **Developer tools → States** and update the YAML accordingly.
 
 ## Privacy
 
-Configured country/location terms are sent to Google News RSS; if enabled, search terms and country code are sent to Ticketmaster. Do not enter private information in the location field. Do not publish API keys.
+Configured country and location terms are sent to Google News RSS; if Ticketmaster is enabled, search terms and country code are also sent to Ticketmaster. Nearest-sauna lookups use OpenStreetMap-related services. Do not put private information in location fields or publish API keys.
 
 ## Contributing
 
-Bug reports and pull requests are welcome. Include Home Assistant version and logs with personal information removed.
+Bug reports and pull requests are welcome. Include your Home Assistant version and relevant logs, with personal information and credentials removed.
 
+## License
 
-### Selecting the dedicated kink and fetish calendar
-
-The integration exposes a separate **Kink & Fetish Events** calendar entity alongside Monthly Events, LGBTQ+ Events, and Sauna Events. After the updated integration is installed and Home Assistant reloads it, select the Kink & Fetish Events entity in the Home Assistant Calendar dashboard or use its entity ID in a calendar card/automation. Events are included when discovery returns a dated event and its metadata or text identifies it as kink/fetish-related; this is not a guarantee that every listing on every external website will be imported.
+This project is licensed under the [MIT License](LICENSE).
