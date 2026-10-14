@@ -154,7 +154,8 @@ class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
 
     def _event(self):
         today = dt_util.now().date()
-        events = self._events("pride", today, date(today.year + 2, 1, 1))
+        calendar_type = "kink" if self.category == "furry" else "pride"
+        events = self._events(calendar_type, today, date(today.year + 2, 1, 1))
         upcoming = [event for event in events if event.end_datetime_local.date() > today]
         return min(upcoming, key=lambda event: event.start_datetime_local) if upcoming else None
 
