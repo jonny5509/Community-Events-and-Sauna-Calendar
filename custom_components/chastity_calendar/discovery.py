@@ -545,6 +545,146 @@ async def _geocode_location(session, location: str, country: str):
     return None
 
 
+def _gaysaunas_venue_urls(body: str, base_url: str = "https://gaysaunas.co.uk") -> list[str]:
+    """Extract individual England venue listing URLs from the directory index."""
+    found = []
+    pattern = re.compile(r"""href\s*=\s*(['"])(.*?)\1""", re.I | re.S)
+    for match in pattern.finditer(body or ""):
+        href = html.unescape(match.group(2).strip())
+        if not href:
+            continue
+        absolute = href if href.startswith(("http://", "https://")) else base_url.rstrip("/") + "/" + href.lstrip("/")
+        parsed = urlsplit(absolute)
+        if parsed.netloc.casefold() not in {"gaysaunas.co.uk", "www.gaysaunas.co.uk"}:
+            continue
+        path = parsed.path.rstrip("/") + "/"
+        # Venue pages have a region and venue slug after /uk/england/.
+        # Exclude region indexes and other directory/article pages.
+        if not re.fullmatch(r"/uk/england/[^/]+/[^/]+/", path, re.I):
+            continue
+        canonical = urlunsplit(("https", "gaysaunas.co.uk", path, "", ""))
+        if canonical not in found:
+            found.append(canonical)
+    return found
+
+
+def _iter_jsonld_events(body: str):
+    """Yield Schema.org Event objects from JSON-LD without depending on HTML layout."""
+    pattern = re.compile(
+        r'<script\\b[^>]*type=["\\']application/ld\\+json["\\'][^>]*>(.*?)</script\\s*>',
+        re.I | re.S,
+    )
+    for raw in pattern.findall(body or ""):
+        try:
+            payload = json.loads(html.unescape(raw).strip())
+        except (json.JSONDecodeError, TypeError):
+            continue
+        stack = [payload]
+        while stack:
+            value = stack.pop()
+            if isinstance(value, list):
+                stack.extend(reversed(value))
+            elif isinstance(value, dict):
+                types = value.get("@type", [])
+                if isinstance(types, str):
+                    types = [types]
+                if any(str(kind).casefold() == "event" for kind in types):
+                    yield value
+                stack.extend(item for key, item in value.items() if key not in {"@context"})
+
+
+async def _fetch_gaysaunas_directory_events(session, today: datetime) -> list[dict]:
+    """Discover dated sauna events from the England venue directory.
+
+    Only explicit Schema.org Event start dates are emitted. Venue verification
+    dates, opening hours, and recurring descriptions are not treated as event dates.
+    """
+    index_url = "https://gaysaunas.co.uk/uk/england/"
+    headers = {"User-Agent": "HomeAssistant-ChastityCalendar/2.3.6"}
+    try:
+        async with asyncio.timeout(12):
+            async with session.get(index_url, headers=headers) as response:
+                if response.status != 200:
+                    _LOGGER.debug("Gay Saunas UK England index returned HTTP %s", response.status)
+                    return []
+                index_body = await response.text()
+    except Exception as err:
+        _LOGGER.debug("Could not fetch Gay Saunas UK England index: %s", err)
+        return []
+
+    venue_urls = _gaysaunas_venue_urls(index_body)
+    if not venue_urls:
+        _LOGGER.debug("No individual venue links found on Gay Saunas UK England index")
+        return []
+
+    semaphore = asyncio.Semaphore(5)
+
+    async def fetch_venue(url: str) -> tuple[str, str]:
+        async with semaphore:
+            try:
+                async with asyncio.timeout(10):
+                    async with session.get(url, headers=headers) as response:
+                        if response.status != 200:
+                            _LOGGER.debug("Gay Saunas UK venue page returned HTTP %s: %s", response.status, url)
+                            return url, ""
+                        return url, (await response.text())[:1500000]
+            except Exception as err:
+                _LOGGER.debug("Could not fetch Gay Saunas UK venue page %s: %s", url, err)
+                return url, ""
+
+    pages = await asyncio.gather(*(fetch_venue(url) for url in venue_urls))
+    lower = (today - timedelta(days=180)).date()
+    upper = (today + timedelta(days=730)).date()
+    events = []
+    for page_url, body in pages:
+        for item in _iter_jsonld_events(body):
+            raw_start = item.get("startDate")
+            if not isinstance(raw_start, str):
+                continue
+            try:
+                start = datetime.fromisoformat(raw_start.replace("Z", "+00:00")).replace(tzinfo=None)
+            except ValueError:
+                start = _find_future_date(raw_start, today)
+            if start is None or not lower <= start.date() <= upper:
+                continue
+            title = str(item.get("name") or "").strip()
+            if not title:
+                continue
+            raw_end = item.get("endDate")
+            try:
+                end = datetime.fromisoformat(raw_end.replace("Z", "+00:00")).replace(tzinfo=None) if isinstance(raw_end, str) else start + timedelta(hours=2)
+            except ValueError:
+                end = start + timedelta(hours=2)
+            event_url = str(item.get("url") or page_url)
+            description = str(item.get("description") or "Dated event listed by Gay Saunas UK.")
+            location_data = item.get("location", {})
+            if isinstance(location_data, dict):
+                address = location_data.get("address", {})
+                if isinstance(address, dict):
+                    location = ", ".join(str(address.get(key, "")).strip() for key in (
+                        "streetAddress", "addressLocality", "addressRegion", "addressCountry"
+                    ) if address.get(key))
+                else:
+                    location = str(address or "")
+                location = location or str(location_data.get("name") or "")
+            else:
+                location = str(location_data or "")
+            record = _record(
+                title, start, event_url, "sauna",
+                f"{description} Source: Gay Saunas UK venue directory.",
+                source="Gay Saunas UK directory", location=location,
+                date_confidence="structured",
+            )
+            record["end"] = max(end, start + timedelta(minutes=1))
+            events.append(record)
+    _LOGGER.info(
+        "Gay Saunas UK directory found %s dated events across %s England venue listings",
+        len(events), len(venue_urls),
+    )
+    return events
+
+
+
 async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
     """Read dated and recurring events from Number 52 Sauna's own public pages."""
     base_url = "https://www.number52sauna.co.uk"
@@ -827,44 +967,16 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         coordinates=coordinates, radius_km=30,
     )
     sauna52_task = _fetch_sauna52_events(session, today)
-    # Only include Number 52 events when it is actually the closest mapped
-    # sauna to the configured location. This reuses the same 30 km venue
-    # discovery logic exposed by the Nearest Sauna sensor.
-    nearest_saunas_task = async_discover_nearest_saunas(
-        hass, country=country, location=location or city or county or region
-    )
-    rss, ticketmaster, sauna52, nearest_saunas = await asyncio.gather(
-        rss_task, ticketmaster_task, sauna52_task, nearest_saunas_task
+    # Venue event discovery is independent of the nearest-sauna sensor:
+    # a user's selected location must not silently suppress public event listings.
+    gaysaunas_task = _fetch_gaysaunas_directory_events(session, today)
+    rss, ticketmaster, sauna52, gaysaunas = await asyncio.gather(
+        rss_task, ticketmaster_task, sauna52_task, gaysaunas_task
     )
     events = [item for batch in rss for item in batch]
     events.extend(ticketmaster)
-    nearest_name = str(nearest_saunas[0].get("name", "") if nearest_saunas else "").casefold()
-    number52_is_nearest = (
-        "number 52" in nearest_name
-        or "number52" in nearest_name.replace(" ", "")
-        or "number52sauna.co.uk" in str(nearest_saunas[0].get("website", "") if nearest_saunas else "").casefold()
-    )
-    if number52_is_nearest:
-        events.extend(sauna52)
-    else:
-        _LOGGER.info(
-            "Skipping Number 52 events because it is not the closest mapped sauna to configured location %s",
-            location or city or county or region or "unspecified",
-        )
-
-    # RSS can independently return Number 52 listings, so apply the same
-    # nearest-venue rule to those results instead of only gating its official feed.
-    if not number52_is_nearest:
-        number52_pattern = re.compile(
-            r"number\s*52|number52sauna\.co\.uk|scotswood road",
-            re.IGNORECASE,
-        )
-        events = [
-            item for item in events
-            if not number52_pattern.search(" ".join(str(item.get(key, "")) for key in (
-                "summary", "description", "location", "url", "source"
-            )))
-        ]
+    events.extend(sauna52)
+    events.extend(gaysaunas)
 
     _LOGGER.info(
         "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
