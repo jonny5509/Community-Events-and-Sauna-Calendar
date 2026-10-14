@@ -74,6 +74,9 @@ class ChastityCalendarSensorBase(SensorEntity):
         end = getattr(event, "end", None)
         start_date = start.date() if hasattr(start, "date") else start
         end_date = end.date() if hasattr(end, "date") else end
+        # Home Assistant all-day CalendarEvent ends are exclusive.
+        if type(end) is date:
+            end_date = end - timedelta(days=1)
         summary = str(getattr(event, "summary", "") or "")
         normalized = re.sub(r"[^a-z0-9]+", " ", summary.casefold()).strip()
         record = next((
@@ -536,7 +539,11 @@ class ChastityNextSaunaEventSensor(ChastityCalendarSensorBase):
         end = event.get("end")
         return {
             "event_date": start.date().isoformat() if hasattr(start, "date") else str(start)[:10],
-            "end_date": end.date().isoformat() if hasattr(end, "date") else str(end)[:10] if end else "",
+            "end_date": (
+                (end - timedelta(days=1)).isoformat() if type(end) is date
+                else end.date().isoformat() if hasattr(end, "date")
+                else str(end)[:10] if end else ""
+            ),
             "location": event.get("location", ""),
             "source_url": event.get("url", ""),
             "source": event.get("source", ""),
