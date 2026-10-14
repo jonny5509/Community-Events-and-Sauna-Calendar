@@ -430,7 +430,7 @@ def _deduplicate(events):
         right_location = normalise(right.get("location"))
         if not left_location or not right_location:
             return True
-        return SequenceMatcher(None, left_location, right_location).ratio() >= 0.72
+        return SequenceMatcher(None, left_location, right_location).ratio() >= 0.65
 
     for event in events:
         title_key = normalise(event.get("summary"))
@@ -456,7 +456,7 @@ def _deduplicate(events):
             merged[key] = event
         else:
             old = merged[key]
-            old_start, old_end = old["start"], old["end"]
+            old_end = old["end"]
             new_start, new_end = event["start"], event["end"]
             if event.get("date_confidence") == "structured" or old.get("date_confidence") != "structured":
                 old["start"] = new_start
