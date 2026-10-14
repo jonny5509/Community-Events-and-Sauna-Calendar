@@ -212,6 +212,31 @@ def _find_future_date(text: str, today: datetime):
     eligible = [value for value in found_dates if lower <= value.date() <= upper]
     return min(eligible, key=lambda value: value.date()) if eligible else None
 
+def _find_event_datetime(text: str, today: datetime):
+    """Extract a date and an explicit local clock time from a listing snippet."""
+    event_date = _find_future_date(text, today)
+    if event_date is None:
+        return None
+    # Accept common listing formats such as 6pm, 6:00 pm, 18:00, and 6:00pm.
+    time_match = re.search(
+        r"\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)(?=\b|\s|[,.;]|$)"
+        r"|\b([01]?\d|2[0-3]):([0-5]\d)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if not time_match:
+        return event_date
+    if time_match.group(4) is not None:
+        hour, minute = int(time_match.group(4)), int(time_match.group(5))
+    else:
+        hour, minute = int(time_match.group(1)), int(time_match.group(2) or 0)
+        meridiem = re.sub(r"[^ap]", "", time_match.group(3).casefold())
+        if hour < 1 or hour > 12:
+            return event_date
+        hour = hour % 12 + (12 if meridiem == "p" else 0)
+    return event_date.replace(hour=hour, minute=minute)
+
+
 def _normalise_url(url: str) -> str:
     """Strip tracking parameters to improve duplicate detection."""
     try:
@@ -258,7 +283,8 @@ def _record(title, start, url, category, description, source="Google News RSS", 
     )
     return {
         "summary": title[:180] or "Possible event",
-        "start": start, "end": start + timedelta(days=1),
+        # Explicitly timed listings should not become midnight-to-midnight events.
+        "start": start, "end": start + (timedelta(hours=2) if start.time() != datetime.min.time() else timedelta(days=1)),
         "description": description[:1200], "url": url, "category": record_category,
         "categories": _category_tags(record_category, title, description),
         "location": location, "source": source, "sources": [source],
@@ -318,6 +344,46 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
             candidates.append(parsed)
     return min(candidates, key=lambda item: item.date()) if candidates else None
 
+async def _fetch_structured_event_name(session, url: str) -> str:
+    """Extract a canonical event name from schema.org Event metadata."""
+    if urlsplit(url).scheme not in {"http", "https"}:
+        return ""
+    try:
+        async with asyncio.timeout(6):
+            async with session.get(
+                url,
+                headers={"User-Agent": "HomeAssistant-CommunityEventsCalendar/2.0.3"},
+                allow_redirects=True,
+            ) as response:
+                if response.status != 200:
+                    return ""
+                body = (await response.text())[:1500000]
+    except Exception as err:
+        _LOGGER.debug("Could not inspect event title page %s: %s", url, err)
+        return ""
+    pattern = re.compile(r'<script\b[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script\s*>', re.I | re.S)
+    names = []
+    for raw in pattern.findall(body):
+        try:
+            payload = json.loads(html.unescape(raw))
+        except (ValueError, TypeError):
+            continue
+        stack = [payload]
+        while stack:
+            value = stack.pop()
+            if isinstance(value, list):
+                stack.extend(value)
+            elif isinstance(value, dict):
+                types = value.get("@type", [])
+                if isinstance(types, str):
+                    types = [types]
+                if any(str(kind).casefold() == "event" for kind in types):
+                    name = value.get("name")
+                    if isinstance(name, str) and name.strip():
+                        names.append(html.unescape(name).strip())
+                stack.extend(item for key, item in value.items() if key not in {"@context"})
+    return names[0] if names else ""
+
 async def _fetch_rss(session, category, query, country, location, country_code, today, search_location=None):
     """Fetch one public Google News RSS search."""
     # Prefer the specific geographic level for this query, while always retaining country context.
@@ -342,6 +408,7 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
         return []
     results = []
     structured_date_checks = 0
+    structured_title_checks = 0
     lgbtq_categories = {"pride", "gay", "lesbian", "bisexual", "transgender", "queer", "lgbtq"}
     structured_date_categories = lgbtq_categories | {"kink", "chastity", "adult"}
     for item in root.findall(".//item"):
@@ -349,7 +416,8 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
         description = item.findtext("description") or ""
         link = item.findtext("link") or ""
         if not title.strip() or not link.strip(): continue
-        event_date = _find_future_date(f"{title} {description}", today)
+        event_text = f"{title} {description}"
+        event_date = _find_event_datetime(event_text, today)
         # Search snippets often omit dates. Inspect a bounded number of LGBTQ+,
         # kink/fetish, chastity, and adult-event pages for explicit structured
         # Event.startDate metadata; never substitute an article publication date.
@@ -363,7 +431,16 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
                 date_confidence = "extracted_from_event_page"
         if event_date is None:
             continue
-        title = re.sub(r"\s+-\s+[^-]+$", "", title).strip()
+        # Prefer the original event's structured name over a news headline.
+        canonical_title = ""
+        max_title_checks = 8 if category in lgbtq_categories else 4
+        if category in structured_date_categories and structured_title_checks < max_title_checks:
+            structured_title_checks += 1
+            canonical_title = await _fetch_structured_event_name(session, link)
+        if canonical_title:
+            title = canonical_title
+        else:
+            title = re.sub(r"\s+-\s+[^-]+$", "", title).strip()
         results.append(_record(
             title, event_date, link, category,
             "Unverified public search result. Date extracted from title/snippet and may be wrong. "
