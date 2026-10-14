@@ -402,6 +402,28 @@ class ChastityNextSaunaEventSensor(ChastityCalendarSensorBase):
         return {}
 
 
+class ChastityNextKinkEventSensor(ChastityCalendarSensorBase):
+    """Show the next discovered kink or fetish event."""
+
+    _attr_name = "Next Kink/Fetish Event"
+    _attr_icon = "mdi:calendar-heart"
+
+    def _event(self):
+        today = dt_util.now().date()
+        events = self._events("kink", today, date(today.year + 2, 1, 1))
+        upcoming = [event for event in events if event.end_datetime_local.date() > today]
+        return min(upcoming, key=lambda event: event.start_datetime_local) if upcoming else None
+
+    @property
+    def native_value(self) -> str:
+        event = self._event()
+        return _sensor_event_name(event.summary) if event else "No upcoming kink/fetish event"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {}
+
+
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
     """Set up focused monthly, LGBTQ+, and category-specific event sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -409,6 +431,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
     async_add_entities([
         ChastityNearestSaunaSensor(hass, entry, preferences),
         ChastityNextSaunaEventSensor(coordinator, entry.entry_id),
+        ChastityNextKinkEventSensor(coordinator, entry.entry_id),
         ChastityOngoingMonthEventSensor(coordinator, entry.entry_id),
         ChastityNextMonthEventSensor(coordinator, entry.entry_id),
         ChastityPastLGBTQEventSensor(coordinator, entry.entry_id),
