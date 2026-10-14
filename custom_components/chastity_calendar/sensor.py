@@ -250,12 +250,14 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
         return {}
 
 
-class ChastityNextGayEventSensor(ChastityNextCategoryEventSensor):
-    """Show the next discovered gay event."""
 
-    category = "gay"
-    _attr_name = "Next Gay Event"
-    _attr_icon = "mdi:account-multiple"
+
+
+
+
+
+
+
 
 
 class ChastityNextLesbianEventSensor(ChastityNextCategoryEventSensor):
@@ -263,6 +265,14 @@ class ChastityNextLesbianEventSensor(ChastityNextCategoryEventSensor):
 
     category = "lesbian"
     _attr_name = "Next Lesbian Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextGayEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered gay event."""
+
+    category = "gay"
+    _attr_name = "Next Gay Event"
     _attr_icon = "mdi:account-multiple"
 
 
@@ -290,6 +300,21 @@ class ChastityNextQueerEventSensor(ChastityNextCategoryEventSensor):
     _attr_icon = "mdi:account-multiple"
 
 
+class ChastityNextIntersexEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered intersex community event."""
+
+    category = "intersex"
+    _attr_name = "Next Intersex Event"
+    _attr_icon = "mdi:account-multiple"
+
+
+class ChastityNextAsexualEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered asexual community event."""
+
+    category = "asexual"
+    _attr_name = "Next Asexual Event"
+    _attr_icon = "mdi:account-multiple"
+
 
 class ChastityNextPansexualEventSensor(ChastityNextCategoryEventSensor):
     """Show the next discovered pansexual community event."""
@@ -304,22 +329,6 @@ class ChastityNextNonBinaryEventSensor(ChastityNextCategoryEventSensor):
 
     category = "non-binary"
     _attr_name = "Next Non-binary Event"
-    _attr_icon = "mdi:account-multiple"
-
-
-class ChastityNextIntersexEventSensor(ChastityNextCategoryEventSensor):
-    """Show the next discovered intersex community event."""
-
-    category = "intersex"
-    _attr_name = "Next Intersex Event"
-    _attr_icon = "mdi:account-multiple"
-
-
-class ChastityNextAsexualEventSensor(ChastityNextCategoryEventSensor):
-    """Show the next discovered asexual community event."""
-
-    category = "asexual"
-    _attr_name = "Next Asexual Event"
     _attr_icon = "mdi:account-multiple"
 
 
@@ -345,7 +354,6 @@ class ChastityNextSapphicEventSensor(ChastityNextCategoryEventSensor):
     category = "sapphic"
     _attr_name = "Next Sapphic Event"
     _attr_icon = "mdi:account-multiple"
-
 
 
 class ChastityNextFurryEventSensor(ChastityNextCategoryEventSensor):
