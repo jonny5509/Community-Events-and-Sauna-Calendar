@@ -283,6 +283,7 @@ def _is_kink_event(item: dict) -> bool:
         "rope play", "pup play", "puppy play", "dominatrix", "dominant",
         "submission", "submissive", "power exchange", "locktober", "chastity",
         "adult play party", "fetish market", "fetish social", "dungeon",
+        "furry", "furmeet", "fursuit",
     )
     categories = {str(value).casefold() for value in item.get("categories", [])}
     category = str(item.get("category", "")).casefold()
