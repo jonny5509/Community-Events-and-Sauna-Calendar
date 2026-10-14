@@ -420,18 +420,35 @@ def _deduplicate(events):
     """Merge same-day duplicate listings while preserving distinct events."""
     merged = {}
     title_date_to_key = {}
+
+    def normalise(value):
+        return re.sub(r"[^a-z0-9]+", " ", str(value or "").casefold()).strip()
+
+    def locations_compatible(left, right):
+        """Do not merge same-title events at clearly different venues."""
+        left_location = normalise(left.get("location"))
+        right_location = normalise(right.get("location"))
+        if not left_location or not right_location:
+            return True
+        return SequenceMatcher(None, left_location, right_location).ratio() >= 0.72
+
     for event in events:
-        title_key = re.sub(r"[^a-z0-9]+", " ", event["summary"].casefold()).strip()
+        title_key = normalise(event.get("summary"))
         date_key = event["start"].date().isoformat()
-        identity = (title_key, date_key)
+        location_key = normalise(event.get("location"))
+        identity = (title_key, date_key, location_key)
         key = title_date_to_key.get(identity)
         if key is None:
-            # Different sources often add a year, subtitle, or minor wording
-            # variation. Merge only highly similar titles on the same date.
-            for (existing_title, existing_date), existing_key in title_date_to_key.items():
-                if existing_date == date_key and SequenceMatcher(
-                    None, title_key, existing_title
-                ).ratio() >= 0.88:
+            # Sources often add subtitles or small wording variations. Match
+            # similar names on the same start date, but never combine listings
+            # that clearly point to different venues.
+            for (existing_title, existing_date, _existing_location), existing_key in title_date_to_key.items():
+                existing = merged[existing_key]
+                if (
+                    existing_date == date_key
+                    and SequenceMatcher(None, title_key, existing_title).ratio() >= 0.88
+                    and locations_compatible(existing, event)
+                ):
                     key = existing_key
                     break
         if key is None:
@@ -439,8 +456,19 @@ def _deduplicate(events):
             merged[key] = event
         else:
             old = merged[key]
+            old_start, old_end = old["start"], old["end"]
+            new_start, new_end = event["start"], event["end"]
             if event.get("date_confidence") == "structured" or old.get("date_confidence") != "structured":
-                old["start"], old["end"] = event["start"], event["end"]
+                old["start"] = new_start
+                # Keep the widest known span for a multi-day occurrence rather
+                # than shrinking it to a shorter duplicate listing.
+                if type(old_end) is type(new_end):
+                    old["end"] = max(old_end, new_end)
+                else:
+                    old["end"] = new_end
+            else:
+                if type(old_end) is type(new_end):
+                    old["end"] = max(old_end, new_end)
             old["categories"] = sorted(set(old.get("categories", [])) | set(event.get("categories", [])))
             old["sources"] = sorted(set(old.get("sources", [])) | set(event.get("sources", [])))
             old["source_links"] = list(dict.fromkeys(old.get("source_links", []) + event.get("source_links", [])))
