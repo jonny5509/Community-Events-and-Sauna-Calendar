@@ -62,7 +62,6 @@ def test_lgbtq_identity_events_are_routed_by_listing_text_without_category_tags(
         _event("Asexual and aromantic meetup", "community", ["community"]),
         _event("Genderfluid support group", "community", ["community"]),
         _event("Sapphic film night", "community", ["community"]),
-        _event("Furry community furmeet", "community", ["community"]),
     ]
 
     lgbtq = _summaries("pride", events)
@@ -70,6 +69,15 @@ def test_lgbtq_identity_events_are_routed_by_listing_text_without_category_tags(
 
     assert {event["summary"] for event in events}.issubset(lgbtq)
     assert not ({event["summary"] for event in events} & monthly)
+
+
+
+def test_furry_events_are_routed_to_kink_calendar_not_monthly_or_lgbtq_calendar():
+    event = _event("Furry community furmeet", "community", ["community", "kink"])
+
+    assert "Furry community furmeet" not in _summaries("monthly", [event])
+    assert "Furry community furmeet" not in _summaries("pride", [event])
+    assert "Furry community furmeet" in _summaries("kink", [event])
 
 
 
