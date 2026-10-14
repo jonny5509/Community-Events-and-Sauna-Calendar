@@ -224,7 +224,7 @@ def _category_tags(category: str, title: str, description: str) -> list[str]:
     tags.update(tag for tag, words in rules.items() if any(word in text for word in words))
     return sorted(tags)
 
-def _record(title, start, url, category, description, source="Google News RSS", location=""):
+def _record(title, start, url, category, description, source="Google News RSS", location="", date_confidence="extracted_from_search_snippet"):
     """Create a consistent discovery record."""
     title = html.unescape(re.sub(r"<[^>]+>", "", title)).strip()
     description = html.unescape(re.sub(r"<[^>]+>", "", description)).strip()
@@ -248,7 +248,7 @@ def _record(title, start, url, category, description, source="Google News RSS", 
         "categories": _category_tags(record_category, title, description),
         "location": location, "source": source, "sources": [source],
         "source_links": [url] if url else [], "last_seen": dt_util.now().isoformat(),
-        "date_confidence": "extracted_from_search_snippet",
+        "date_confidence": date_confidence,
     }
 
 
@@ -328,17 +328,24 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
     results = []
     structured_date_checks = 0
     lgbtq_categories = {"pride", "gay", "lesbian", "bisexual", "transgender", "queer", "lgbtq"}
+    structured_date_categories = lgbtq_categories | {"kink", "chastity", "adult"}
     for item in root.findall(".//item"):
         title = item.findtext("title") or ""
         description = item.findtext("description") or ""
         link = item.findtext("link") or ""
         if not title.strip() or not link.strip(): continue
         event_date = _find_future_date(f"{title} {description}", today)
-        # Search snippets often omit event dates. Inspect a bounded number of
-        # LGBTQ+ result pages for explicit structured event start dates.
-        if event_date is None and category in lgbtq_categories and structured_date_checks < 8:
+        # Search snippets often omit dates. Inspect a bounded number of LGBTQ+,
+        # kink/fetish, chastity, and adult-event pages for explicit structured
+        # Event.startDate metadata; never substitute an article publication date.
+        date_confidence = "extracted_from_search_snippet"
+        max_structured_checks = 8 if category in lgbtq_categories else 4
+        if (event_date is None and category in structured_date_categories
+                and structured_date_checks < max_structured_checks):
             structured_date_checks += 1
             event_date = await _fetch_structured_event_date(session, link, today)
+            if event_date is not None:
+                date_confidence = "extracted_from_event_page"
         if event_date is None:
             continue
         title = re.sub(r"\s+-\s+[^-]+$", "", title).strip()
@@ -347,6 +354,7 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
             "Unverified public search result. Date extracted from title/snippet and may be wrong. "
             f"Configured country: {country or 'not set'}. Search relevance is not proof of venue location. "
             f"Verify details with the original listing: {link}",
+            date_confidence=date_confidence,
         ))
     return results
 
