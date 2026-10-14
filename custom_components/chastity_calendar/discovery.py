@@ -212,6 +212,31 @@ def _find_future_date(text: str, today: datetime):
     eligible = [value for value in found_dates if lower <= value.date() <= upper]
     return min(eligible, key=lambda value: value.date()) if eligible else None
 
+def _find_event_datetime(text: str, today: datetime):
+    """Extract a date and an explicit local clock time from a listing snippet."""
+    event_date = _find_future_date(text, today)
+    if event_date is None:
+        return None
+    # Accept common listing formats such as 6pm, 6:00 pm, 18:00, and 6:00pm.
+    time_match = re.search(
+        r"\\b(\\d{1,2})(?::(\\d{2}))?\\s*(a\\.?m\\.?|p\\.?m\\.?)(?=\\b|\\s|[,.;]|$)"
+        r"|\\b([01]?\\d|2[0-3]):([0-5]\\d)\\b",
+        text,
+        re.IGNORECASE,
+    )
+    if not time_match:
+        return event_date
+    if time_match.group(4) is not None:
+        hour, minute = int(time_match.group(4)), int(time_match.group(5))
+    else:
+        hour, minute = int(time_match.group(1)), int(time_match.group(2) or 0)
+        meridiem = re.sub(r"[^ap]", "", time_match.group(3).casefold())
+        if hour < 1 or hour > 12:
+            return event_date
+        hour = hour % 12 + (12 if meridiem == "p" else 0)
+    return event_date.replace(hour=hour, minute=minute)
+
+
 def _normalise_url(url: str) -> str:
     """Strip tracking parameters to improve duplicate detection."""
     try:
@@ -349,7 +374,8 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
         description = item.findtext("description") or ""
         link = item.findtext("link") or ""
         if not title.strip() or not link.strip(): continue
-        event_date = _find_future_date(f"{title} {description}", today)
+        event_text = f"{title} {description}"
+        event_date = _find_event_datetime(event_text, today)
         # Search snippets often omit dates. Inspect a bounded number of LGBTQ+,
         # kink/fetish, chastity, and adult-event pages for explicit structured
         # Event.startDate metadata; never substitute an article publication date.
