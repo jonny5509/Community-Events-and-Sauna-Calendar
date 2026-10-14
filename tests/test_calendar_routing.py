@@ -203,3 +203,28 @@ def test_lgbtq_single_and_multi_day_events_preserve_original_spans():
     assert results["Single-day queer meetup"].end == date(2027, 6, 13)
     assert results["Multi-day Pride festival"].start == date(2027, 6, 14)
     assert results["Multi-day Pride festival"].end == date(2027, 6, 18)
+
+
+
+def test_gay_sauna_events_appear_in_both_sauna_and_lgbtq_calendars():
+    event = _event(
+        "Fetish Night at Number 52 Sauna",
+        "sauna",
+        ["sauna", "gay", "lgbtq", "kink"],
+    )
+    event["source"] = "Number 52 Sauna official website"
+    event["url"] = "https://www.number52sauna.co.uk/our-events/"
+
+    assert "Fetish Night at Number 52 Sauna" not in _summaries("monthly", [event])
+    assert "Fetish Night at Number 52 Sauna" in _summaries("sauna", [event])
+    assert "Fetish Night at Number 52 Sauna" in _summaries("pride", [event])
+    assert "Fetish Night at Number 52 Sauna" not in _summaries("kink", [event])
+
+
+def test_non_gay_sauna_events_remain_out_of_lgbtq_calendar():
+    event = _event("General Sauna Session", "sauna", ["sauna"])
+    event["source"] = "Generic sauna listing"
+    event["url"] = "https://example.com/sauna/events"
+
+    assert "General Sauna Session" in _summaries("sauna", [event])
+    assert "General Sauna Session" not in _summaries("pride", [event])
