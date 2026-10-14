@@ -9,7 +9,7 @@ from homeassistant.helpers.event import async_track_time_change
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.util import dt as dt_util
 
-from .calendar import ChastityChallengeCalendar
+from .calendar import ChastityChallengeCalendar, _is_gay_sauna_event
 from .const import DOMAIN
 
 
@@ -223,8 +223,17 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
                 item_category,
                 " ".join(item_categories),
             )).casefold()
-            if item_category == self.category or self.category in item_categories or any(
-                term in text for term in terms
+            # Venue-directory listings may have generic titles (for example
+            # "Sauna 52") with no explicit "gay" keyword. Their source itself
+            # identifies them as gay-sauna events, so include them in Next Gay.
+            is_gay_sauna_for_gay_sensor = (
+                self.category == "gay" and _is_gay_sauna_event(item)
+            )
+            if (
+                is_gay_sauna_for_gay_sensor
+                or item_category == self.category
+                or self.category in item_categories
+                or any(term in text for term in terms)
             ):
                 matching_summaries.add(item.get("summary", ""))
 
