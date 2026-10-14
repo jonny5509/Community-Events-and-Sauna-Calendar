@@ -371,12 +371,19 @@ class ChastityChallengeCalendar(CalendarEntity):
             # Events can appear in more than one focused calendar when relevant.
             if self.calendar_type == "monthly" and (is_sauna or is_lgbtq or is_kink):
                 continue
-            if self.calendar_type == "sauna" and not is_sauna:
-                continue
-            if self.calendar_type == "pride" and not is_lgbtq:
-                continue
-            if self.calendar_type == "kink" and not is_kink:
-                continue
+            # Assign each discovered event to exactly one focused calendar.
+            # Specific venue/topic calendars take precedence over broader tags:
+            # sauna first, then kink/fetish (including furry), then LGBTQ+.
+            # This avoids duplicates when dashboards display multiple calendars.
+            if self.calendar_type == "sauna":
+                if not is_sauna:
+                    continue
+            elif self.calendar_type == "kink":
+                if not is_kink or is_sauna:
+                    continue
+            elif self.calendar_type == "pride":
+                if not is_lgbtq or is_sauna or is_kink:
+                    continue
             raw_start = item["start"]
             raw_end = item["end"]
             # Discovered events can be timed events (not all-day entries).
