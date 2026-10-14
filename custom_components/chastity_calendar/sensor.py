@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 import re
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_time_change
 
 from homeassistant.components.sensor import SensorEntity
@@ -35,7 +36,7 @@ class ChastityCalendarSensorBase(SensorEntity):
             identifiers={(DOMAIN, entry_id)},
             name="Community Events & Sauna Calendar",
             manufacturer="Community Events & Sauna Calendar",
-            configuration_url="https://github.com/jonny5509/chastity_calendar",
+            configuration_url="https://github.com/jonny5509/community-events-sauna-calendar",
         )
 
     async def async_added_to_hass(self) -> None:
@@ -65,6 +66,40 @@ class ChastityCalendarSensorBase(SensorEntity):
         calendar = ChastityChallengeCalendar(self.coordinator, calendar_type, self.entry_id)
         return calendar._events_between(start_day, end_day)
 
+    def _event_attributes(self, event) -> dict:
+        """Expose useful details without requiring a separate sensor per category."""
+        if event is None:
+            return {}
+        start = getattr(event, "start", None)
+        end = getattr(event, "end", None)
+        start_date = start.date() if hasattr(start, "date") else start
+        end_date = end.date() if hasattr(end, "date") else end
+        # Home Assistant all-day CalendarEvent ends are exclusive.
+        if type(end) is date:
+            end_date = end - timedelta(days=1)
+        summary = str(getattr(event, "summary", "") or "")
+        normalized = re.sub(r"[^a-z0-9]+", " ", summary.casefold()).strip()
+        record = next((
+            item for item in (self.coordinator.data or [])
+            if re.sub(r"[^a-z0-9]+", " ", str(item.get("summary", "")).casefold()).strip() == normalized
+            and (
+                (item.get("start").date() if hasattr(item.get("start"), "date") else item.get("start"))
+                == start_date
+            )
+        ), {})
+        sources = record.get("sources") or ([record.get("source")] if record.get("source") else [])
+        links = record.get("source_links") or ([record.get("url")] if record.get("url") else [])
+        attrs = {
+            "event_date": start_date.isoformat() if hasattr(start_date, "isoformat") else str(start_date or ""),
+            "end_date": end_date.isoformat() if hasattr(end_date, "isoformat") else str(end_date or ""),
+            "location": record.get("location", ""),
+            "source_url": record.get("url", "") or (links[0] if links else ""),
+            "sources": sources,
+            "source_urls": links,
+            "categories": record.get("categories", []),
+        }
+        return {key: value for key, value in attrs.items() if value not in ("", [], None)}
+
 
 class ChastityOngoingMonthEventSensor(ChastityCalendarSensorBase):
     """Show a monthly challenge event that is active today."""
@@ -86,8 +121,8 @@ class ChastityOngoingMonthEventSensor(ChastityCalendarSensorBase):
 
     @property
     def extra_state_attributes(self) -> dict:
-        """Keep event details in the calendar, not duplicated on the sensor."""
-        return {}
+        return self._event_attributes(self._event())
+
 
 
 class ChastityNextMonthEventSensor(ChastityCalendarSensorBase):
@@ -113,8 +148,8 @@ class ChastityNextMonthEventSensor(ChastityCalendarSensorBase):
 
     @property
     def extra_state_attributes(self) -> dict:
-        event = self._event()
-        return {}
+        return self._event_attributes(self._event())
+
 
 
 class ChastityPastLGBTQEventSensor(ChastityCalendarSensorBase):
@@ -139,8 +174,8 @@ class ChastityPastLGBTQEventSensor(ChastityCalendarSensorBase):
 
     @property
     def extra_state_attributes(self) -> dict:
-        event = self._event()
-        return {}
+        return self._event_attributes(self._event())
+
 
 
 class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
@@ -165,8 +200,17 @@ class ChastityNextLGBTQEventSensor(ChastityCalendarSensorBase):
 
     @property
     def extra_state_attributes(self) -> dict:
-        event = self._event()
-        return {}
+        attrs = self._event_attributes(self._event())
+        by_category = {}
+        for sensor_class in _CATEGORY_SENSOR_CLASSES:
+            candidate = sensor_class(self.coordinator, self.entry_id)._event()
+            if candidate:
+                details = self._event_attributes(candidate)
+                details["name"] = _sensor_event_name(candidate.summary)
+                by_category[sensor_class.category] = details
+        attrs["next_events_by_category"] = by_category
+        return attrs
+
 
 
 class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
@@ -255,8 +299,8 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
 
     @property
     def extra_state_attributes(self) -> dict:
-        event = self._event()
-        return {}
+        return self._event_attributes(self._event())
+
 
 class ChastityNextLesbianEventSensor(ChastityNextCategoryEventSensor):
     """Show the next discovered lesbian event."""
@@ -361,6 +405,21 @@ class ChastityNextFurryEventSensor(ChastityNextCategoryEventSensor):
     _attr_name = "Next Furry Event"
     _attr_icon = "mdi:paw"
 
+_CATEGORY_SENSOR_CLASSES = (
+    ChastityNextLesbianEventSensor,
+    ChastityNextGayEventSensor,
+    ChastityNextBisexualEventSensor,
+    ChastityNextTransgenderEventSensor,
+    ChastityNextQueerEventSensor,
+    ChastityNextIntersexEventSensor,
+    ChastityNextAsexualEventSensor,
+    ChastityNextPansexualEventSensor,
+    ChastityNextNonBinaryEventSensor,
+    ChastityNextAromanticEventSensor,
+    ChastityNextGenderfluidEventSensor,
+    ChastityNextSapphicEventSensor,
+)
+
 
 class ChastityNearestSaunaSensor(SensorEntity):
     """Show the nearest sauna mapped in OpenStreetMap to the configured location."""
@@ -378,7 +437,7 @@ class ChastityNearestSaunaSensor(SensorEntity):
             identifiers={(DOMAIN, entry.entry_id)},
             name="Community Events & Sauna Calendar",
             manufacturer="Community Events & Sauna Calendar",
-            configuration_url="https://github.com/jonny5509/chastity_calendar",
+            configuration_url="https://github.com/jonny5509/community-events-sauna-calendar",
         )
         self._saunas = []
         self._unsub_refresh = None
@@ -477,9 +536,21 @@ class ChastityNextSaunaEventSensor(ChastityCalendarSensorBase):
         if not event:
             return {}
         start = event.get("start")
-        event_date = start.date().isoformat() if hasattr(start, "date") else str(start)[:10]
-        # Detailed event metadata belongs to the Sauna Events calendar.
-        return {}
+        end = event.get("end")
+        return {
+            "event_date": start.date().isoformat() if hasattr(start, "date") else str(start)[:10],
+            "end_date": (
+                (end - timedelta(days=1)).isoformat() if type(end) is date
+                else end.date().isoformat() if hasattr(end, "date")
+                else str(end)[:10] if end else ""
+            ),
+            "location": event.get("location", ""),
+            "source_url": event.get("url", ""),
+            "source": event.get("source", ""),
+            "sources": event.get("sources", []),
+            "categories": event.get("categories", []),
+        }
+
 
 
 class ChastityNextKinkEventSensor(ChastityCalendarSensorBase):
@@ -501,33 +572,34 @@ class ChastityNextKinkEventSensor(ChastityCalendarSensorBase):
 
     @property
     def extra_state_attributes(self) -> dict:
-        return {}
+        return self._event_attributes(self._event())
 
 
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
     """Set up focused monthly, LGBTQ+, and category-specific event sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     preferences = {**entry.data, **entry.options}
+    # Retire category-only entities now represented by the consolidated
+    # next_lgbtq_event.next_events_by_category attribute. Keep the dedicated
+    # furry sensor as it is useful independently.
+    registry = er.async_get(hass)
+    for suffix in (
+        "next_lesbian_event", "next_gay_event", "next_bisexual_event",
+        "next_transgender_event", "next_queer_event", "next_intersex_event",
+        "next_asexual_event", "next_pansexual_event", "next_non-binary_event",
+        "next_aromantic_event", "next_genderfluid_event", "next_sapphic_event",
+    ):
+        old_entity_id = registry.async_get_entity_id(
+            "sensor", DOMAIN, f"{DOMAIN}_{entry.entry_id}_{suffix}"
+        )
+        if old_entity_id:
+            registry.async_remove(old_entity_id)
+
     async_add_entities([
-        # General and calendar overview sensors first.
         ChastityOngoingMonthEventSensor(coordinator, entry.entry_id),
         ChastityNextMonthEventSensor(coordinator, entry.entry_id),
         ChastityPastLGBTQEventSensor(coordinator, entry.entry_id),
         ChastityNextLGBTQEventSensor(coordinator, entry.entry_id),
-        # Identity-specific sensors in LGBTQIA+ order.
-        ChastityNextLesbianEventSensor(coordinator, entry.entry_id),
-        ChastityNextGayEventSensor(coordinator, entry.entry_id),
-        ChastityNextBisexualEventSensor(coordinator, entry.entry_id),
-        ChastityNextTransgenderEventSensor(coordinator, entry.entry_id),
-        ChastityNextQueerEventSensor(coordinator, entry.entry_id),
-        ChastityNextIntersexEventSensor(coordinator, entry.entry_id),
-        ChastityNextAsexualEventSensor(coordinator, entry.entry_id),
-        ChastityNextPansexualEventSensor(coordinator, entry.entry_id),
-        ChastityNextNonBinaryEventSensor(coordinator, entry.entry_id),
-        ChastityNextAromanticEventSensor(coordinator, entry.entry_id),
-        ChastityNextGenderfluidEventSensor(coordinator, entry.entry_id),
-        ChastityNextSapphicEventSensor(coordinator, entry.entry_id),
-        # Related community interests after the LGBTQIA+ identities.
         ChastityNextFurryEventSensor(coordinator, entry.entry_id),
         ChastityNextKinkEventSensor(coordinator, entry.entry_id),
         ChastityNextSaunaEventSensor(coordinator, entry.entry_id),

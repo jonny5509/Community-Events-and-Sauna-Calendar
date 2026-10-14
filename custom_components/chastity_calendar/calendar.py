@@ -340,7 +340,7 @@ class ChastityChallengeCalendar(CalendarEntity):
             identifiers={(DOMAIN, entry_id)},
             name="Community Events & Sauna Calendar",
             manufacturer="Community Events & Sauna Calendar",
-            configuration_url="https://github.com/jonny5509/chastity_calendar",
+            configuration_url="https://github.com/jonny5509/community-events-sauna-calendar",
         )
         if calendar_type == "pride":
             self._attr_name = "LGBTQ+ Events"

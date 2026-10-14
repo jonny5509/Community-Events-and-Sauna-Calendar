@@ -303,3 +303,45 @@ def test_deduplicate_keeps_distinct_events_on_the_same_day():
     result = _deduplicate(events)
 
     assert len(result) == 3
+
+
+
+def test_deduplicate_merges_cross_source_same_event_and_keeps_source_links():
+    start = datetime(2027, 6, 12)
+    first = _event("Newcastle Pride Festival", start, source="RSS A", url="https://a.test/pride")
+    second = _event("Newcastle Pride Festival", start, source="RSS B", url="https://b.test/pride")
+    first["location"] = "Newcastle"
+    second["location"] = "Newcastle, UK"
+
+    result = _deduplicate([first, second])
+
+    assert len(result) == 1
+    assert set(result[0]["sources"]) == {"RSS A", "RSS B"}
+    assert set(result[0]["source_links"]) == {"https://a.test/pride", "https://b.test/pride"}
+
+
+def test_deduplicate_does_not_merge_same_title_and_date_at_different_venues():
+    start = datetime(2027, 6, 12)
+    first = _event("Pride Social", start, url="https://a.test/pride")
+    second = _event("Pride Social", start, url="https://b.test/pride")
+    first["location"] = "Newcastle Civic Centre"
+    second["location"] = "Gateshead Town Hall"
+
+    result = _deduplicate([first, second])
+
+    assert len(result) == 2
+
+
+def test_deduplicate_preserves_longer_multi_day_span():
+    from datetime import timedelta
+
+    start = datetime(2027, 6, 12)
+    short = _event("Queer Community Festival", start, source="RSS A")
+    long = _event("Queer Community Festival", start, source="RSS B")
+    short["end"] = start + timedelta(days=1)
+    long["end"] = start + timedelta(days=3)
+
+    result = _deduplicate([short, long])
+
+    assert len(result) == 1
+    assert result[0]["end"] == start + timedelta(days=3)

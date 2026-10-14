@@ -7,7 +7,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration for discov
 ## Features
 
 - **Four calendars:** Monthly Events, LGBTQ+ Events, Sauna Events, and Kink & Fetish Events.
-- **Event sensors:** ongoing and next monthly event, past and next LGBTQ+ event, and focused upcoming-event sensors for lesbian, gay, bisexual, transgender, queer, intersex, asexual, pansexual, non-binary, aromantic, genderfluid, and sapphic communities.
+- **Event sensors:** ongoing and next monthly event, past and next LGBTQ+ event, and next-event details for LGBTQIA+ categories exposed through the `next_lgbtq_event` sensor attributes.
 - **Community-interest sensors:** next furry event, next kink/fetish event, and next sauna event.
 - **Nearest Sauna:** looks for mapped sauna venues within 30 km of the configured location and reports distance, address, website, phone, map link, and other nearby listings when available.
 - **Event Hub buttons:** create notifications with next-event details and map links when source and location data are available.
@@ -26,7 +26,7 @@ If the integration is available in the HACS default store, search for **Communit
 If it is not listed yet:
 
 1. Open **HACS → Custom repositories**.
-2. Add `jonny5509/chastity_calendar` and choose **Integration** as the category.
+2. Add `jonny5509/community-events-sauna-calendar` and choose **Integration** as the category.
 3. Download the integration.
 4. Restart Home Assistant.
 5. Go to **Settings → Devices & services → Add integration** and search for **Community Events & Sauna Calendar**.
@@ -37,7 +37,7 @@ If it is not listed yet:
 2. Restart Home Assistant.
 3. Open **Settings → Devices & services → Add integration** and add **Community Events & Sauna Calendar**.
 
-The internal integration domain remains `chastity_calendar` to preserve existing configuration and entity IDs.
+The internal integration domain remains `chastity_calendar` to preserve existing configuration and retained entity IDs. The category-only sensors for lesbian, gay, bisexual, transgender, queer, intersex, asexual, pansexual, non-binary, aromantic, genderfluid, and sapphic events are consolidated into the `next_lgbtq_event` sensor's `next_events_by_category` attribute. On upgrade, the integration removes those retired category-only entity registry entries; update dashboards that referenced them to read the consolidated attribute instead. The dedicated furry, kink, and sauna sensors remain.
 
 ### Upcoming Events dashboard card
 
@@ -139,7 +139,7 @@ Fallback entries are maintained in the integration and are not scraped from the 
 
 If a calendar or sensor is empty, check the integration logs and diagnostics. Diagnostics include discovery status, recent attempts, top-level errors, and event counts by source and category. Credential-like configuration fields are excluded.
 
-If a removed legacy status sensor remains after an upgrade, open **Settings → Devices & services → Entities** and remove only the orphaned sensor entity. Do not remove its replacement calendar entity.
+If a dashboard referenced a retired identity-specific event sensor, switch it to the **Next LGBTQ Event** sensor and read the relevant entry under `next_events_by_category`. The individual identity-specific entities are intentionally removed during setup to avoid leaving stale, unavailable entities in the registry.
 
 If the dashboard example does not work, confirm the actual entity IDs under **Developer tools → States** and update the YAML accordingly.
 

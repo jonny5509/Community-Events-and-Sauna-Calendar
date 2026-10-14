@@ -5,8 +5,8 @@
     "@jonny5509"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/jonny5509/chastity_calendar",
+  "documentation": "https://github.com/jonny5509/community-events-sauna-calendar",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/jonny5509/chastity_calendar/issues",
+  "issue_tracker": "https://github.com/jonny5509/community-events-sauna-calendar/issues",
   "version": "2.4.0"
 }
