@@ -45,12 +45,30 @@ def test_lgbtq_events_are_separate_from_monthly_calendar():
     assert "General community fair" not in sauna
 
 
-def test_lgbtq_sauna_event_can_appear_in_both_focused_calendars():
+def test_overlapping_event_is_assigned_to_only_one_focused_calendar():
     event = _event("Queer sauna social", "sauna", ["sauna", "queer", "lgbtq"])
 
     assert "Queer sauna social" not in _summaries("monthly", [event])
-    assert "Queer sauna social" in _summaries("pride", [event])
+    assert "Queer sauna social" not in _summaries("pride", [event])
+    assert "Queer sauna social" not in _summaries("kink", [event])
     assert "Queer sauna social" in _summaries("sauna", [event])
+
+
+def test_lgbtq_kink_event_appears_only_in_kink_calendar():
+    event = _event("Queer BDSM Social", "community", ["community", "queer", "lgbtq", "kink"])
+
+    assert "Queer BDSM Social" not in _summaries("monthly", [event])
+    assert "Queer BDSM Social" not in _summaries("pride", [event])
+    assert "Queer BDSM Social" in _summaries("kink", [event])
+
+
+def test_lgbtq_only_event_remains_in_pride_calendar():
+    event = _event("Queer Film Night", "community", ["community", "queer", "lgbtq"])
+
+    assert "Queer Film Night" not in _summaries("monthly", [event])
+    assert "Queer Film Night" in _summaries("pride", [event])
+    assert "Queer Film Night" not in _summaries("kink", [event])
+    assert "Queer Film Night" not in _summaries("sauna", [event])
 
 
 
