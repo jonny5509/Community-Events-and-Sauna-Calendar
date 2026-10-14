@@ -112,7 +112,64 @@ EVENTS = [
         "end": (12, 24),
         "description": "Suggested personal or couples idea: a daily consensual prompt or activity through 24 December.",
         "category": "suggested",
+    },,
+    {
+        "summary": "International Fetish Day",
+        "start": (1, 1),
+        "end": (1, 1),
+        "recurrence": "third_friday_january",
+        "description": "Community observance for fetish diversity and education. Observed on the third Friday in January; community observance, not an official holiday.",
+        "category": "kink observance",
     },
+    {
+        "summary": "World BDSM Day",
+        "start": (7, 24),
+        "end": (7, 24),
+        "description": "Community-referenced BDSM awareness date. Observance and recognition vary; use as an informational calendar entry.",
+        "category": "kink observance",
+    },
+    {
+        "summary": "Kink Consent & Safety Check-in",
+        "start": (4, 1),
+        "end": (4, 1),
+        "description": "Suggested annual reminder to review consent, boundaries, safewords, aftercare, and risk-aware practices with partners.",
+        "category": "suggested",
+    },
+    {
+        "summary": "Leather & Gear Appreciation Day",
+        "start": (5, 1),
+        "end": (5, 1),
+        "description": "Suggested community theme day for leather, boots, uniforms, and fetish fashion; not an official observance.",
+        "category": "suggested",
+    },
+    {
+        "summary": "Rope & Shibari Education Day",
+        "start": (3, 1),
+        "end": (3, 1),
+        "description": "Suggested reminder to explore consent-led rope education, communication, and safety; not an official observance.",
+        "category": "suggested",
+    },
+    {
+        "summary": "Rubber & Latex Appreciation Day",
+        "start": (8, 1),
+        "end": (8, 1),
+        "description": "Suggested theme day for rubber, latex, PVC, and fetish fashion; not an official observance.",
+        "category": "suggested",
+    },
+    {
+        "summary": "Power Exchange Reflection Day",
+        "start": (9, 1),
+        "end": (9, 1),
+        "description": "Suggested reminder for consenting adults to review roles, boundaries, communication, and relationship agreements.",
+        "category": "suggested",
+    },
+    {
+        "summary": "Fetish Community & Gear Social Reminder",
+        "start": (2, 1),
+        "end": (2, 1),
+        "description": "Suggested prompt to look for local leather, rubber, pup-play, rope, and other adult kink community socials.",
+        "category": "suggested",
+    }
 ]
 
 # Reliable annual observances ensure this calendar has upcoming events even
@@ -203,8 +260,14 @@ def _event_for_year(item: dict, year: int) -> CalendarEvent:
     """Build an all-day event using dates and an exclusive end date."""
     start_month, start_day = item["start"]
     end_month, end_day = item["end"]
-    start = date(year, start_month, start_day)
-    end = date(year, end_month, end_day) + timedelta(days=1)
+    if item.get("recurrence") == "third_friday_january":
+        # January 1 weekday offset to Friday, then two further weeks.
+        start = date(year, 1, 1) + timedelta(days=(4 - date(year, 1, 1).weekday()) % 7 + 14)
+        end = start
+    else:
+        start = date(year, start_month, start_day)
+        end = date(year, end_month, end_day)
+    end += timedelta(days=1)
     return CalendarEvent(
         summary=item["summary"],
         start=start,
