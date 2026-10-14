@@ -17,10 +17,8 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration with recur
 ## Installation
 
 ### HACS
-1. Open HACS and choose **Custom repositories**.
-2. Add `jonny5509/Chastity-Events` as an **Integration**.
-3. Download the integration and restart Home Assistant.
-4. Add it from **Settings → Devices & services → Add integration**.
+- **After acceptance into the HACS default store:** search for **Chastity Events**, download it, restart Home Assistant, then add it from **Settings → Devices & services → Add integration**.
+- **Until it is listed in the default store:** open HACS → **Custom repositories**, add `jonny5509/chastity_calendar` as an **Integration**, download it, restart Home Assistant, then add the integration from **Settings → Devices & services → Add integration**.
 
 ### Manual
 Copy `custom_components/chastity_calendar` to `config/custom_components/`, restart Home Assistant, and add the integration. The internal domain remains `chastity_calendar` to preserve existing configuration and entity IDs.
