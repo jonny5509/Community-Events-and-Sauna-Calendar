@@ -66,6 +66,76 @@ class ChastityCalendarSensorBase(SensorEntity):
         return calendar._events_between(start_day, end_day)
 
 
+class ChastityCalendarStatusSensor(ChastityCalendarSensorBase):
+    """Mirror whether a calendar currently has an active event."""
+
+    calendar_type = ""
+    _attr_icon = "mdi:calendar-check"
+
+    def __init__(self, coordinator, entry_id: str) -> None:
+        super().__init__(coordinator, entry_id)
+
+    @property
+    def native_value(self) -> str:
+        """Report On while an event is in progress, otherwise Off."""
+        now = dt_util.now()
+        today = now.date()
+        events = self._events(self.calendar_type, today, today + timedelta(days=2))
+        active = any(
+            event.start_datetime_local <= now < event.end_datetime_local
+            for event in events
+        )
+        return "On" if active else "Off"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Expose the matching calendar entity and active event, if any."""
+        now = dt_util.now()
+        today = now.date()
+        events = self._events(self.calendar_type, today, today + timedelta(days=2))
+        active = next(
+            (event for event in events
+             if event.start_datetime_local <= now < event.end_datetime_local),
+            None,
+        )
+        return {
+            "calendar_entity": f"calendar.{self.calendar_type}_events",
+            "active_event": active.summary if active else None,
+        }
+
+
+class ChastityMonthlyEventsStatusSensor(ChastityCalendarStatusSensor):
+    """Status of the Monthly Events calendar."""
+
+    calendar_type = "monthly"
+    _attr_name = "Monthly Events"
+    _attr_icon = "mdi:calendar-heart"
+
+
+class ChastityLGBTQEventsStatusSensor(ChastityCalendarStatusSensor):
+    """Status of the LGBTQ+ Events calendar."""
+
+    calendar_type = "pride"
+    _attr_name = "LGBTQ+ Events"
+    _attr_icon = "mdi:flag"
+
+
+class ChastitySaunaEventsStatusSensor(ChastityCalendarStatusSensor):
+    """Status of the Sauna Events calendar."""
+
+    calendar_type = "sauna"
+    _attr_name = "Sauna Events"
+    _attr_icon = "mdi:hot-tub"
+
+
+class ChastityKinkEventsStatusSensor(ChastityCalendarStatusSensor):
+    """Status of the Kink & Fetish Events calendar."""
+
+    calendar_type = "kink"
+    _attr_name = "Kink & Fetish Events"
+    _attr_icon = "mdi:calendar-heart"
+
+
 class ChastityOngoingMonthEventSensor(ChastityCalendarSensorBase):
     """Show a monthly challenge event that is active today."""
 
@@ -396,6 +466,10 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]
     preferences = {**entry.data, **entry.options}
     async_add_entities([
+        ChastityMonthlyEventsStatusSensor(coordinator, entry.entry_id),
+        ChastityLGBTQEventsStatusSensor(coordinator, entry.entry_id),
+        ChastitySaunaEventsStatusSensor(coordinator, entry.entry_id),
+        ChastityKinkEventsStatusSensor(coordinator, entry.entry_id),
         ChastityNearestSaunaSensor(hass, entry, preferences),
         ChastityNextSaunaEventSensor(coordinator, entry.entry_id),
         ChastityOngoingMonthEventSensor(coordinator, entry.entry_id),
