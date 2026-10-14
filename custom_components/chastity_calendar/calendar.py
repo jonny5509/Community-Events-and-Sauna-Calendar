@@ -355,6 +355,23 @@ class ChastityChallengeCalendar(CalendarEntity):
             self._attr_name = "Monthly Events"
         self._attr_unique_id = f"{DOMAIN}_{calendar_type}"
 
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Expose saved attendance choices so dashboard cards can show them."""
+        records = getattr(self.coordinator, "attendance", {})
+        return {
+            "attendance": [
+                {
+                    "summary": record.get("summary", ""),
+                    "start": record.get("start", ""),
+                    "status": record.get("status", ""),
+                    "url": record.get("url", ""),
+                }
+                for record in records.values()
+                if isinstance(record, dict)
+            ],
+        }
+
     def _events_between(self, start_day: date, end_day: date) -> list[CalendarEvent]:
         """Build events overlapping a date range (end is exclusive)."""
         events = []
