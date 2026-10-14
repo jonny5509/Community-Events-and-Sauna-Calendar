@@ -2,6 +2,7 @@
 from __future__ import annotations
 import asyncio
 import calendar as _calendar
+from difflib import SequenceMatcher
 import html
 import json
 import logging
@@ -416,33 +417,39 @@ async def _fetch_ticketmaster(session, api_key, country_code, today, coordinates
     return [item for batch in batches for item in batch]
 
 def _deduplicate(events):
-    """Merge duplicate title/date matches without collapsing a venue's event list."""
+    """Merge same-day duplicate listings while preserving genuinely distinct events."""
     merged = {}
     title_date_to_key = {}
     for event in events:
         title_key = re.sub(r"[^a-z0-9]+", " ", event["summary"].casefold()).strip()
         date_key = event["start"].date().isoformat()
-        # A venue page is often the URL for every event on that venue's website.
-        # URL-only merging therefore loses distinct event names and dates,
-        # especially when several JSON-LD events fall back to the same page URL.
-        # Treat the same title on the same date as a duplicate instead.
+        # Exact normalized titles are duplicates. Also catch small title variations
+        # across sources (punctuation, subtitles, or a year suffix), but use a high
+        # similarity threshold so distinct same-day events remain separate.
         identity = (title_key, date_key)
         key = title_date_to_key.get(identity)
+        if key is None:
+            for (existing_title, existing_date), existing_key in title_date_to_key.items():
+                if existing_date != date_key:
+                    continue
+                if SequenceMatcher(None, title_key, existing_title).ratio() >= 0.88:
+                    key = existing_key
+                    break
         if key is None:
             key = ("event", len(merged))
             merged[key] = event
         else:
-            old = merged[key]
-            if event.get("date_confidence") == "structured" or old.get("date_confidence") != "structured":
-                old["start"], old["end"] = event["start"], event["end"]
-            old["categories"] = sorted(set(old.get("categories", [])) | set(event.get("categories", [])))
-            old["sources"] = sorted(set(old.get("sources", [])) | set(event.get("sources", [])))
-            old["source_links"] = list(dict.fromkeys(old.get("source_links", []) + event.get("source_links", [])))
-            if event.get("location") and not old.get("location"):
-                old["location"] = event["location"]
+            existing = merged[key]
+            if event.get("date_confidence") == "structured" or existing.get("date_confidence") != "structured":
+                existing["start"], existing["end"] = event["start"], event["end"]
+            existing["categories"] = sorted(set(existing.get("categories", [])) | set(event.get("categories", [])))
+            existing["sources"] = sorted(set(existing.get("sources", [])) | set(event.get("sources", [])))
+            existing["source_links"] = list(dict.fromkeys(existing.get("source_links", []) + event.get("source_links", [])))
+            if event.get("location") and not existing.get("location"):
+                existing["location"] = event["location"]
             if event.get("date_confidence") == "structured":
-                old["summary"], old["url"], old["description"] = event["summary"], event["url"], event["description"]
-                old["date_confidence"] = "structured"
+                existing["summary"], existing["url"], existing["description"] = event["summary"], event["url"], event["description"]
+                existing["date_confidence"] = "structured"
         title_date_to_key[identity] = key
     return sorted(merged.values(), key=lambda item: item["start"])
 
