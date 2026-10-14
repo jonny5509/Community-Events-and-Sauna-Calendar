@@ -410,30 +410,16 @@ class ChastityChallengeCalendar(CalendarEntity):
                 event_end = raw_end
                 overlaps = event_end > start_day and event_start < end_day
             if overlaps:
-                # Only split discovered multi-day LGBTQ+ all-day events into
-                # daily entries. Annual observances (including Pride Month)
-                # are defined above and intentionally retain their original span.
-                if (self.calendar_type == "pride"
-                        and isinstance(raw_start, date) and not isinstance(raw_start, datetime)
-                        and isinstance(raw_end, date) and not isinstance(raw_end, datetime)):
-                    day = raw_start
-                    while day < raw_end:
-                        events.append(CalendarEvent(
-                            summary=item["summary"],
-                            start=day,
-                            end=day + timedelta(days=1),
-                            description=item["description"],
-                            location=item.get("location") or "",
-                        ))
-                        day += timedelta(days=1)
-                else:
-                    events.append(CalendarEvent(
-                        summary=item["summary"],
-                        start=event_start,
-                        end=event_end,
-                        description=item["description"],
-                        location=item.get("location") or "",
-                    ))
+                # Preserve the original event span. Single-day events remain
+                # single-day entries; multi-day events span their full dates so
+                # Home Assistant can render them as bars in month views.
+                events.append(CalendarEvent(
+                    summary=item["summary"],
+                    start=event_start,
+                    end=event_end,
+                    description=item["description"],
+                    location=item.get("location") or "",
+                ))
         # Daily crowns appear only on the monthly challenge calendar. A crown
         # means an active session was verified at least once on that local date;
         # it does not claim uninterrupted activity for the entire day.
