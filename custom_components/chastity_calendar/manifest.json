@@ -1,10 +1,12 @@
 {
   "domain": "chastity_calendar",
   "name": "Chastity Events",
-  "codeowners": [],
+  "codeowners": [
+    "@jonny5509"
+  ],
   "config_flow": true,
-  "documentation": "https://github.com/jonny5509/Chastity-Events",
-  "issue_tracker": "https://github.com/jonny5509/Chastity-Events/issues",
+  "documentation": "https://github.com/jonny5509/chastity_calendar",
   "iot_class": "cloud_polling",
-  "version": "2.3.0"
+  "issue_tracker": "https://github.com/jonny5509/chastity_calendar/issues",
+  "version": "2.3.1"
 }
