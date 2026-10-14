@@ -447,26 +447,53 @@ def _deduplicate(events):
 
 
 def _is_target_event(event: dict) -> bool:
-    """Keep only LGBTQ+, sauna, kink, or fetish events in discovered results.
+    """Keep LGBTQ+ identity/community and sauna, kink, or fetish events.
 
-    Search-query labels are deliberately not trusted here: broad RSS searches
-    can return unrelated events even when the query mentions a target topic.
-    The event listing itself must contain a relevant term.
+    RSS search labels alone are not sufficient: broad searches can return
+    unrelated listings. Match the listing's own title, description, tags,
+    category, venue, source, or URL instead.
     """
-    text = " ".join(
-        str(event.get(key, "") or "")
-        for key in ("summary", "description", "location", "url", "source")
-    ).casefold()
+    fields = (
+        "summary", "title", "description", "location", "url", "source",
+        "category", "categories", "tags", "event_type",
+    )
+    values = []
+    for key in fields:
+        value = event.get(key, "")
+        if isinstance(value, (list, tuple, set)):
+            values.extend(str(item) for item in value if item)
+        elif value:
+            values.append(str(value))
+    values.extend(str(item) for item in (event.get("sources") or []) if item)
+    text = " ".join(values).casefold()
+
+    # Identity labels and communities: include the full LGBTQIA+ spectrum and
+    # commonly used names for events, not just the acronym itself.
     patterns = (
-        r"\blgbt(?:q|qia)?\+?(?=\W|$)", r"\bqueer\b",
-        r"\bpride\b", r"\bgay\b", r"\blesbian\b", r"\bbisexual\b",
-        r"\btrans(?:gender)?\b", r"\bsapphic\b", r"\bdrag\b",
-        r"\bsaunas?\b", r"\bsteam room\b",
-        r"\bkink\b", r"\bfetish\b", r"\bbdsm\b", r"\bleather\b",
-        r"\blatex\b", r"\brubber\b", r"\bshibari\b", r"\brope play\b",
-        r"\bpup play\b", r"\bpuppy play\b", r"\bchastity\b",
-        r"\blocktober\b", r"\bpower exchange\b", r"\bdungeon\b",
-        r"\bfindom\b", r"\bgear social\b",
+        r"\blgbt(?:q|qia)?\+?(?=\W|$)", r"\bqueer\b", r"\bpride\b",
+        r"\bgay\b", r"\blesbian\b", r"\bbisexual\b", r"\bbi pride\b",
+        r"\bpansexual\b", r"\bpansexuality\b", r"\bomnisexual\b",
+        r"\btrans(?:gender)?\b", r"\btransmasc(?:uline)?\b",
+        r"\btransfem(?:inine)?\b", r"\bnon[- ]?binary\b",
+        r"\benby\b", r"\bgenderqueer\b", r"\bgenderfluid\b",
+        r"\bagender\b", r"\bintersex\b", r"\basexual\b", r"\baromantic\b",
+        r"\bdemisexual\b", r"\bdemiromantic\b", r"\bgraysexual\b",
+        r"\bgreysexual\b", r"\bace community\b", r"\baro community\b",
+        r"\btwo[- ]?spirit\b", r"\bsapphic\b", r"\bwlw\b", r"\bmlm\b",
+        r"\bqueer women\b", r"\bqueer men\b", r"\bchosen family\b",
+        r"\bdrag\b", r"\bvoguing\b", r"\bballroom scene\b",
+        r"\bqueer film\b", r"\blgbt film\b", r"\bqueer art\b",
+        r"\bgender affirming\b", r"\bhiv awareness\b", r"\bhiv support\b",
+        # Sauna, kink, fetish and adjacent event communities.
+        r"\bsaunas?\b", r"\bsteam room\b", r"\bkink\b", r"\bfetish\b",
+        r"\bbdsm\b", r"\bbondage\b", r"\bdominance\b", r"\bsubmission\b",
+        r"\bsadomasochism\b", r"\bleather\b", r"\blatex\b", r"\brubber\b",
+        r"\bshibari\b", r"\brope play\b", r"\bpup play\b", r"\bpuppy play\b",
+        r"\bpet play\b", r"\bchastity\b", r"\blocktober\b",
+        r"\bpower exchange\b", r"\bdungeon\b", r"\bfindom\b",
+        r"\bfinancial domination\b", r"\bgear social\b", r"\bfoot fetish\b",
+        r"\bimpact play\b", r"\bsensory play\b", r"\broleplay kink\b",
+        r"\bcrossdressing\b", r"\bfurry convention\b", r"\bfurry meetup\b",
     )
     return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
 
