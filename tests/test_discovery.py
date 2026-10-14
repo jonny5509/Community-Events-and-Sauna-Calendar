@@ -65,6 +65,35 @@ def test_target_event_filter_keeps_supported_event_topics():
 
     assert all(_is_target_event(event) for event in cases)
 
+def test_event_datetime_extracts_am_pm_time_from_listing_title():
+    from custom_components.chastity_calendar.discovery import _find_event_datetime
+
+    result = _find_event_datetime(
+        "Fri 16th Oct '26 6:00pm Abfurtay - Furry Student Society",
+        datetime(2026, 10, 14),
+    )
+    assert result == datetime(2026, 10, 16, 18, 0)
+
+
+def test_event_datetime_extracts_24_hour_time():
+    from custom_components.chastity_calendar.discovery import _find_event_datetime
+
+    result = _find_event_datetime(
+        "Community event 16 October 2026 18:30",
+        datetime(2026, 10, 14),
+    )
+    assert result == datetime(2026, 10, 16, 18, 30)
+
+
+def test_timed_record_uses_short_default_duration_instead_of_all_day_span():
+    event = _record(
+        "Ab-Fur-Tay", datetime(2026, 10, 16, 18, 0),
+        "https://example.test/event", "kink", "Furry society meeting",
+    )
+    assert event["start"] == datetime(2026, 10, 16, 18, 0)
+    assert event["end"] == datetime(2026, 10, 16, 20, 0)
+
+
 def test_future_date_accepts_month_day_without_year():
     result = _find_future_date("Pride social on Friday 16 October", datetime(2026, 10, 13))
     assert result == datetime(2026, 10, 16)
