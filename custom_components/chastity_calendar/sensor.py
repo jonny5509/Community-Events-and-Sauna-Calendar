@@ -275,11 +275,23 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
         terms = category_terms.get(self.category, (self.category,))
         matching_summaries = set()
         for item in self.coordinator.data or []:
+            # The discovery query/category is itself useful evidence for
+            # category-specific sensors: event titles often omit words such
+            # as "gay" even when the listing was returned by the gay-events
+            # search. Include explicit category metadata as well as the text.
+            item_categories = {
+                str(value).casefold() for value in item.get("categories", [])
+            }
+            item_category = str(item.get("category", "")).casefold()
             text = " ".join((
                 str(item.get("summary", "")),
                 str(item.get("description", "")),
+                item_category,
+                " ".join(item_categories),
             )).casefold()
-            if any(term in text for term in terms):
+            if item_category == self.category or self.category in item_categories or any(
+                term in text for term in terms
+            ):
                 matching_summaries.add(item.get("summary", ""))
 
         upcoming = [
