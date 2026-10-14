@@ -139,7 +139,7 @@ Fallback entries are maintained in the integration and are not scraped from the 
 
 If a calendar or sensor is empty, check the integration logs and diagnostics. Diagnostics include discovery status, recent attempts, top-level errors, and event counts by source and category. Credential-like configuration fields are excluded.
 
-If a dashboard referenced a retired identity-specific event sensor, switch it to `sensor.chastity_calendar_next_lgbtq_event` and read the relevant entry under `next_events_by_category`. The individual identity-specific entities are intentionally removed during setup to avoid leaving stale, unavailable entities in the registry.
+If a dashboard referenced a retired identity-specific event sensor, switch it to the **Next LGBTQ Event** sensor and read the relevant entry under `next_events_by_category`. The individual identity-specific entities are intentionally removed during setup to avoid leaving stale, unavailable entities in the registry.
 
 If the dashboard example does not work, confirm the actual entity IDs under **Developer tools → States** and update the YAML accordingly.
 
