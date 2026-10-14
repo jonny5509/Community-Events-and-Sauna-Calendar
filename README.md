@@ -39,9 +39,9 @@ When a configured provider explicitly confirms an active session, the integratio
 
 ## Expanded kink and fetish discovery
 
-- Expand public-event searches for leather, rubber/latex, rope and shibari, pup/pet play, fetish conventions and gear socials, foot/boot fetish, power exchange, findom, furry communities, and fetish fashion.
+- Expand public-event searches for leather, rubber/latex, rope and shibari, pup/pet play, fetish conventions and gear socials, foot/boot fetish, power exchange, findom, furry communities, and fetish fashion. For kink/fetish, chastity, adult, and LGBTQ+ searches, inspect a bounded number of result pages for structured event start dates when search snippets omit dates.
 - Add informational entries for International Fetish Day (third Friday in January) and World BDSM Day, plus suggested consent, rope education, leather/gear, rubber/latex, power-exchange reflection, and community-social reminders.
-- Community-created prompts are labelled as suggestions rather than official observances. Public event listings still require organiser verification.
+- When a page publishes structured event start-date metadata, use that event date rather than dropping the listing because its search snippet lacks a date. Store whether a date came from a snippet or event-page metadata, and retain the source URL for verification. Community-created prompts are labelled as suggestions rather than official observances. Public event listings still require organiser verification.
 
 ## What's new in 2.0.8
 
