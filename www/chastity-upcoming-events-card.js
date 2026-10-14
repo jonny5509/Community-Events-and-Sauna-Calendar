@@ -180,4 +180,13 @@ window.customCards.push({
   type: "chastity-upcoming-events-card",
   name: "Chastity Upcoming Events",
   description: "Upcoming Chastity Events with a one-tap Going button.",
+  getEntitySuggestion: (_hass, entityId) => {
+    if (!entityId.startsWith("calendar.chastity_calendar_")) return null;
+    return {
+      config: {
+        type: "custom:chastity-upcoming-events-card",
+        entities: [entityId],
+      },
+    };
+  },
 });
