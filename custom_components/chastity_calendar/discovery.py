@@ -62,6 +62,17 @@ SEARCHES = (
     ("community", 'food festival OR street festival dates'),
     ("kink", '"kink event" OR "BDSM event" dates'),
     ("kink", '"fetish night" OR "fetish festival" dates'),
+    ("kink", '"leather event" OR "leather weekend" fetish dates'),
+    ("kink", '"rubber" OR "latex" fetish event party dates'),
+    ("kink", '"BDSM workshop" OR "rope workshop" OR shibari event dates'),
+    ("kink", '"pup play" OR "pet play" kink meetup event dates'),
+    ("kink", '"fetish convention" OR "fetish market" OR "gear social" dates'),
+    ("kink", '"foot fetish" OR boot fetish community event dates'),
+    ("kink", '"power exchange" OR "dominance submission" workshop event dates'),
+    ("kink", '"findom" OR "financial domination" community event dates'),
+    ("kink", '"furry meetup" OR "furry convention" events dates'),
+    ("kink", '"fetish fashion" OR latex fashion event dates'),
+    ("kink", '"International Fetish Day" OR "World BDSM Day" dates'),
     ("chastity", '"chastity" event OR meetup OR convention dates'),
     ("chastity", '"Locktober" OR "male chastity" challenge events'),
     ("adult", '"adults only" event OR party OR festival dates'),
@@ -180,9 +191,9 @@ def _category_tags(category: str, title: str, description: str) -> list[str]:
         "lgbtq": ("lgbt","queer","pride","gay","lesbian","bisexual","transgender"),
         "gay": ("gay",), "lesbian": ("lesbian",), "bisexual": ("bisexual","bi pride"),
         "transgender": ("transgender","trans pride"), "queer": ("queer",), "pride": ("pride",),
-        "kink": ("kink","bdsm","fetish","leather","puppy play"),
+        "kink": ("kink","bdsm","fetish","leather","puppy play","pup play","pet play","rubber","latex","shibari","rope bondage","findom","financial domination","foot fetish","gear social","power exchange","dominance and submission","fetish fashion","furry"),
         "chastity": ("chastity","locktober","no nut november"),
-        "adult": ("adult-only","adults only","18+","fetish","bdsm","erotic"),
+        "adult": ("adult-only","adults only","18+","fetish","bdsm","erotic","kink event","fetish night","leather event","rubber event"),
         "sauna": ("sauna","steam room","number 52 sauna"),
         "festival": ("festival","parade","fair","carnival"),
         "arts_music": ("music","concert","arts","theatre","theater","gallery"),
@@ -321,7 +332,8 @@ async def _fetch_ticketmaster(session, api_key, country_code, today, coordinates
     """Search Ticketmaster's structured catalogue within the configured radius when possible."""
     if not api_key or not country_code: return []
     terms = ("LGBTQ Pride","gay events","gay men social","gay pride festival","community festival","community event","convention","kink fetish",
-             "chastity","adult only","gay lesbian queer","music arts festival","workshop meetup")
+             "chastity","adult only","gay lesbian queer","music arts festival","workshop meetup",
+             "leather fetish","rubber latex","BDSM workshop","rope shibari","pup play","fetish convention","kink social")
     async def fetch_term(term):
         params = {"apikey":api_key,"countryCode":country_code,"keyword":term,"size":"100","page":"0","sort":"date,asc"}
         if coordinates:
