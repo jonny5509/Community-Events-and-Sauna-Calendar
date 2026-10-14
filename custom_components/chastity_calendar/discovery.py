@@ -283,7 +283,7 @@ def _record(title, start, url, category, description, source="Google News RSS", 
     )
     return {
         "summary": title[:180] or "Possible event",
-        "start": start, "end": start + timedelta(days=1),
+        "start": start, "end": start + (timedelta(hours=2) if start.time() != datetime.min.time() else timedelta(days=1)),
         "description": description[:1200], "url": url, "category": record_category,
         "categories": _category_tags(record_category, title, description),
         "location": location, "source": source, "sources": [source],
