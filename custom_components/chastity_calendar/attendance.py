@@ -142,17 +142,15 @@ async def async_setup_attendance(hass: HomeAssistant, entry, coordinator) -> Non
         if previous:
             previous()
 
-        if data["status"] == "not_going":
-            records.pop(identifier, None)
-        else:
-            records[identifier] = {
-                "id": identifier,
-                "summary": summary,
-                "start": start.isoformat(),
-                "url": url,
-                "status": data["status"],
-                "reminder_sent": False,
-            }
+        records[identifier] = {
+            "id": identifier,
+            "summary": summary,
+            "start": start.isoformat(),
+            "url": url,
+            "status": data["status"],
+            "reminder_sent": False,
+        }
+        if data["status"] == "going":
             schedule(records[identifier])
         await async_persist()
         coordinator.async_set_updated_data(coordinator.data or [])
