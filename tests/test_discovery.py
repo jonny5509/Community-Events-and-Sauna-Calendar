@@ -143,3 +143,22 @@ def test_find_future_date_prefers_earliest_explicit_future_date():
 def test_find_future_date_ignores_dates_outside_supported_window():
     today = datetime(2026, 10, 13)
     assert _find_future_date("Event on January 1, 2030", today) is None
+
+
+
+def test_kink_event_searches_cover_major_fetish_communities():
+    from custom_components.chastity_calendar.discovery import SEARCHES
+
+    query_text = " ".join(query.casefold() for _category, query in SEARCHES)
+    for term in ("leather", "latex", "shibari", "pup play", "foot fetish", "findom", "furry"):
+        assert term in query_text
+
+
+def test_kink_category_tags_cover_major_fetish_interests():
+    tags = set()
+    for title in (
+        "Leather Weekend", "Rubber and latex social", "Shibari rope workshop",
+        "Pup play meetup", "Foot fetish night", "Findom community event",
+    ):
+        tags.update(_category_tags("community", title, ""))
+    assert "kink" in tags
