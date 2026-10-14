@@ -344,6 +344,46 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
             candidates.append(parsed)
     return min(candidates, key=lambda item: item.date()) if candidates else None
 
+async def _fetch_structured_event_name(session, url: str) -> str:
+    """Extract a canonical event name from schema.org Event metadata."""
+    if urlsplit(url).scheme not in {"http", "https"}:
+        return ""
+    try:
+        async with asyncio.timeout(6):
+            async with session.get(
+                url,
+                headers={"User-Agent": "HomeAssistant-CommunityEventsCalendar/2.0.3"},
+                allow_redirects=True,
+            ) as response:
+                if response.status != 200:
+                    return ""
+                body = (await response.text())[:1500000]
+    except Exception as err:
+        _LOGGER.debug("Could not inspect event title page %s: %s", url, err)
+        return ""
+    pattern = re.compile(r'<script\\b[^>]*type=["\\']application/ld\\+json["\\'][^>]*>(.*?)</script\\s*>', re.I | re.S)
+    names = []
+    for raw in pattern.findall(body):
+        try:
+            payload = json.loads(html.unescape(raw))
+        except (ValueError, TypeError):
+            continue
+        stack = [payload]
+        while stack:
+            value = stack.pop()
+            if isinstance(value, list):
+                stack.extend(value)
+            elif isinstance(value, dict):
+                types = value.get("@type", [])
+                if isinstance(types, str):
+                    types = [types]
+                if any(str(kind).casefold() == "event" for kind in types):
+                    name = value.get("name")
+                    if isinstance(name, str) and name.strip():
+                        names.append(html.unescape(name).strip())
+                stack.extend(item for key, item in value.items() if key not in {"@context"})
+    return names[0] if names else ""
+
 async def _fetch_rss(session, category, query, country, location, country_code, today, search_location=None):
     """Fetch one public Google News RSS search."""
     # Prefer the specific geographic level for this query, while always retaining country context.
@@ -368,6 +408,7 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
         return []
     results = []
     structured_date_checks = 0
+    structured_title_checks = 0
     lgbtq_categories = {"pride", "gay", "lesbian", "bisexual", "transgender", "queer", "lgbtq"}
     structured_date_categories = lgbtq_categories | {"kink", "chastity", "adult"}
     for item in root.findall(".//item"):
@@ -390,7 +431,16 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
                 date_confidence = "extracted_from_event_page"
         if event_date is None:
             continue
-        title = re.sub(r"\s+-\s+[^-]+$", "", title).strip()
+        # Prefer the original event's structured name over a news headline.
+        canonical_title = ""
+        max_title_checks = 8 if category in lgbtq_categories else 4
+        if category in structured_date_categories and structured_title_checks < max_title_checks:
+            structured_title_checks += 1
+            canonical_title = await _fetch_structured_event_name(session, link)
+        if canonical_title:
+            title = canonical_title
+        else:
+            title = re.sub(r"\s+-\s+[^-]+$", "", title).strip()
         results.append(_record(
             title, event_date, link, category,
             "Unverified public search result. Date extracted from title/snippet and may be wrong. "
