@@ -172,6 +172,7 @@ def test_discovery_searches_cover_straight_gay_lesbian_and_other_kink_communitie
         "straight kink", "gay bdsm", "lesbian kink", "sapphic kink",
         "bisexual kink", "trans kink", "queer kink", "couples bdsm",
         "dominatrix", "crossdressing", "impact play", "sensory deprivation",
+        "site:othernights.com/e/", "site:kinkready.com/events", "site:londonalternativemarket.com",
     ):
         assert term in queries
 
