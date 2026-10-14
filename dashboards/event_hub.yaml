@@ -23,6 +23,18 @@ views:
           - entity: button.community_events_sauna_calendar_next_sauna_event_directions
             name: Next sauna event directions
       - type: entities
+        title: Calendar status
+        show_header_toggle: false
+        entities:
+          - entity: sensor.monthly_events
+            name: Monthly Events
+          - entity: sensor.lgbtq_events
+            name: LGBTQ+ Events
+          - entity: sensor.sauna_events
+            name: Sauna Events
+          - entity: sensor.kink_fetish_events
+            name: Kink & Fetish Events
+      - type: entities
         title: Event overview
         show_header_toggle: false
         entities:
@@ -63,3 +75,8 @@ views:
         initial_view: listWeek
         entities:
           - calendar.sauna_events
+      - type: calendar
+        title: Kink & Fetish events
+        initial_view: listWeek
+        entities:
+          - calendar.kink_fetish_events

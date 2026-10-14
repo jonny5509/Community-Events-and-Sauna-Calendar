@@ -62,6 +62,50 @@ SEARCHES = (
     ("community", 'food festival OR street festival dates'),
     ("kink", '"kink event" OR "BDSM event" dates'),
     ("kink", '"fetish night" OR "fetish festival" dates'),
+    ("kink", '"leather event" OR "leather weekend" fetish dates'),
+    ("kink", '"rubber" OR "latex" fetish event party dates'),
+    ("kink", '"BDSM workshop" OR "rope workshop" OR shibari event dates'),
+    ("kink", '"pup play" OR "pet play" kink meetup event dates'),
+    ("kink", '"fetish convention" OR "fetish market" OR "gear social" dates'),
+    ("kink", '"foot fetish" OR boot fetish community event dates'),
+    ("kink", '"power exchange" OR "dominance submission" workshop event dates'),
+    ("kink", '"findom" OR "financial domination" community event dates'),
+    ("kink", '"furry meetup" OR "furry convention" events dates'),
+    ("kink", '"fetish fashion" OR latex fashion event dates'),
+    ("kink", '"International Fetish Day" OR "World BDSM Day" dates'),
+    ("kink", '"straight kink" OR heterosexual BDSM OR "straight fetish" events dates'),
+    ("kink", '"straight couples" BDSM OR fetish night meetup dates'),
+    ("gay", '"gay BDSM" OR "gay kink" OR "gay fetish" event dates'),
+    ("gay", '"gay leather" OR "gay rubber" OR "gay pup play" event dates'),
+    ("gay", '"gay male" bondage OR chastity OR gear social dates'),
+    ("lesbian", '"lesbian BDSM" OR "lesbian kink" OR "lesbian fetish" event dates'),
+    ("lesbian", '"sapphic kink" OR "queer women" fetish meetup dates'),
+    ("bisexual", '"bisexual kink" OR "bi BDSM" OR "bi fetish" events dates'),
+    ("transgender", '"trans kink" OR "trans BDSM" OR transgender fetish community events dates'),
+    ("queer", '"queer kink" OR "queer BDSM" OR "queer fetish" event dates'),
+    ("kink", '"women in kink" OR "female dominatrix" workshop event dates'),
+    ("kink", '"men in kink" OR "male dominance" BDSM event dates'),
+    ("kink", '"couples BDSM" OR "couples fetish" workshop social dates'),
+    ("kink", '"dominatrix" OR "professional domination" community event dates'),
+    ("kink", '"crossdressing" OR "sissy" fetish social event dates'),
+    ("kink", '"corsetry" OR "high heels" OR "stocking fetish" event dates'),
+    ("kink", '"sensory play" OR "impact play" OR bondage workshop events dates'),
+    ("kink", '"medical fetish" OR "uniform fetish" OR "roleplay kink" events dates'),
+    ("kink", '"watersports fetish" OR "food play" OR "sploshing" event dates'),
+    ("kink", '"wax play" OR "sensory deprivation" kink workshop dates'),
+    ("kink", '"consensual non-monogamy" OR polyamory kink social event dates'),
+    ("kink", 'site:regulation.co.uk/pages/uk-fetish-calendar UK fetish calendar events dates'),
+    ("kink", 'site:regulation.co.uk fetish events UK calendar'),
+    ("kink", 'site:fetish.events/gb upcoming UK kink fetish events'),
+    ("kink", 'site:kinkready.com/events UK kink fetish dates'),
+    ("kink", 'site:thefetishnetwork.com/events UK fetish kink events dates'),
+    # Source-focused searches help surface actual dated listings, not only broad articles.
+    ("kink", 'site:othernights.com/e/ kink BDSM fetish events dates'),
+    ("kink", 'site:kinkready.com/events upcoming BDSM kink fetish events'),
+    ("kink", 'site:londonalternativemarket.com event dates kink market'),
+    ("kink", 'site:outsavvy.com kink fetish BDSM queer events dates'),
+    ("kink", 'site:skiddle.com London fetish BDSM events dates'),
+    ("kink", 'site:dice.fm London fetish queer kink events dates'),
     ("chastity", '"chastity" event OR meetup OR convention dates'),
     ("chastity", '"Locktober" OR "male chastity" challenge events'),
     ("adult", '"adults only" event OR party OR festival dates'),
@@ -177,12 +221,13 @@ def _category_tags(category: str, title: str, description: str) -> list[str]:
     text = f"{category} {title} {description}".casefold()
     rules = {
         "community": ("community","meetup","workshop","conference","convention","social","expo"),
-        "lgbtq": ("lgbt","queer","pride","gay","lesbian","bisexual","transgender"),
-        "gay": ("gay",), "lesbian": ("lesbian",), "bisexual": ("bisexual","bi pride"),
-        "transgender": ("transgender","trans pride"), "queer": ("queer",), "pride": ("pride",),
-        "kink": ("kink","bdsm","fetish","leather","puppy play"),
+        "lgbtq": ("lgbt","queer","pride","gay","lesbian","bisexual","transgender","sapphic"),
+        "gay": ("gay",), "lesbian": ("lesbian","sapphic"), "bisexual": ("bisexual","bi pride"),
+        "transgender": ("transgender","trans pride","trans kink"), "queer": ("queer",), "pride": ("pride",),
+        "straight": ("straight kink","straight couples","heterosexual bdsm","straight fetish"),
+        "kink": ("kink","bdsm","fetish","leather","puppy play","pup play","pet play","rubber","latex","shibari","rope bondage","findom","financial domination","foot fetish","gear social","power exchange","dominance and submission","fetish fashion","furry"),
         "chastity": ("chastity","locktober","no nut november"),
-        "adult": ("adult-only","adults only","18+","fetish","bdsm","erotic"),
+        "adult": ("adult-only","adults only","18+","fetish","bdsm","erotic","kink event","fetish night","leather event","rubber event"),
         "sauna": ("sauna","steam room","number 52 sauna"),
         "festival": ("festival","parade","fair","carnival"),
         "arts_music": ("music","concert","arts","theatre","theater","gallery"),
@@ -191,7 +236,7 @@ def _category_tags(category: str, title: str, description: str) -> list[str]:
     tags.update(tag for tag, words in rules.items() if any(word in text for word in words))
     return sorted(tags)
 
-def _record(title, start, url, category, description, source="Google News RSS", location=""):
+def _record(title, start, url, category, description, source="Google News RSS", location="", date_confidence="extracted_from_search_snippet"):
     """Create a consistent discovery record."""
     title = html.unescape(re.sub(r"<[^>]+>", "", title)).strip()
     description = html.unescape(re.sub(r"<[^>]+>", "", description)).strip()
@@ -215,7 +260,7 @@ def _record(title, start, url, category, description, source="Google News RSS", 
         "categories": _category_tags(record_category, title, description),
         "location": location, "source": source, "sources": [source],
         "source_links": [url] if url else [], "last_seen": dt_util.now().isoformat(),
-        "date_confidence": "extracted_from_search_snippet",
+        "date_confidence": date_confidence,
     }
 
 
@@ -295,17 +340,24 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
     results = []
     structured_date_checks = 0
     lgbtq_categories = {"pride", "gay", "lesbian", "bisexual", "transgender", "queer", "lgbtq"}
+    structured_date_categories = lgbtq_categories | {"kink", "chastity", "adult"}
     for item in root.findall(".//item"):
         title = item.findtext("title") or ""
         description = item.findtext("description") or ""
         link = item.findtext("link") or ""
         if not title.strip() or not link.strip(): continue
         event_date = _find_future_date(f"{title} {description}", today)
-        # Search snippets often omit event dates. Inspect a bounded number of
-        # LGBTQ+ result pages for explicit structured event start dates.
-        if event_date is None and category in lgbtq_categories and structured_date_checks < 8:
+        # Search snippets often omit dates. Inspect a bounded number of LGBTQ+,
+        # kink/fetish, chastity, and adult-event pages for explicit structured
+        # Event.startDate metadata; never substitute an article publication date.
+        date_confidence = "extracted_from_search_snippet"
+        max_structured_checks = 8 if category in lgbtq_categories else 4
+        if (event_date is None and category in structured_date_categories
+                and structured_date_checks < max_structured_checks):
             structured_date_checks += 1
             event_date = await _fetch_structured_event_date(session, link, today)
+            if event_date is not None:
+                date_confidence = "extracted_from_event_page"
         if event_date is None:
             continue
         title = re.sub(r"\s+-\s+[^-]+$", "", title).strip()
@@ -314,6 +366,7 @@ async def _fetch_rss(session, category, query, country, location, country_code, 
             "Unverified public search result. Date extracted from title/snippet and may be wrong. "
             f"Configured country: {country or 'not set'}. Search relevance is not proof of venue location. "
             f"Verify details with the original listing: {link}",
+            date_confidence=date_confidence,
         ))
     return results
 
@@ -321,7 +374,8 @@ async def _fetch_ticketmaster(session, api_key, country_code, today, coordinates
     """Search Ticketmaster's structured catalogue within the configured radius when possible."""
     if not api_key or not country_code: return []
     terms = ("LGBTQ Pride","gay events","gay men social","gay pride festival","community festival","community event","convention","kink fetish",
-             "chastity","adult only","gay lesbian queer","music arts festival","workshop meetup")
+             "chastity","adult only","gay lesbian queer","music arts festival","workshop meetup",
+             "leather fetish","rubber latex","BDSM workshop","rope shibari","pup play","fetish convention","kink social")
     async def fetch_term(term):
         params = {"apikey":api_key,"countryCode":country_code,"keyword":term,"size":"100","page":"0","sort":"date,asc"}
         if coordinates:

@@ -143,3 +143,53 @@ def test_find_future_date_prefers_earliest_explicit_future_date():
 def test_find_future_date_ignores_dates_outside_supported_window():
     today = datetime(2026, 10, 13)
     assert _find_future_date("Event on January 1, 2030", today) is None
+
+
+
+def test_kink_event_searches_cover_major_fetish_communities():
+    from custom_components.chastity_calendar.discovery import SEARCHES
+
+    query_text = " ".join(query.casefold() for _category, query in SEARCHES)
+    for term in ("leather", "latex", "shibari", "pup play", "foot fetish", "findom", "furry"):
+        assert term in query_text
+
+
+def test_kink_category_tags_cover_major_fetish_interests():
+    tags = set()
+    for title in (
+        "Leather Weekend", "Rubber and latex social", "Shibari rope workshop",
+        "Pup play meetup", "Foot fetish night", "Findom community event",
+    ):
+        tags.update(_category_tags("community", title, ""))
+    assert "kink" in tags
+
+
+def test_discovery_searches_cover_straight_gay_lesbian_and_other_kink_communities():
+    from custom_components.chastity_calendar.discovery import SEARCHES
+
+    queries = " ".join(query.casefold() for _category, query in SEARCHES)
+    for term in (
+        "straight kink", "gay bdsm", "lesbian kink", "sapphic kink",
+        "bisexual kink", "trans kink", "queer kink", "couples bdsm",
+        "dominatrix", "crossdressing", "impact play", "sensory deprivation",
+        "site:othernights.com/e/", "site:kinkready.com/events", "site:londonalternativemarket.com",
+        "site:regulation.co.uk/pages/uk-fetish-calendar", "site:fetish.events/gb",
+        "site:thefetishnetwork.com/events",
+    ):
+        assert term in queries
+
+
+def test_record_preserves_structured_event_page_date_confidence():
+    from custom_components.chastity_calendar.discovery import _record
+
+    event = _record(
+        "Rubber social",
+        datetime(2026, 11, 13),
+        "https://example.test/event",
+        "kink",
+        "Date verified from event-page metadata.",
+        date_confidence="extracted_from_event_page",
+    )
+
+    assert event["date_confidence"] == "extracted_from_event_page"
+    assert event["source_links"] == ["https://example.test/event"]
