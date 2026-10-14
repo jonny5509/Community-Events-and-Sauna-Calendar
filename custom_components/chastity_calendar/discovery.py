@@ -94,6 +94,11 @@ SEARCHES = (
     ("kink", '"watersports fetish" OR "food play" OR "sploshing" event dates'),
     ("kink", '"wax play" OR "sensory deprivation" kink workshop dates'),
     ("kink", '"consensual non-monogamy" OR polyamory kink social event dates'),
+    ("kink", 'site:regulation.co.uk/pages/uk-fetish-calendar UK fetish calendar events dates'),
+    ("kink", 'site:regulation.co.uk fetish events UK calendar'),
+    ("kink", 'site:fetish.events/gb upcoming UK kink fetish events'),
+    ("kink", 'site:kinkready.com/events UK kink fetish dates'),
+    ("kink", 'site:thefetishnetwork.com/events UK fetish kink events dates'),
     # Source-focused searches help surface actual dated listings, not only broad articles.
     ("kink", 'site:othernights.com/e/ kink BDSM fetish events dates'),
     ("kink", 'site:kinkready.com/events upcoming BDSM kink fetish events'),
