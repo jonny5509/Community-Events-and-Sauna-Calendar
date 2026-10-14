@@ -925,11 +925,6 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
         for fragment in fragments:
             plain = html.unescape(re.sub(r"<[^>]+>", " ", fragment))
             plain = re.sub(r"\s+", " ", plain).strip()
-            if not re.search(
-                r"\bfurr|\bfurmeet\b|\bfursuit\b|\banthro\b|\bscotiacon\b|\bconfuzzled\b|\baberacon\b|\bpawsome\b|\bwild north\b|\bfurcation\b",
-                plain, re.I,
-            ):
-                continue
             start = _find_future_date(plain, today)
             if not start or not lower <= start.date() <= upper:
                 continue
@@ -940,10 +935,7 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
             for href, label in links:
                 label = html.unescape(re.sub(r"<[^>]+>", " ", label))
                 label = re.sub(r"\s+", " ", label).strip()
-                if label and re.search(
-                    r"\bfurr|\bfurmeet\b|\bfursuit\b|\banthro\b|\bscotiacon\b|\bconfuzzled\b|\baberacon\b|\bpawsome\b|\bwild north\b|\bfurcation\b",
-                    label + " " + plain, re.I,
-                ):
+                if label and len(label) > 2:
                     title = label
                     event_url = href if href.startswith("http") else urlsplit(url)._replace(path=href).geturl()
                     break
