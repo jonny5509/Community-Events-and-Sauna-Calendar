@@ -112,7 +112,7 @@ EVENTS = [
         "end": (12, 24),
         "description": "Suggested personal or couples idea: a daily consensual prompt or activity through 24 December.",
         "category": "suggested",
-    },,
+    },
     {
         "summary": "International Fetish Day",
         "start": (1, 1),
