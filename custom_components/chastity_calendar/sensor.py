@@ -249,17 +249,6 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
         event = self._event()
         return {}
 
-
-
-
-
-
-
-
-
-
-
-
 class ChastityNextLesbianEventSensor(ChastityNextCategoryEventSensor):
     """Show the next discovered lesbian event."""
 
@@ -434,8 +423,6 @@ class ChastityNearestSaunaSensor(SensorEntity):
             "other_nearby_saunas": self._saunas[1:6],
             "data_source": "OpenStreetMap",
         }
-
-
 
 class ChastityNextSaunaEventSensor(ChastityCalendarSensorBase):
     """Show the next discovered public sauna event."""
