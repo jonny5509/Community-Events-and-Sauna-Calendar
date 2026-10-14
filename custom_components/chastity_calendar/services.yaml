@@ -1,0 +1,35 @@
+set_event_attendance:
+  name: Set event attendance
+  description: Save your attendance choice and schedule a phone and dashboard reminder when going.
+  fields:
+    summary:
+      name: Event title
+      description: Exact title of the event.
+      required: true
+      example: Fetish Night at Number 52 Sauna
+      selector:
+        text:
+    start:
+      name: Event start
+      description: ISO date or datetime for this occurrence. Include the time for timed events.
+      required: true
+      example: "2026-11-05T18:00:00+00:00"
+      selector:
+        text:
+    status:
+      name: Attendance
+      description: Going triggers a reminder exactly 24 hours before the start; Interested does not.
+      required: true
+      selector:
+        select:
+          options:
+            - interested
+            - going
+            - not_going
+    url:
+      name: Event URL
+      description: Optional event page, used to distinguish events and included in the reminder.
+      required: false
+      example: https://example.com/events/123
+      selector:
+        text:
