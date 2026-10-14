@@ -11,6 +11,8 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration for discov
 - **Community-interest sensors:** next furry event, next kink/fetish event, and next sauna event.
 - **Nearest Sauna:** looks for mapped sauna venues within 30 km of the configured location and reports distance, address, website, phone, map link, and other nearby listings when available.
 - **Event Hub buttons:** create notifications with next-event details and map links when source and location data are available.
+- **Personal attendance tracking:** save Interested, Going, or Not going for individual event occurrences.
+- **Going reminders:** persist attendance choices and send a Home Assistant dashboard notification plus notifications to configured Home Assistant mobile apps exactly 24 hours before an event starts.
 - **Multiple discovery sources:** Google News RSS works without credentials. An optional Ticketmaster Discovery API key can add structured event listings and venue details.
 - **Event deduplication:** matching title/date listings are combined where possible while retaining source links and category information.
 - **Optional daily participation crowns:** read-only active-session checks for EmlaLock, Chastify, and Chaster can add at most one crown per local calendar day to Monthly Events.
@@ -66,6 +68,23 @@ The integration searches for publicly indexed LGBTQ+ and Pride events, community
 Searches can use indexed results from event platforms and community calendars. A source name in a search query does **not** mean the integration directly connects to or officially partners with that site.
 
 The dedicated **Kink & Fetish Events** calendar keeps matching events separate from the general monthly calendar. LGBTQ+ events are routed to **LGBTQ+ Events**; some events may appear in more than one focused calendar when they fit multiple categories.
+
+### Personal attendance and reminders
+
+Use the `chastity_calendar.set_event_attendance` service to save your choice for an event occurrence. Choices are stored locally by Home Assistant and survive restarts. Marking an event `going` schedules a reminder exactly 24 hours before its start; changing it to `interested` or `not_going` cancels the pending reminder. If the 24-hour point has already passed when you mark Going, no late reminder is sent.
+
+Example service action (replace the title, start time, and URL with the event's actual details):
+
+```yaml
+action: chastity_calendar.set_event_attendance
+data:
+  summary: Fetish Night at Number 52 Sauna
+  start: "2026-11-05T18:00:00+00:00"
+  status: going
+  url: "https://www.number52sauna.co.uk/our-events/"
+```
+
+Use `status: interested` to save a maybe, or `status: not_going` to record that you will not attend. Include the exact start date/time for that occurrence; use an ISO date for an all-day event. The integration creates a persistent dashboard notification and sends phone notifications through configured `notify.mobile_app_*` services. At least one Home Assistant mobile app must be registered for phone delivery. This service stores your choice, but it does not add interactive attendance controls directly inside Home Assistant's standard calendar card; you can call it from Developer Tools → Actions or a dashboard script/button.
 
 ### Event Hub dashboard
 
