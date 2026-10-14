@@ -219,8 +219,8 @@ def _find_event_datetime(text: str, today: datetime):
         return None
     # Accept common listing formats such as 6pm, 6:00 pm, 18:00, and 6:00pm.
     time_match = re.search(
-        r"\\b(\\d{1,2})(?::(\\d{2}))?\\s*(a\\.?m\\.?|p\\.?m\\.?)(?=\\b|\\s|[,.;]|$)"
-        r"|\\b([01]?\\d|2[0-3]):([0-5]\\d)\\b",
+        r"\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)(?=\b|\s|[,.;]|$)"
+        r"|\b([01]?\d|2[0-3]):([0-5]\d)\b",
         text,
         re.IGNORECASE,
     )
