@@ -2,6 +2,7 @@
 from __future__ import annotations
 import asyncio
 import calendar as _calendar
+from difflib import SequenceMatcher
 import html
 import json
 import logging
@@ -416,18 +417,23 @@ async def _fetch_ticketmaster(session, api_key, country_code, today, coordinates
     return [item for batch in batches for item in batch]
 
 def _deduplicate(events):
-    """Merge duplicate title/date matches without collapsing a venue's event list."""
+    """Merge same-day duplicate listings while preserving distinct events."""
     merged = {}
     title_date_to_key = {}
     for event in events:
         title_key = re.sub(r"[^a-z0-9]+", " ", event["summary"].casefold()).strip()
         date_key = event["start"].date().isoformat()
-        # A venue page is often the URL for every event on that venue's website.
-        # URL-only merging therefore loses distinct event names and dates,
-        # especially when several JSON-LD events fall back to the same page URL.
-        # Treat the same title on the same date as a duplicate instead.
         identity = (title_key, date_key)
         key = title_date_to_key.get(identity)
+        if key is None:
+            # Different sources often add a year, subtitle, or minor wording
+            # variation. Merge only highly similar titles on the same date.
+            for (existing_title, existing_date), existing_key in title_date_to_key.items():
+                if existing_date == date_key and SequenceMatcher(
+                    None, title_key, existing_title
+                ).ratio() >= 0.88:
+                    key = existing_key
+                    break
         if key is None:
             key = ("event", len(merged))
             merged[key] = event

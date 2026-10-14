@@ -279,3 +279,27 @@ def test_gaysaunas_directory_ignores_non_event_jsonld():
     </script>
     '''
     assert list(_iter_jsonld_events(body)) == []
+
+
+def test_deduplicate_merges_near_identical_titles_on_same_day():
+    start = datetime(2027, 6, 12)
+    first = _event("Newcastle Pride Festival", start, source="RSS A")
+    second = _event("Newcastle Pride Festival 2027", start, source="Ticketmaster")
+
+    result = _deduplicate([first, second])
+
+    assert len(result) == 1
+    assert set(result[0]["sources"]) == {"RSS A", "Ticketmaster"}
+
+
+def test_deduplicate_keeps_distinct_events_on_the_same_day():
+    start = datetime(2027, 6, 12)
+    events = [
+        _event("Fetish Night", start),
+        _event("Sports Night", start),
+        _event("Pride Festival", start),
+    ]
+
+    result = _deduplicate(events)
+
+    assert len(result) == 3

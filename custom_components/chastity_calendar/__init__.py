@@ -63,7 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
             # Previously an initial timeout left the coordinator empty until
-            # the next six-hour refresh. Retry shortly so a slow first search
+            # the next scheduled refresh. Retry shortly so a slow first search
             # does not make the LGBTQ+ calendar appear permanently blank.
             def request_retry(_now):
                 hass.async_create_task(
@@ -122,11 +122,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     async def async_scheduled_refresh(_now):
-        """Refresh at midnight and every six hours."""
+        """Refresh every three hours, starting at midnight."""
         await coordinator.async_request_refresh()
 
     entry.async_on_unload(
-        async_track_time_change(hass, async_scheduled_refresh, hour=[0, 6, 12, 18], minute=0, second=0)
+        async_track_time_change(hass, async_scheduled_refresh, hour=[0, 3, 6, 9, 12, 15, 18, 21], minute=0, second=0)
     )
     # Check periodically so a session that starts during the day can be recorded.
     entry.async_on_unload(
