@@ -571,7 +571,7 @@ def _gaysaunas_venue_urls(body: str, base_url: str = "https://gaysaunas.co.uk") 
 def _iter_jsonld_events(body: str):
     """Yield Schema.org Event objects from JSON-LD without depending on HTML layout."""
     pattern = re.compile(
-        r'<script\\b[^>]*type=["\\']application/ld\\+json["\\'][^>]*>(.*?)</script\\s*>',
+        r"""<script\b[^>]*type=["']application/ld\+json["'][^>]*>(.*?)</script\s*>""",
         re.I | re.S,
     )
     for raw in pattern.findall(body or ""):
@@ -671,7 +671,7 @@ async def _fetch_gaysaunas_directory_events(session, today: datetime) -> list[di
                 location = str(location_data or "")
             record = _record(
                 title, start, event_url, "sauna",
-                f"{description} Source: Gay Saunas UK venue directory.",
+                f"Gay sauna event. {description} Source: Gay Saunas UK venue directory.",
                 source="Gay Saunas UK directory", location=location,
                 date_confidence="structured",
             )
