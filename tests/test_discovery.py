@@ -58,6 +58,7 @@ def test_target_event_filter_keeps_supported_event_topics():
         _event("Queer Film Night", start),
         _event("Shibari and Rope Workshop", start),
         _event("Pup Play Social", start),
+        _event("Furry Convention and Furmeet", start),
     ]
 
     assert all(_is_target_event(event) for event in cases)
@@ -183,7 +184,7 @@ def test_kink_event_searches_cover_major_fetish_communities():
     from custom_components.chastity_calendar.discovery import SEARCHES
 
     query_text = " ".join(query.casefold() for _category, query in SEARCHES)
-    for term in ("leather", "latex", "shibari", "pup play", "foot fetish", "findom", "furry"):
+    for term in ("leather", "latex", "shibari", "pup play", "foot fetish", "findom", "furry", "furmeet"):
         assert term in query_text
 
 
@@ -191,7 +192,7 @@ def test_kink_category_tags_cover_major_fetish_interests():
     tags = set()
     for title in (
         "Leather Weekend", "Rubber and latex social", "Shibari rope workshop",
-        "Pup play meetup", "Foot fetish night", "Findom community event",
+        "Pup play meetup", "Foot fetish night", "Findom community event", "Furry social",
     ):
         tags.update(_category_tags("community", title, ""))
     assert "kink" in tags
