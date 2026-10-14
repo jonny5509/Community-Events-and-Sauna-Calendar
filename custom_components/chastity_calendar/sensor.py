@@ -98,8 +98,14 @@ class ChastityCalendarStatusSensor(ChastityCalendarSensorBase):
              if event.start_datetime_local <= now < event.end_datetime_local),
             None,
         )
+        calendar_entities = {
+            "monthly": "calendar.monthly_events",
+            "pride": "calendar.lgbtq_events",
+            "sauna": "calendar.sauna_events",
+            "kink": "calendar.kink_fetish_events",
+        }
         return {
-            "calendar_entity": f"calendar.{self.calendar_type}_events",
+            "calendar_entity": calendar_entities[self.calendar_type],
             "active_event": active.summary if active else None,
         }
 
