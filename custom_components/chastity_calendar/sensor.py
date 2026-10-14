@@ -35,7 +35,7 @@ class ChastityCalendarSensorBase(SensorEntity):
             identifiers={(DOMAIN, entry_id)},
             name="Chastity Events",
             manufacturer="Chastity Events",
-            configuration_url="https://github.com/jonny5509/Chastity-Events",
+            configuration_url="https://github.com/jonny5509/chastity_calendar",
         )
 
     async def async_added_to_hass(self) -> None:
@@ -296,7 +296,7 @@ class ChastityNearestSaunaSensor(SensorEntity):
             identifiers={(DOMAIN, entry.entry_id)},
             name="Chastity Events",
             manufacturer="Chastity Events",
-            configuration_url="https://github.com/jonny5509/Chastity-Events",
+            configuration_url="https://github.com/jonny5509/chastity_calendar",
         )
         self._saunas = []
         self._unsub_refresh = None
