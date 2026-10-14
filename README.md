@@ -152,7 +152,7 @@ The buttons use current coordinator data, skip expired or undated records, and s
 
 ### Add the Event Hub dashboard
 
-Home Assistant integrations cannot safely install or modify a user's Lovelace dashboard automatically. Import the example view from [dashboards/event_hub.yaml](dashboards/event_hub.yaml) into a dashboard (Dashboard → Edit dashboard → Raw configuration editor), or copy its cards into an existing dashboard. Check **Developer tools → States** and replace entity IDs in the sample if Home Assistant assigned different IDs. The example brings the integration's existing capabilities into one place: all three calendars, every existing event and sauna sensor (including category-specific LGBTQ+ sensors), and all four action buttons. Existing entities are retained rather than replaced. The dashboard YAML is a starting template; if entity IDs differ on your Home Assistant instance, adjust them in the dashboard editor.
+Home Assistant integrations cannot safely install or modify a user's Lovelace dashboard automatically. Import the example view from [dashboards/event_hub.yaml](dashboards/event_hub.yaml) into a dashboard (Dashboard → Edit dashboard → Raw configuration editor), or copy its cards into an existing dashboard. Check **Developer tools → States** and replace entity IDs in the sample if Home Assistant assigned different IDs. The example brings the integration's existing capabilities into one place: all four calendars (including the dedicated Kink & Fetish Events calendar), every existing event and sauna sensor (including category-specific LGBTQ+ sensors), and all four action buttons. Existing entities are retained rather than replaced. The dashboard YAML is a starting template; if entity IDs differ on your Home Assistant instance, adjust them in the dashboard editor.
 
 
 ## Troubleshooting diagnostics
@@ -166,3 +166,8 @@ Configured country/location terms are sent to Google News RSS; if enabled, searc
 ## Contributing
 
 Bug reports and pull requests are welcome. Include Home Assistant version and logs with personal information removed.
+
+
+### Selecting the dedicated kink and fetish calendar
+
+The integration exposes a separate **Kink & Fetish Events** calendar entity alongside Monthly Events, LGBTQ+ Events, and Sauna Events. After the updated integration is installed and Home Assistant reloads it, select the Kink & Fetish Events entity in the Home Assistant Calendar dashboard or use its entity ID in a calendar card/automation. Events are included when discovery returns a dated event and its metadata or text identifies it as kink/fetish-related; this is not a guarantee that every listing on every external website will be imported.
