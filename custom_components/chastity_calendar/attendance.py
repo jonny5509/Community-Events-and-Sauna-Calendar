@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 import voluptuous as vol
@@ -29,7 +29,8 @@ SERVICE_SCHEMA = vol.Schema(
 
 def _event_id(summary: str, start: datetime, url: str = "") -> str:
     """Build a stable identifier for one event occurrence."""
-    identity = f"{summary.strip().casefold()}|{start.isoformat()}|{url.strip().casefold()}"
+    # The occurrence identity excludes the optional URL so choices can be updated without it.
+    identity = f"{summary.strip().casefold()}|{start.isoformat()}"
     return hashlib.sha256(identity.encode()).hexdigest()[:24]
 
 
@@ -37,7 +38,10 @@ def _parse_start(value: str) -> datetime:
     """Parse a timestamp and interpret naive values in Home Assistant local time."""
     parsed = dt_util.parse_datetime(value)
     if parsed is None:
-        raise vol.Invalid("start must be an ISO date or datetime")
+        try:
+            parsed = datetime.combine(date.fromisoformat(value), time.min)
+        except (TypeError, ValueError):
+            raise vol.Invalid("start must be an ISO date or datetime") from None
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         parsed = parsed.replace(tzinfo=dt_util.get_default_time_zone())
     return dt_util.as_local(parsed)
