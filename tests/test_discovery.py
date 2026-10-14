@@ -73,9 +73,9 @@ def test_future_date_accepts_abbreviated_month_without_year():
     assert result == datetime(2026, 11, 7)
 
 
-def test_future_date_rolls_yearless_date_forward_when_this_year_has_passed():
+def test_yearless_date_keeps_recent_past_event_in_history_window():
     result = _find_future_date("Gay film night on 3 October", datetime(2026, 10, 13))
-    assert result == datetime(2027, 10, 3)
+    assert result == datetime(2026, 10, 3)
 
 
 def test_future_date_accepts_uk_numeric_date():
@@ -113,7 +113,6 @@ def test_sauna_detection_uses_event_metadata():
     assert not _is_sauna_event({"summary": "Pride Festival", "category": "community"})
 
 
-
 def test_generic_theme_night_is_not_misclassified_as_sauna():
     """Generic themed events should not be hidden from the monthly calendar."""
     tags = _category_tags("community", "80s Theme Night", "A themed social event with music.")
@@ -126,7 +125,6 @@ def test_sauna_context_still_classifies_sauna_events():
     tags = _category_tags("community", "Theme Night at Number 52 Sauna", "Steam room event.")
 
     assert "sauna" in tags
-
 
 
 def test_sauna_search_result_without_sauna_context_is_not_routed_to_sauna_calendar():
@@ -179,7 +177,6 @@ def test_find_future_date_ignores_dates_outside_supported_window():
     assert _find_future_date("Event on January 1, 2030", today) is None
 
 
-
 def test_kink_event_searches_cover_major_fetish_communities():
     from custom_components.chastity_calendar.discovery import SEARCHES
 
@@ -227,3 +224,14 @@ def test_record_preserves_structured_event_page_date_confidence():
 
     assert event["date_confidence"] == "extracted_from_event_page"
     assert event["source_links"] == ["https://example.test/event"]
+
+
+def test_date_extraction_keeps_recent_past_events_for_calendar_history():
+    today = datetime(2026, 10, 14)
+    assert _find_future_date("Queer film night on October 1, 2026", today) == datetime(2026, 10, 1)
+    assert _find_future_date("Sauna social on 1 April 2026", today) is None
+
+
+def test_date_extraction_keeps_recent_past_date_without_year():
+    today = datetime(2026, 10, 14)
+    assert _find_future_date("Pride event on 1 October", today) == datetime(2026, 10, 1)

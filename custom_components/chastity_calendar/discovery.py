@@ -134,11 +134,12 @@ DATE_PATTERNS = (
 )
 
 def _find_future_date(text: str, today: datetime):
-    """Extract the earliest explicit or yearless event date in the next two years.
+    """Extract an event date from the past 180 days through the next two years.
 
-    Search snippets often show dates such as "Friday 16 October" without a
-    year. Treat those as the next occurrence, rather than dropping the event.
-    Numeric dates use UK-style day/month/year; ISO dates remain unambiguous.
+    Retaining a short history lets calendar views show recently completed events
+    on their original dates. Search snippets often omit the year, so yearless
+    dates are resolved to the nearest eligible occurrence. Numeric dates use
+    UK-style day/month/year; ISO dates remain unambiguous.
     """
     found_dates = []
     month_names = "January|February|March|April|May|June|July|August|September|October|November|December"
@@ -205,7 +206,7 @@ def _find_future_date(text: str, today: datetime):
         except ValueError:
             pass
 
-    lower = today.date()
+    lower = (today - timedelta(days=180)).date()
     upper = (today + timedelta(days=730)).date()
     eligible = [value for value in found_dates if lower <= value.date() <= upper]
     return min(eligible, key=lambda value: value.date()) if eligible else None
@@ -312,7 +313,7 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
             parsed = datetime.fromisoformat(raw.replace("Z", "+00:00")).replace(tzinfo=None)
         except (ValueError, TypeError):
             parsed = _find_future_date(str(raw), today)
-        if parsed and today.date() <= parsed.date() <= (today + timedelta(days=730)).date():
+        if parsed and (today - timedelta(days=180)).date() <= parsed.date() <= (today + timedelta(days=730)).date():
             candidates.append(parsed)
     return min(candidates, key=lambda item: item.date()) if candidates else None
 
@@ -399,7 +400,7 @@ async def _fetch_ticketmaster(session, api_key, country_code, today, coordinates
             if not raw: continue
             try: start = datetime.fromisoformat(raw.replace("Z","+00:00")).replace(tzinfo=None)
             except ValueError: continue
-            if not today.date() <= start.date() <= (today + timedelta(days=730)).date(): continue
+            if not (today - timedelta(days=180)).date() <= start.date() <= (today + timedelta(days=730)).date(): continue
             venues = item.get("_embedded",{}).get("venues",[])
             venue = venues[0] if venues else {}
             location = ", ".join(filter(None,(venue.get("name"),venue.get("city",{}).get("name"),venue.get("state",{}).get("name"),venue.get("country",{}).get("name"))))
@@ -615,7 +616,7 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
                     start = datetime.fromisoformat(raw_start.replace("Z", "+00:00")).replace(tzinfo=None)
                 except ValueError:
                     continue
-                if not today.date() <= start.date() <= cutoff.date():
+                if not (today - timedelta(days=180)).date() <= start.date() <= cutoff.date():
                     continue
                 title = str(item.get("name") or "Number 52 Sauna event").strip()
                 if not title:
@@ -671,7 +672,7 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
         )
         now = dt_util.now().replace(tzinfo=None)
         last_day = (today + timedelta(days=180)).date()
-        day = today.date()
+        day = (today - timedelta(days=180)).date()
         while day <= last_day:
             if day.weekday() in (0, 1, 2):
                 for pattern, title, kind, weekdays, start_hour, end_hour in recurring:
@@ -681,7 +682,7 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
                         continue
                     start = datetime.combine(day, datetime.min.time()).replace(hour=start_hour)
                     end = datetime.combine(day, datetime.min.time()).replace(hour=end_hour)
-                    if start >= now:
+                    if start >= now - timedelta(days=180):
                         record = _record(
                             title, start, offers_url, "sauna",
                             "Recurring offer published by Number 52 Sauna. Check the official page for current terms and any changes.",
@@ -697,7 +698,7 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
     # the 1st/3rd Thursday and Sports/Chav Night on the 2nd/4th Thursday.
     # Rotating Friday/Saturday themes are taken from their individual event
     # pages above rather than assigning invented weekdays to them.
-    for offset in range(0, 181):
+    for offset in range(-180, 181):
         day = (today + timedelta(days=offset)).date()
         if day.weekday() != 3:
             continue
@@ -710,8 +711,7 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
             title = "Sports/Chav Night at Number 52 Sauna"
         start = datetime.combine(day, datetime.min.time()).replace(hour=18)
         end = start + timedelta(hours=4)
-        if start < dt_util.now().replace(tzinfo=None):
-            continue
+        # Keep completed occurrences in the short calendar history too.
         record = _record(
             title, start, f"{base_url}/our-events/", "sauna",
             "Recurring themed night listed in public Number 52 Sauna event information. "

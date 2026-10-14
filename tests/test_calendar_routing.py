@@ -45,12 +45,30 @@ def test_lgbtq_events_are_separate_from_monthly_calendar():
     assert "General community fair" not in sauna
 
 
-def test_lgbtq_sauna_event_can_appear_in_both_focused_calendars():
+def test_overlapping_event_is_assigned_to_only_one_focused_calendar():
     event = _event("Queer sauna social", "sauna", ["sauna", "queer", "lgbtq"])
 
     assert "Queer sauna social" not in _summaries("monthly", [event])
-    assert "Queer sauna social" in _summaries("pride", [event])
+    assert "Queer sauna social" not in _summaries("pride", [event])
+    assert "Queer sauna social" not in _summaries("kink", [event])
     assert "Queer sauna social" in _summaries("sauna", [event])
+
+
+def test_lgbtq_kink_event_appears_only_in_kink_calendar():
+    event = _event("Queer BDSM Social", "community", ["community", "queer", "lgbtq", "kink"])
+
+    assert "Queer BDSM Social" not in _summaries("monthly", [event])
+    assert "Queer BDSM Social" not in _summaries("pride", [event])
+    assert "Queer BDSM Social" in _summaries("kink", [event])
+
+
+def test_lgbtq_only_event_remains_in_pride_calendar():
+    event = _event("Queer Film Night", "community", ["community", "queer", "lgbtq"])
+
+    assert "Queer Film Night" not in _summaries("monthly", [event])
+    assert "Queer Film Night" in _summaries("pride", [event])
+    assert "Queer Film Night" not in _summaries("kink", [event])
+    assert "Queer Film Night" not in _summaries("sauna", [event])
 
 
 
@@ -149,3 +167,39 @@ def test_verified_crown_days_appear_only_on_monthly_calendar():
     sauna = ChastityChallengeCalendar(coordinator, "sauna", "test-entry")
     sauna_events = sauna._events_between(date(2027, 6, 1), date(2027, 7, 1))
     assert not any("participation crown" in event.summary for event in sauna_events)
+
+
+def test_lgbtq_single_and_multi_day_events_preserve_original_spans():
+    events = [
+        {
+            "summary": "Single-day queer meetup",
+            "start": date(2027, 6, 12),
+            "end": date(2027, 6, 13),
+            "description": "Single day",
+            "category": "community",
+            "categories": ["lgbtq"],
+            "location": "",
+        },
+        {
+            "summary": "Multi-day Pride festival",
+            "start": date(2027, 6, 14),
+            "end": date(2027, 6, 18),
+            "description": "Multi day",
+            "category": "community",
+            "categories": ["lgbtq"],
+            "location": "",
+        },
+    ]
+    calendar = ChastityChallengeCalendar(
+        SimpleNamespace(data=events), "pride", "test-entry"
+    )
+    results = {
+        event.summary: event
+        for event in calendar._events_between(date(2027, 6, 1), date(2027, 7, 1))
+        if event.summary in {"Single-day queer meetup", "Multi-day Pride festival"}
+    }
+
+    assert results["Single-day queer meetup"].start == date(2027, 6, 12)
+    assert results["Single-day queer meetup"].end == date(2027, 6, 13)
+    assert results["Multi-day Pride festival"].start == date(2027, 6, 14)
+    assert results["Multi-day Pride festival"].end == date(2027, 6, 18)

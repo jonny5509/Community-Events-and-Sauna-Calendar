@@ -371,12 +371,19 @@ class ChastityChallengeCalendar(CalendarEntity):
             # Events can appear in more than one focused calendar when relevant.
             if self.calendar_type == "monthly" and (is_sauna or is_lgbtq or is_kink):
                 continue
-            if self.calendar_type == "sauna" and not is_sauna:
-                continue
-            if self.calendar_type == "pride" and not is_lgbtq:
-                continue
-            if self.calendar_type == "kink" and not is_kink:
-                continue
+            # Assign each discovered event to exactly one focused calendar.
+            # Specific venue/topic calendars take precedence over broader tags:
+            # sauna first, then kink/fetish (including furry), then LGBTQ+.
+            # This avoids duplicates when dashboards display multiple calendars.
+            if self.calendar_type == "sauna":
+                if not is_sauna:
+                    continue
+            elif self.calendar_type == "kink":
+                if not is_kink or is_sauna:
+                    continue
+            elif self.calendar_type == "pride":
+                if not is_lgbtq or is_sauna or is_kink:
+                    continue
             raw_start = item["start"]
             raw_end = item["end"]
             # Discovered events can be timed events (not all-day entries).
@@ -403,30 +410,16 @@ class ChastityChallengeCalendar(CalendarEntity):
                 event_end = raw_end
                 overlaps = event_end > start_day and event_start < end_day
             if overlaps:
-                # Only split discovered multi-day LGBTQ+ all-day events into
-                # daily entries. Annual observances (including Pride Month)
-                # are defined above and intentionally retain their original span.
-                if (self.calendar_type == "pride"
-                        and isinstance(raw_start, date) and not isinstance(raw_start, datetime)
-                        and isinstance(raw_end, date) and not isinstance(raw_end, datetime)):
-                    day = raw_start
-                    while day < raw_end:
-                        events.append(CalendarEvent(
-                            summary=item["summary"],
-                            start=day,
-                            end=day + timedelta(days=1),
-                            description=item["description"],
-                            location=item.get("location") or "",
-                        ))
-                        day += timedelta(days=1)
-                else:
-                    events.append(CalendarEvent(
-                        summary=item["summary"],
-                        start=event_start,
-                        end=event_end,
-                        description=item["description"],
-                        location=item.get("location") or "",
-                    ))
+                # Preserve the original event span. Single-day events remain
+                # single-day entries; multi-day events span their full dates so
+                # Home Assistant can render them as bars in month views.
+                events.append(CalendarEvent(
+                    summary=item["summary"],
+                    start=event_start,
+                    end=event_end,
+                    description=item["description"],
+                    location=item.get("location") or "",
+                ))
         # Daily crowns appear only on the monthly challenge calendar. A crown
         # means an active session was verified at least once on that local date;
         # it does not claim uninterrupted activity for the entire day.
