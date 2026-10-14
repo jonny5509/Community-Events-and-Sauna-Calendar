@@ -1,4 +1,4 @@
-# Chastity Events
+# Community Events & Sauna Calendar
 
 A custom [Home Assistant](https://www.home-assistant.io/) integration for discovering public community events and displaying them in focused calendars and sensors.
 
@@ -21,7 +21,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration for discov
 
 ### HACS
 
-If the integration is available in the HACS default store, search for **Chastity Events** and download it.
+If the integration is available in the HACS default store, search for **Community Events & Sauna Calendar** and download it.
 
 If it is not listed yet:
 
@@ -29,19 +29,19 @@ If it is not listed yet:
 2. Add `jonny5509/chastity_calendar` and choose **Integration** as the category.
 3. Download the integration.
 4. Restart Home Assistant.
-5. Go to **Settings → Devices & services → Add integration** and search for **Chastity Events**.
+5. Go to **Settings → Devices & services → Add integration** and search for **Community Events & Sauna Calendar**.
 
 ### Manual installation
 
 1. Copy `custom_components/chastity_calendar` into your Home Assistant `config/custom_components/` directory.
 2. Restart Home Assistant.
-3. Open **Settings → Devices & services → Add integration** and add **Chastity Events**.
+3. Open **Settings → Devices & services → Add integration** and add **Community Events & Sauna Calendar**.
 
 The internal integration domain remains `chastity_calendar` to preserve existing configuration and entity IDs.
 
 ### Upcoming Events dashboard card
 
-The optional **Chastity Upcoming Events** Lovelace card lists upcoming events from selected Chastity Events calendar entities and adds a one-tap **Going** button beside each event. Attendance choices are saved by the integration.
+The optional **Community Events & Sauna Calendar — Upcoming Events** Lovelace card lists upcoming events from selected calendar entities and adds a one-tap **Going** button beside each event. Attendance choices are saved by the integration.
 
 1. Copy `www/chastity-upcoming-events-card.js` into your Home Assistant `config/www/chastity-upcoming-events-card.js`.
 2. In **Settings → Dashboards → Resources**, add `/local/chastity-upcoming-events-card.js` as a **JavaScript module**.
