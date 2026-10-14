@@ -16,9 +16,9 @@ def test_different_occurrences_have_different_ids():
     assert _event_id("Fetish Night", first) != _event_id("Fetish Night", second)
 
 
-def test_event_url_can_distinguish_same_title_and_start():
+def test_event_url_does_not_change_occurrence_identity():
     start = datetime(2026, 11, 5, 18, tzinfo=ZoneInfo("Europe/London"))
-    assert _event_id("Community Night", start, "https://example.com/a") != _event_id(
+    assert _event_id("Community Night", start, "https://example.com/a") == _event_id(
         "Community Night", start, "https://example.com/b"
     )
 
