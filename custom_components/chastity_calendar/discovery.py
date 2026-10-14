@@ -873,6 +873,94 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
     return events
 
 
+
+
+async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
+    """Read public furry event listings from FurryCons and FurDar UK pages."""
+    sources = (
+        ("FurryCons.com", "https://furrycons.com/calendar/calendar.php?loc=uk"),
+        ("FurDar", "https://furdar.org/country/GB/"),
+    )
+    lower = (today - timedelta(days=180)).date()
+    upper = (today + timedelta(days=730)).date()
+
+    async def fetch_source(source, url):
+        try:
+            async with asyncio.timeout(12):
+                async with session.get(
+                    url,
+                    headers={"User-Agent": "HomeAssistant-CommunityEventsCalendar/2.3 (public event calendar discovery)"},
+                    allow_redirects=True,
+                ) as response:
+                    if response.status != 200:
+                        _LOGGER.debug("%s returned HTTP %s", source, response.status)
+                        return []
+                    body = (await response.text())[:2000000]
+        except Exception as err:
+            _LOGGER.debug("Could not fetch %s: %s", source, err)
+            return []
+        candidates = []
+        # Prefer explicit Schema.org event metadata when the site provides it.
+        for item in _iter_jsonld_events(body):
+            title = str(item.get("name") or "").strip()
+            raw_start = item.get("startDate")
+            if not title or not isinstance(raw_start, str):
+                continue
+            try:
+                start = datetime.fromisoformat(raw_start.replace("Z", "+00:00")).replace(tzinfo=None)
+            except ValueError:
+                start = _find_future_date(raw_start, today)
+            context = title + " " + str(item.get("description", ""))
+            if start and lower <= start.date() <= upper and re.search(
+                r"\bfurr|\bfurmeet\b|\bfursuit\b|\banthro\b|\bscotiacon\b|\bconfuzzled\b|\baberacon\b|\bpawsome\b|\bwild north\b|\bfurcation\b",
+                context, re.I,
+            ):
+                candidates.append((title, start, str(item.get("url") or url), str(item.get("description") or ""), str(item.get("location") or ""), "structured"))
+        # FurryCons uses dated table rows; FurDar may use event cards. Parse
+        # bounded row/card fragments and require an explicit furry-context match.
+        fragments = re.findall(
+            r"<tr\b[^>]*>.*?</tr\s*>|<article\b[^>]*>.*?</article\s*>|<li\b[^>]*>.*?</li\s*>",
+            body, re.I | re.S,
+        )
+        for fragment in fragments:
+            plain = html.unescape(re.sub(r"<[^>]+>", " ", fragment))
+            plain = re.sub(r"\s+", " ", plain).strip()
+            start = _find_future_date(plain, today)
+            if not start or not lower <= start.date() <= upper:
+                continue
+            links = re.findall(r"<a\b[^>]*href=['\"]([^'\"]+)['\"][^>]*>(.*?)</a\s*>", fragment, re.I | re.S)
+            if not links:
+                continue
+            title, event_url = "", url
+            for href, label in links:
+                label = html.unescape(re.sub(r"<[^>]+>", " ", label))
+                label = re.sub(r"\s+", " ", label).strip()
+                if label and len(label) > 2:
+                    title = label
+                    event_url = href if href.startswith("http") else urlsplit(url)._replace(path=href).geturl()
+                    break
+            if title:
+                candidates.append((title, start, event_url, plain, "", "extracted_from_source_listing"))
+        results = []
+        seen = set()
+        for title, start, event_url, description, location, confidence in candidates:
+            key = (re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip(), start.date())
+            if key in seen:
+                continue
+            seen.add(key)
+            record = _record(
+                title, start, event_url, "kink",
+                f"Furry community event listing from {source}. {description[:800]} Verify dates, venue and access details with the organiser.",
+                source=source, location=location, date_confidence=confidence,
+            )
+            record["categories"] = sorted(set(record.get("categories", [])) | {"furry", "community"})
+            results.append(record)
+        _LOGGER.info("%s yielded %s dated furry events", source, len(results))
+        return results
+
+    batches = await asyncio.gather(*(fetch_source(source, url) for source, url in sources))
+    return [item for batch in batches for item in batch]
+
 async def async_discover_events(hass, country: str = "", location: str = "", ticketmaster_api_key: str = "", region: str = "", county: str = "", city: str = "", area: str = "") -> list[dict]:
     """Search public event sources at several levels of the configured location."""
     session = async_get_clientsession(hass)
@@ -976,13 +1064,15 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
     # Venue event discovery is independent of the nearest-sauna sensor:
     # a user's selected location must not silently suppress public event listings.
     gaysaunas_task = _fetch_gaysaunas_directory_events(session, today)
-    rss, ticketmaster, sauna52, gaysaunas = await asyncio.gather(
-        rss_task, ticketmaster_task, sauna52_task, gaysaunas_task
+    furry_task = _fetch_furry_directory_events(session, today)
+    rss, ticketmaster, sauna52, gaysaunas, furry = await asyncio.gather(
+        rss_task, ticketmaster_task, sauna52_task, gaysaunas_task, furry_task
     )
     events = [item for batch in rss for item in batch]
     events.extend(ticketmaster)
     events.extend(sauna52)
     events.extend(gaysaunas)
+    events.extend(furry)
 
     _LOGGER.info(
         "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
