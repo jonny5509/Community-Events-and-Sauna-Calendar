@@ -70,7 +70,8 @@ SEARCHES = (
     ("kink", '"foot fetish" OR boot fetish community event dates'),
     ("kink", '"power exchange" OR "dominance submission" workshop event dates'),
     ("kink", '"findom" OR "financial domination" community event dates'),
-    ("kink", '"furry meetup" OR "furry convention" events dates'),
+    ("kink", '"furry meetup" OR "furry convention" OR furmeet events dates'),
+    ("kink", '"furry social" OR "furry gathering" OR "furry festival" dates'),
     ("kink", '"fetish fashion" OR latex fashion event dates'),
     ("kink", '"International Fetish Day" OR "World BDSM Day" dates'),
     ("kink", '"straight kink" OR heterosexual BDSM OR "straight fetish" events dates'),
@@ -493,7 +494,7 @@ def _is_target_event(event: dict) -> bool:
         r"\bpower exchange\b", r"\bdungeon\b", r"\bfindom\b",
         r"\bfinancial domination\b", r"\bgear social\b", r"\bfoot fetish\b",
         r"\bimpact play\b", r"\bsensory play\b", r"\broleplay kink\b",
-        r"\bcrossdressing\b", r"\bfurry convention\b", r"\bfurry meetup\b",
+        r"\bcrossdressing\b", r"\bfurry\b", r"\bfurmeet\b", r"\bfursuit\b",
     )
     return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
 
