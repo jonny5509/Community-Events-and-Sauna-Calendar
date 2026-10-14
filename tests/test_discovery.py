@@ -227,3 +227,14 @@ def test_record_preserves_structured_event_page_date_confidence():
 
     assert event["date_confidence"] == "extracted_from_event_page"
     assert event["source_links"] == ["https://example.test/event"]
+
+
+def test_date_extraction_keeps_recent_past_events_for_calendar_history():
+    today = datetime(2026, 10, 14)
+    assert _find_future_date("Queer film night on October 1, 2026", today) == datetime(2026, 10, 1)
+    assert _find_future_date("Sauna social on 1 April 2026", today) is None
+
+
+def test_date_extraction_keeps_recent_past_date_without_year():
+    today = datetime(2026, 10, 14)
+    assert _find_future_date("Pride event on 1 October", today) == datetime(2026, 10, 1)
