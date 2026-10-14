@@ -43,6 +43,12 @@ When a configured provider explicitly confirms an active session, the integratio
 - Add informational entries for International Fetish Day (third Friday in January) and World BDSM Day, plus suggested consent, rope education, leather/gear, rubber/latex, power-exchange reflection, and community-social reminders.
 - When a page publishes structured event start-date metadata, use that event date rather than dropping the listing because its search snippet lacks a date. Store whether a date came from a snippet or event-page metadata, and retain the source URL for verification. Community-created prompts are labelled as suggestions rather than official observances. Public event listings still require organiser verification.
 
+## What's new in 2.3.0
+
+- Rename the four calendar activity sensors to `Monthly Events Status`, `LGBTQ+ Events Status`, `Sauna Events Status`, and `Kink & Fetish Events Status` so they are distinguishable from the same-named calendar entities.
+- Preserve the status sensors' existing unique IDs so Home Assistant can retain their entity registry entries and automations.
+- Update the integration manifest version to 2.3.0.
+
 ## What's new in 2.0.8
 
 - Ensure discovered timed events use timezone-aware datetimes before constructing Home Assistant calendar events, preventing calendar state updates from failing validation.
@@ -107,7 +113,7 @@ When a configured provider explicitly confirms an active session, the integratio
 
 ## Event data
 
-Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for this release is 2.2.5. Subsequent scheduled refreshes update the current results.
+Events can expose `category`, overlapping `categories`, `source`, `sources`, `url`, `source_links`, `location`, `date_confidence`, and `last_seen`. RSS dates are inferred from snippets and may be wrong. Ticketmaster dates are taken from structured records when available. Cross-source title/date matches merge when possible; distinct events published on the same venue page remain separate. The integration manifest version for the 2.3.0 status-sensor naming fix is 2.3.0 (earlier release notes below describe their original releases). Subsequent scheduled refreshes update the current results.
 
 ## Transparent limitations
 
