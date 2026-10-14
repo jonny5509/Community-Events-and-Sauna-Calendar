@@ -43,7 +43,7 @@ The internal integration domain remains `chastity_calendar` to preserve existing
 
 During setup, choose a country and then select any available region, county, or district options. Enter your town or city as free text. If optional location lists are unavailable, skip them and enter the city manually.
 
-The configured location is used to improve event relevance and find nearby sauna venues. The nearest-sauna sensor uses the configured location, **not live device GPS**, and refreshes at 00:00, 06:00, 12:00, and 18:00 Home Assistant local time.
+The configured location is used to improve event relevance and find nearby sauna venues. The nearest-sauna sensor uses the configured location, **not live device GPS**, and refreshes every three hours at 00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, and 21:00 Home Assistant local time.
 
 ### Optional Ticketmaster support
 
