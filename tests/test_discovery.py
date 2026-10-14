@@ -9,6 +9,8 @@ from custom_components.chastity_calendar.discovery import (
     _is_target_event,
     _normalise_url,
     _find_future_date,
+    _gaysaunas_venue_urls,
+    _iter_jsonld_events,
     _record,
 )
 
@@ -235,3 +237,45 @@ def test_date_extraction_keeps_recent_past_events_for_calendar_history():
 def test_date_extraction_keeps_recent_past_date_without_year():
     today = datetime(2026, 10, 14)
     assert _find_future_date("Pride event on 1 October", today) == datetime(2026, 10, 1)
+
+
+def test_gaysaunas_directory_extracts_individual_venue_pages_only():
+    html = """
+    <a href="/uk/england/">England</a>
+    <a href="/uk/england/north-east/">North East</a>
+    <a href="/uk/england/north-east/number-52-sauna-newcastle/">Number 52</a>
+    <a href="https://gaysaunas.co.uk/uk/england/london/sweatbox-soho/?utm_source=test">Sweatbox</a>
+    <a href="https://example.com/uk/england/london/other-venue/">External</a>
+    <a href="/uk/england/north-east/number-52-sauna-newcastle/">Duplicate</a>
+    """
+    assert _gaysaunas_venue_urls(html) == [
+        "https://gaysaunas.co.uk/uk/england/north-east/number-52-sauna-newcastle/",
+        "https://gaysaunas.co.uk/uk/england/london/sweatbox-soho/",
+    ]
+
+
+def test_gaysaunas_directory_reads_explicit_jsonld_event_dates():
+    body = '''
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Event",
+      "name": "Fetish Night",
+      "startDate": "2026-11-05T18:00:00",
+      "url": "https://gaysaunas.co.uk/uk/england/north-east/number-52-sauna-newcastle/"
+    }
+    </script>
+    '''
+    events = list(_iter_jsonld_events(body))
+    assert len(events) == 1
+    assert events[0]["name"] == "Fetish Night"
+    assert events[0]["startDate"] == "2026-11-05T18:00:00"
+
+
+def test_gaysaunas_directory_ignores_non_event_jsonld():
+    body = '''
+    <script type="application/ld+json">
+    {"@context": "https://schema.org", "@type": "LocalBusiness", "name": "Sauna"}
+    </script>
+    '''
+    assert list(_iter_jsonld_events(body)) == []
