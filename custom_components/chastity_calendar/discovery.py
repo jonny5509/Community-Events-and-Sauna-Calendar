@@ -446,6 +446,31 @@ def _deduplicate(events):
 
 
 
+def _is_target_event(event: dict) -> bool:
+    """Keep only LGBTQ+, sauna, kink, or fetish events in discovered results.
+
+    Search-query labels are deliberately not trusted here: broad RSS searches
+    can return unrelated events even when the query mentions a target topic.
+    The event listing itself must contain a relevant term.
+    """
+    text = " ".join(
+        str(event.get(key, "") or "")
+        for key in ("summary", "description", "location", "url", "source")
+    ).casefold()
+    patterns = (
+        r"\blgbtq?\+?\b", r"\blgbtqia\+?\b", r"\bqueer\b",
+        r"\bpride\b", r"\bgay\b", r"\blesbian\b", r"\bbisexual\b",
+        r"\btrans(?:gender)?\b", r"\bsapphic\b", r"\bdrag\b",
+        r"\bsaunas?\b", r"\bsteam room\b",
+        r"\bkink\b", r"\bfetish\b", r"\bbdsm\b", r"\bleather\b",
+        r"\blatex\b", r"\brubber\b", r"\bshibari\b", r"\brope play\b",
+        r"\bpup play\b", r"\bpuppy play\b", r"\bchastity\b",
+        r"\blocktober\b", r"\bpower exchange\b", r"\bdungeon\b",
+        r"\bfindom\b", r"\bgear social\b",
+    )
+    return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
+
+
 def _is_sauna_event(event: dict) -> bool:
     """Return whether event metadata explicitly identifies a sauna listing."""
     searchable = [
@@ -817,7 +842,15 @@ async def async_discover_events(hass, country: str = "", location: str = "", tic
         "Event discovery completed for %s, %s: %s search queries returned %s dated events before deduplication",
         location or "unspecified location", country or "unspecified country", len(searches), len(events),
     )
-    return _deduplicate(events)
+    # Broad RSS searches sometimes return unrelated events (for example,
+    # ordinary comedy listings). Only retain listings whose own metadata/text
+    # identifies one of the integration's supported event topics.
+    relevant_events = [item for item in events if _is_target_event(item)]
+    _LOGGER.info(
+        "Filtered discovery results to %s LGBTQ+/sauna/kink/fetish events",
+        len(relevant_events),
+    )
+    return _deduplicate(relevant_events)
 
 
 async def async_discover_nearest_saunas(hass, country: str = "", location: str = "") -> list[dict]:
