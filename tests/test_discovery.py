@@ -174,3 +174,19 @@ def test_discovery_searches_cover_straight_gay_lesbian_and_other_kink_communitie
         "dominatrix", "crossdressing", "impact play", "sensory deprivation",
     ):
         assert term in queries
+
+
+def test_record_preserves_structured_event_page_date_confidence():
+    from custom_components.chastity_calendar.discovery import _record
+
+    event = _record(
+        "Rubber social",
+        datetime(2026, 11, 13),
+        "https://example.test/event",
+        "kink",
+        "Date verified from event-page metadata.",
+        date_confidence="extracted_from_event_page",
+    )
+
+    assert event["date_confidence"] == "extracted_from_event_page"
+    assert event["source_links"] == ["https://example.test/event"]
