@@ -361,7 +361,7 @@ async def _fetch_structured_event_name(session, url: str) -> str:
     except Exception as err:
         _LOGGER.debug("Could not inspect event title page %s: %s", url, err)
         return ""
-    pattern = re.compile(r'<script\\b[^>]*type=["\\']application/ld\\+json["\\'][^>]*>(.*?)</script\\s*>', re.I | re.S)
+    pattern = re.compile(r'<script\b[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script\s*>', re.I | re.S)
     names = []
     for raw in pattern.findall(body):
         try:
