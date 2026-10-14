@@ -195,6 +195,7 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
                 "transgender day of remembrance", "trans pride",
             ),
             "queer": ("queer",),
+            "furry": ("furry", "furmeet", "fursuit"),
             "pansexual": ("pansexual", "pan pride"),
             "non-binary": ("non-binary", "nonbinary", "enby", "genderqueer"),
             "intersex": ("intersex",),
@@ -285,6 +286,14 @@ class ChastityNextQueerEventSensor(ChastityNextCategoryEventSensor):
     _attr_name = "Next Queer Event"
     _attr_icon = "mdi:account-multiple"
 
+
+
+class ChastityNextFurryEventSensor(ChastityNextCategoryEventSensor):
+    """Show the next discovered furry community event."""
+
+    category = "furry"
+    _attr_name = "Next Furry Event"
+    _attr_icon = "mdi:paw"
 
 
 class ChastityNextPansexualEventSensor(ChastityNextCategoryEventSensor):
@@ -505,6 +514,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         ChastityNextBisexualEventSensor(coordinator, entry.entry_id),
         ChastityNextTransgenderEventSensor(coordinator, entry.entry_id),
         ChastityNextQueerEventSensor(coordinator, entry.entry_id),
+        ChastityNextFurryEventSensor(coordinator, entry.entry_id),
         ChastityNextPansexualEventSensor(coordinator, entry.entry_id),
         ChastityNextNonBinaryEventSensor(coordinator, entry.entry_id),
         ChastityNextIntersexEventSensor(coordinator, entry.entry_id),
