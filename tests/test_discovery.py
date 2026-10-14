@@ -49,6 +49,15 @@ def test_target_event_filter_keeps_supported_event_topics():
         _event("Gay Sauna Theme Night", start),
         _event("Queer BDSM Social", start),
         _event("Leather and Fetish Market", start),
+        _event("Non-binary Community Meetup", start),
+        _event("Pansexual and Bisexual Social", start),
+        _event("Intersex Awareness Workshop", start),
+        _event("Asexual and Aromantic Meetup", start),
+        _event("Transmasc and Genderfluid Support Group", start),
+        _event("Two-Spirit Community Gathering", start),
+        _event("Queer Film Night", start),
+        _event("Shibari and Rope Workshop", start),
+        _event("Pup Play Social", start),
     ]
 
     assert all(_is_target_event(event) for event in cases)
