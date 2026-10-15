@@ -431,28 +431,28 @@ def _event_page_title(body: str) -> str:
     """Extract a useful canonical title from an event page's visible metadata."""
     # The H1 is usually the best fallback because <title> and Open Graph values
     # often append the directory's branding or SEO text.
-    heading = re.search(r"<h1\\b[^>]*>(.*?)</h1\\s*>", body or "", re.I | re.S)
+    heading = re.search(r"<h1\b[^>]*>(.*?)</h1\s*>", body or "", re.I | re.S)
     if heading:
         value = re.sub(r"<[^>]+>", " ", heading.group(1))
-        value = re.sub(r"\\s+", " ", html.unescape(value)).strip()
+        value = re.sub(r"\s+", " ", html.unescape(value)).strip()
         if value:
             return value
 
     # Parse attributes independently so property/content order and quote style
     # do not affect Open Graph title extraction.
-    for tag in re.findall(r"<meta\\b[^>]*>", body or "", re.I | re.S):
+    for tag in re.findall(r"<meta\b[^>]*>", body or "", re.I | re.S):
         attrs = {
             key.casefold(): html.unescape(value).strip()
             for key, _quote, value in re.findall(
-                r"""([\\w:-]+)\\s*=\\s*(["'])(.*?)\\2""", tag, re.I | re.S
+                r"""([\w:-]+)\s*=\s*(["'])(.*?)\2""", tag, re.I | re.S
             )
         }
         if attrs.get("property", "").casefold() == "og:title" and attrs.get("content"):
             return attrs["content"]
-    title = re.search(r"<title\\b[^>]*>(.*?)</title\\s*>", body or "", re.I | re.S)
+    title = re.search(r"<title\b[^>]*>(.*?)</title\s*>", body or "", re.I | re.S)
     if title:
         value = re.sub(r"<[^>]+>", " ", title.group(1))
-        return re.sub(r"\\s+", " ", html.unescape(value)).strip()
+        return re.sub(r"\s+", " ", html.unescape(value)).strip()
     return ""
 
 
@@ -473,7 +473,7 @@ async def _fetch_structured_event_name(session, url: str) -> str:
     except Exception as err:
         _LOGGER.debug("Could not inspect event title page %s: %s", url, err)
         return ""
-    pattern = re.compile(r'<script\\b[^>]*type=["\\']application/ld\\+json["\\'][^>]*>(.*?)</script\\s*>', re.I | re.S)
+    pattern = re.compile(r'<script\b[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script\s*>', re.I | re.S)
     names = []
     for raw in pattern.findall(body):
         try:
