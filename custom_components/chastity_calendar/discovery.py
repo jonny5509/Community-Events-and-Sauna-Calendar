@@ -314,6 +314,32 @@ def _record(title, start, url, category, description, source="Google News RSS", 
     }
 
 
+def normalized_text_from_html(body: str) -> str:
+    """Return visible page text with HTML markup and whitespace normalised."""
+    visible_text = html.unescape(re.sub(r"<[^>]+>", " ", body or ""))
+    return re.sub(r"\s+", " ", visible_text).strip()
+
+
+def _furryguides_time_range(body: str):
+    """Extract the start clock time from FurryGuides' Quick Facts time range."""
+    normalized_text = normalized_text_from_html(body)
+    time_match = re.search(
+        r"\bTime\s*:?[ \t]*(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)\s*(?:-|–|—|to)\s*"
+        r"\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?",
+        normalized_text,
+        re.I,
+    )
+    if not time_match:
+        return None
+    time_text = re.sub(r"\s+", " ", time_match.group(1)).replace(".", "").upper()
+    for time_format in ("%I:%M %p", "%I %p"):
+        try:
+            return datetime.strptime(time_text, time_format).time()
+        except ValueError:
+            continue
+    return None
+
+
 async def _fetch_structured_event_date(session, url: str, today: datetime, fallback_date: datetime | None = None):
     """Extract an explicit event start date from a public event page."""
     if urlsplit(url).scheme not in {"http", "https"}:
