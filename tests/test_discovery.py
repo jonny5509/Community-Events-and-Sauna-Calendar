@@ -389,3 +389,25 @@ def test_find_future_date_parses_furryguides_multi_day_convention_ranges():
 
     assert _find_future_date("NOV 20 2026 Furcation Brean", today) == datetime(2026, 11, 20)
     assert _find_future_date("Pawsome October 1 – 5, 2026 Gloucester", today) == datetime(2026, 10, 1)
+
+
+
+def test_furryguides_page_name_uses_main_heading():
+    from custom_components.chastity_calendar.discovery import _extract_furryguides_page_name
+
+    body = """
+    <html><head><title>Events - FurryGuides</title></head>
+    <body><h1 class="page-title">Birmingham Furs</h1>
+    <h2>Upcoming events</h2></body></html>
+    """
+    assert _extract_furryguides_page_name(
+        body, "https://furryguides.com/events/birmingham-furs"
+    ) == "Birmingham Furs"
+
+
+def test_furryguides_page_name_only_applies_to_group_event_pages():
+    from custom_components.chastity_calendar.discovery import _extract_furryguides_page_name
+
+    body = "<h1>Some event</h1>"
+    assert _extract_furryguides_page_name(body, "https://example.com/events/birmingham-furs") == ""
+    assert _extract_furryguides_page_name(body, "https://furryguides.com/events") == ""
