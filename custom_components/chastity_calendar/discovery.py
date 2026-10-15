@@ -9,7 +9,7 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
-from urllib.parse import quote, quote_plus, urlsplit, urlunsplit
+from urllib.parse import quote, quote_plus, urljoin, urlsplit, urlunsplit
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
@@ -358,11 +358,40 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
     candidates = []
     for raw in raw_dates:
         try:
-            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00")).replace(tzinfo=None)
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            if parsed.tzinfo is not None and parsed.utcoffset() is not None:
+                parsed = dt_util.as_local(parsed).replace(tzinfo=None)
         except (ValueError, TypeError):
             parsed = _find_future_date(str(raw), today)
         if parsed and (today - timedelta(days=180)).date() <= parsed.date() <= (today + timedelta(days=730)).date():
             candidates.append(parsed)
+
+    # FurryGuides publishes the schedule in its "Quick Facts" list, where
+    # "Time" is followed by a range such as "12 PM - 6 PM". Combine the
+    # explicit start time with the event date from metadata or visible text.
+    visible_text = html.unescape(re.sub(r"<[^>]+>", " ", body))
+    normalized_text = re.sub(r"\s+", " ", visible_text)
+    time_match = re.search(
+        r"\bTime\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)\s*(?:-|–|—|to)\s*"
+        r"\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?",
+        normalized_text,
+        re.I,
+    )
+    if time_match:
+        date_candidate = min(candidates, key=lambda item: item.date()) if candidates else _find_future_date(normalized_text, today)
+        if date_candidate:
+            time_text = re.sub(r"\s+", " ", time_match.group(1)).replace(".", "").upper()
+            parsed_time = None
+            for time_format in ("%I:%M %p", "%I %p"):
+                try:
+                    parsed_time = datetime.strptime(time_text, time_format).time()
+                    break
+                except ValueError:
+                    continue
+            if parsed_time:
+                timed_start = datetime.combine(date_candidate.date(), parsed_time)
+                if (today - timedelta(days=180)).date() <= timed_start.date() <= (today + timedelta(days=730)).date():
+                    return timed_start
     return min(candidates, key=lambda item: item.date()) if candidates else None
 
 async def _fetch_structured_event_name(session, url: str) -> str:
@@ -1009,6 +1038,7 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
     """Read public furry event listings from UK directories and England listings."""
     sources = (
         ("FurryCons.com", "https://furrycons.com/calendar/calendar.php?loc=uk"),
+        ("FurryGuides Events", "https://furryguides.com/events"),
         ("FurryGuides UK", "https://furryguides.com/conventions/countries/united-kingdom"),
         ("FurDar England", "https://furdar.org/area/1-england/"),
     )
@@ -1068,9 +1098,15 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
                 label = re.sub(r"\s+", " ", label).strip()
                 if label and len(label) > 2:
                     title = label
-                    event_url = href if href.startswith("http") else urlsplit(url)._replace(path=href).geturl()
+                    event_url = urljoin(url, href)
                     break
             if title:
+                # The FurryGuides listing supplies the event date, while the
+                # detail page's "Time" field / Event startDate supplies its
+                # actual start time. Prefer that explicit datetime when present.
+                detail_start = await _fetch_structured_event_date(session, event_url, today)
+                if detail_start is not None:
+                    start = detail_start
                 candidates.append((title, start, event_url, plain, "", "extracted_from_source_listing"))
         results = []
         seen = set()
