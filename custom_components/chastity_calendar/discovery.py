@@ -9,7 +9,6 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 from urllib.parse import quote, quote_plus, urljoin, urlsplit, urlunsplit
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
@@ -25,7 +24,6 @@ COUNTRY_CODES = {
 }
 
 _COUNTRY_CODE_CACHE: dict[str, str] = {}
-_UK_TIMEZONE = ZoneInfo("Europe/London")
 
 
 async def _country_code(session, country: str) -> str:
@@ -316,45 +314,7 @@ def _record(title, start, url, category, description, source="Google News RSS", 
     }
 
 
-def normalized_text_from_html(body: str) -> str:
-    """Return visible page text with HTML markup and whitespace normalised."""
-    visible_text = html.unescape(re.sub(r"<[^>]+>", " ", body or ""))
-    return re.sub(r"\s+", " ", visible_text).strip()
-
-
-def _event_page_start_time(body: str):
-    """Extract an explicitly labelled event start time from visible page text."""
-    normalized_text = normalized_text_from_html(body)
-    # FurryGuides uses 12-hour Quick Facts ranges; FurDar and similar listings
-    # may use 24-hour ranges. Only read a labelled time field to avoid treating
-    # unrelated times in descriptions (e.g. ticket deadlines) as event starts.
-    match = re.search(
-        r"\b(?:Quick Facts\s+)?(?:Time|Event time|Start time|Starts|Doors open|Event starts)\s*:?[ \t]*"
-        r"(\d{1,2}(?::\d{2})?\s*(?:[ap]\.?m\.?|h)?)(?:\s*(?:-|–|—|to)\s*"
-        r"\d{1,2}(?::\d{2})?\s*(?:[ap]\.?m\.?|h)?)?",
-        normalized_text,
-        re.I,
-    )
-    if not match:
-        return None
-    time_text = re.sub(r"\s+", " ", match.group(1)).replace(".", "").strip().upper()
-    # Real-world event pages commonly write "6pm" or "6:30pm" without a
-    # separating space; datetime.strptime expects one before AM/PM.
-    time_text = re.sub(r"(?<=\d)([AP]M)$", r" \1", time_text)
-    for time_format in ("%I:%M %p", "%I %p", "%H:%M", "%H", "%I:%M", "%I"):
-        try:
-            parsed = datetime.strptime(time_text, time_format).time()
-            # Avoid interpreting a 24-hour time as a 12-hour time if the
-            # explicit numeric hour is greater than 12.
-            if time_text.isdigit() and int(time_text) > 12:
-                continue
-            return parsed
-        except ValueError:
-            continue
-    return None
-
-
-async def _fetch_structured_event_date(session, url: str, today: datetime, fallback_date: datetime | None = None):
+async def _fetch_structured_event_date(session, url: str, today: datetime):
     """Extract an explicit event start date from a public event page."""
     if urlsplit(url).scheme not in {"http", "https"}:
         return None
@@ -400,69 +360,42 @@ async def _fetch_structured_event_date(session, url: str, today: datetime, fallb
         try:
             parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
             if parsed.tzinfo is not None and parsed.utcoffset() is not None:
-                parsed = parsed.astimezone(_UK_TIMEZONE).replace(tzinfo=None)
+                parsed = dt_util.as_local(parsed).replace(tzinfo=None)
         except (ValueError, TypeError):
             parsed = _find_future_date(str(raw), today)
         if parsed and (today - timedelta(days=180)).date() <= parsed.date() <= (today + timedelta(days=730)).date():
             candidates.append(parsed)
 
     # FurryGuides publishes the schedule in its "Quick Facts" list, where
-    # "Time" is followed by a range such as "12 PM - 6 PM". Use the event
-    # date from structured metadata, visible page text, or the listing fallback.
-    parsed_time = _event_page_start_time(body)
-    if parsed_time:
-        date_candidate = (
-            min(candidates, key=lambda item: item.date())
-            if candidates
-            else fallback_date or _find_future_date(normalized_text_from_html(body), today)
-        )
+    # "Time" is followed by a range such as "12 PM - 6 PM". Combine the
+    # explicit start time with the event date from metadata or visible text.
+    visible_text = html.unescape(re.sub(r"<[^>]+>", " ", body))
+    normalized_text = re.sub(r"\s+", " ", visible_text)
+    time_match = re.search(
+        r"\bTime\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)\s*(?:-|–|—|to)\s*"
+        r"\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?",
+        normalized_text,
+        re.I,
+    )
+    if time_match:
+        date_candidate = min(candidates, key=lambda item: item.date()) if candidates else _find_future_date(normalized_text, today)
         if date_candidate:
-            timed_start = datetime.combine(date_candidate.date(), parsed_time)
-            if (today - timedelta(days=180)).date() <= timed_start.date() <= (today + timedelta(days=730)).date():
-                return timed_start
-    if candidates:
-        candidate = min(candidates, key=lambda item: item.date())
-        if (
-            candidate.time() == datetime.min.time()
-            and fallback_date is not None
-            and fallback_date.date() == candidate.date()
-            and fallback_date.time() != datetime.min.time()
-        ):
-            return fallback_date
-        return candidate
-    return fallback_date
-
-def _event_page_title(body: str) -> str:
-    """Extract a useful canonical title from an event page's visible metadata."""
-    # The H1 is usually the best fallback because <title> and Open Graph values
-    # often append the directory's branding or SEO text.
-    heading = re.search(r"<h1\b[^>]*>(.*?)</h1\s*>", body or "", re.I | re.S)
-    if heading:
-        value = re.sub(r"<[^>]+>", " ", heading.group(1))
-        value = re.sub(r"\s+", " ", html.unescape(value)).strip()
-        if value:
-            return value
-
-    # Parse attributes independently so property/content order and quote style
-    # do not affect Open Graph title extraction.
-    for tag in re.findall(r"<meta\b[^>]*>", body or "", re.I | re.S):
-        attrs = {
-            key.casefold(): html.unescape(value).strip()
-            for key, _quote, value in re.findall(
-                r"""([\w:-]+)\s*=\s*(["'])(.*?)\2""", tag, re.I | re.S
-            )
-        }
-        if attrs.get("property", "").casefold() == "og:title" and attrs.get("content"):
-            return attrs["content"]
-    title = re.search(r"<title\b[^>]*>(.*?)</title\s*>", body or "", re.I | re.S)
-    if title:
-        value = re.sub(r"<[^>]+>", " ", title.group(1))
-        return re.sub(r"\s+", " ", html.unescape(value)).strip()
-    return ""
-
+            time_text = re.sub(r"\s+", " ", time_match.group(1)).replace(".", "").upper()
+            parsed_time = None
+            for time_format in ("%I:%M %p", "%I %p"):
+                try:
+                    parsed_time = datetime.strptime(time_text, time_format).time()
+                    break
+                except ValueError:
+                    continue
+            if parsed_time:
+                timed_start = datetime.combine(date_candidate.date(), parsed_time)
+                if (today - timedelta(days=180)).date() <= timed_start.date() <= (today + timedelta(days=730)).date():
+                    return timed_start
+    return min(candidates, key=lambda item: item.date()) if candidates else None
 
 async def _fetch_structured_event_name(session, url: str) -> str:
-    """Extract a canonical event name from structured data or page metadata."""
+    """Extract a canonical event name from schema.org Event metadata."""
     if urlsplit(url).scheme not in {"http", "https"}:
         return ""
     try:
@@ -499,7 +432,7 @@ async def _fetch_structured_event_name(session, url: str) -> str:
                     if isinstance(name, str) and name.strip():
                         names.append(html.unescape(name).strip())
                 stack.extend(item for key, item in value.items() if key not in {"@context"})
-    return names[0] if names else _event_page_title(body)
+    return names[0] if names else ""
 
 async def _fetch_rss(session, category, query, country, location, country_code, today, search_location=None):
     """Fetch one public Google News RSS search."""
@@ -1168,22 +1101,16 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
                     event_url = urljoin(url, href)
                     break
             if title:
+                # The FurryGuides listing supplies the event date, while the
+                # detail page's "Time" field / Event startDate supplies its
+                # actual start time. Prefer that explicit datetime when present.
+                detail_start = await _fetch_structured_event_date(session, event_url, today)
+                if detail_start is not None:
+                    start = detail_start
                 candidates.append((title, start, event_url, plain, "", "extracted_from_source_listing"))
         results = []
         seen = set()
         for title, start, event_url, description, location, confidence in candidates:
-            # Enrich event dates and titles from the canonical detail page for
-            # FurryGuides and FurDar. Listing-card titles can be truncated or
-            # generic, while schema.org Event metadata often has the full name.
-            if urlsplit(event_url).netloc.casefold().endswith(("furryguides.com", "furdar.org")):
-                detail_start = await _fetch_structured_event_date(
-                    session, event_url, today, fallback_date=start
-                )
-                if detail_start is not None:
-                    start = detail_start
-                detail_title = await _fetch_structured_event_name(session, event_url)
-                if detail_title:
-                    title = detail_title
             key = (re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip(), start.date())
             if key in seen:
                 continue
