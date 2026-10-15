@@ -450,7 +450,11 @@ class ChastityChallengeCalendar(CalendarEntity):
                     summary=item["summary"],
                     start=event_start,
                     end=event_end,
-                    description=item["description"],
+                    description=(
+                        f'{item["description"]}\n\nWebsite: {item.get("url") or item.get("source_url")}'
+                        if item.get("url") or item.get("source_url")
+                        else item["description"]
+                    ),
                     location=item.get("location") or "",
                 ))
         # Daily crowns appear only on the monthly challenge calendar. A crown
