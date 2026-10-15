@@ -1157,7 +1157,7 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
             # Listing metadata can contain a long SEO title instead of the
             # concise group/event name. For FurryGuides event pages, use the
             # canonical heading from the detail page (e.g. "Birmingham Furs").
-            if re.search(r"^https?://(?:www\\.)?furryguides\\.com/events/[^/?#]+", event_url, re.I):
+            if re.search(r"^https?://(?:www\.)?furryguides\.com/events/[^/?#]+", event_url, re.I):
                 canonical_title = await _fetch_structured_event_name(session, event_url)
                 if canonical_title:
                     title = canonical_title
