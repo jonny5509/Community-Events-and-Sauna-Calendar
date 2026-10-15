@@ -374,9 +374,9 @@ async def _fetch_structured_event_date(session, url: str, today: datetime, inclu
     # FurryGuides sometimes publishes only a start time (for example,
     # "Time 2 PM") instead of a start/end range. Accept either form so timed
     # events are not incorrectly emitted as all-day events.
+    clock_pattern = r"(?:\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?|(?:[01]?\d|2[0-3]):[0-5]\d)"
     time_match = re.search(
-        r"\bTime\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)"
-        r"(?:\s*(?:-|–|—|to)\s*(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)?)?",
+        rf"\bTime\s+({clock_pattern})(?:\s*(?:-|–|—|to|till|until)\s*({clock_pattern}))?",
         normalized_text,
         re.I,
     )
@@ -387,7 +387,7 @@ async def _fetch_structured_event_date(session, url: str, today: datetime, inclu
                 if not raw_time:
                     return None
                 time_text = re.sub(r"\s+", " ", raw_time).replace(".", "").upper()
-                for time_format in ("%I:%M %p", "%I %p"):
+                for time_format in ("%H:%M", "%I:%M %p", "%I %p"):
                     try:
                         return datetime.strptime(time_text, time_format).time()
                     except ValueError:
