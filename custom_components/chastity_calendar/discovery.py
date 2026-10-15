@@ -73,6 +73,18 @@ SEARCHES = (
     ("kink", '"findom" OR "financial domination" community event dates'),
     ("kink", '"furry meetup" OR "furry convention" OR furmeet events dates'),
     ("kink", '"furry social" OR "furry gathering" OR "furry festival" dates'),
+
+    # Platform-specific searches supplement the public convention directories below.
+    # These platforms do not all expose stable, anonymous event-calendar pages,
+    # so discover listings through indexed public pages rather than scraping private feeds.
+    ("kink", 'site:meetup.com furry (furmeet OR "furry meetup" OR convention)'),
+    ("kink", 'site:eventbrite.co.uk furry (furmeet OR convention OR meetup)'),
+    ("kink", 'site:facebook.com/events furry (furmeet OR convention OR meetup)'),
+    ("kink", 'site:reddit.com/r/furry (furmeet OR convention OR meetup) dates'),
+    ("kink", 'site:howlr.app (event OR meetup OR furmeet) furry'),
+    ("kink", 'site:en.wikifur.com/wiki furry convention UK dates'),
+    ("kink", 'site:discord.com/invite furry UK furmeet event'),
+    ("kink", 'site:disboard.org furry UK meetup community'),
     ("kink", '"fetish fashion" OR latex fashion event dates'),
     ("kink", '"International Fetish Day" OR "World BDSM Day" dates'),
     ("kink", '"straight kink" OR heterosexual BDSM OR "straight fetish" events dates'),
