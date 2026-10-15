@@ -1138,15 +1138,18 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
         results = []
         seen = set()
         for title, start, event_url, description, location, confidence in candidates:
-            # Every FurryGuides event can carry its real schedule on its detail
-            # page. Enrich both JSON-LD candidates and listing-card candidates;
-            # previously only listing-card candidates were inspected.
+            # Enrich event dates and titles from the canonical detail page for
+            # FurryGuides and FurDar. Listing-card titles can be truncated or
+            # generic, while schema.org Event metadata often has the full name.
             if urlsplit(event_url).netloc.casefold().endswith(("furryguides.com", "furdar.org")):
                 detail_start = await _fetch_structured_event_date(
                     session, event_url, today, fallback_date=start
                 )
                 if detail_start is not None:
                     start = detail_start
+                detail_title = await _fetch_structured_event_name(session, event_url)
+                if detail_title:
+                    title = detail_title
             key = (re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip(), start.date())
             if key in seen:
                 continue
