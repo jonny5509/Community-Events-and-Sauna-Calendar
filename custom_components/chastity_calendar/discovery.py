@@ -336,6 +336,9 @@ def _event_page_start_time(body: str):
     if not match:
         return None
     time_text = re.sub(r"\s+", " ", match.group(1)).replace(".", "").strip().upper()
+    # Real-world event pages commonly write "6pm" or "6:30pm" without a
+    # separating space; datetime.strptime expects one before AM/PM.
+    time_text = re.sub(r"(?<=\d)([AP]M)$", r" \1", time_text)
     for time_format in ("%I:%M %p", "%I %p", "%H:%M", "%H", "%I:%M", "%I"):
         try:
             parsed = datetime.strptime(time_text, time_format).time()
