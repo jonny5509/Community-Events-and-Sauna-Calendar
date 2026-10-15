@@ -320,21 +320,30 @@ def normalized_text_from_html(body: str) -> str:
     return re.sub(r"\s+", " ", visible_text).strip()
 
 
-def _furryguides_time_range(body: str):
-    """Extract the start clock time from FurryGuides' Quick Facts time range."""
+def _event_page_start_time(body: str):
+    """Extract an explicitly labelled event start time from visible page text."""
     normalized_text = normalized_text_from_html(body)
-    time_match = re.search(
-        r"\bTime\s*:?[ \t]*(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)\s*(?:-|–|—|to)\s*"
-        r"\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?",
+    # FurryGuides uses 12-hour Quick Facts ranges; FurDar and similar listings
+    # may use 24-hour ranges. Only read a labelled time field to avoid treating
+    # unrelated times in descriptions (e.g. ticket deadlines) as event starts.
+    match = re.search(
+        r"\b(?:Quick Facts\s+)?(?:Time|Event time|Start time|Starts|Doors open|Event starts)\s*:?[ \t]*"
+        r"(\d{1,2}(?::\d{2})?\s*(?:[ap]\.?m\.?|h)?)(?:\s*(?:-|–|—|to)\s*"
+        r"\d{1,2}(?::\d{2})?\s*(?:[ap]\.?m\.?|h)?)?",
         normalized_text,
         re.I,
     )
-    if not time_match:
+    if not match:
         return None
-    time_text = re.sub(r"\s+", " ", time_match.group(1)).replace(".", "").upper()
-    for time_format in ("%I:%M %p", "%I %p"):
+    time_text = re.sub(r"\s+", " ", match.group(1)).replace(".", "").strip().upper()
+    for time_format in ("%I:%M %p", "%I %p", "%H:%M", "%H", "%I:%M", "%I"):
         try:
-            return datetime.strptime(time_text, time_format).time()
+            parsed = datetime.strptime(time_text, time_format).time()
+            # Avoid interpreting a 24-hour time as a 12-hour time if the
+            # explicit numeric hour is greater than 12.
+            if time_text.isdigit() and int(time_text) > 12:
+                continue
+            return parsed
         except ValueError:
             continue
     return None
@@ -395,7 +404,7 @@ async def _fetch_structured_event_date(session, url: str, today: datetime, fallb
     # FurryGuides publishes the schedule in its "Quick Facts" list, where
     # "Time" is followed by a range such as "12 PM - 6 PM". Use the event
     # date from structured metadata, visible page text, or the listing fallback.
-    parsed_time = _furryguides_time_range(body)
+    parsed_time = _event_page_start_time(body)
     if parsed_time:
         date_candidate = (
             min(candidates, key=lambda item: item.date())
@@ -1132,7 +1141,7 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
             # Every FurryGuides event can carry its real schedule on its detail
             # page. Enrich both JSON-LD candidates and listing-card candidates;
             # previously only listing-card candidates were inspected.
-            if urlsplit(event_url).netloc.casefold().endswith("furryguides.com"):
+            if urlsplit(event_url).netloc.casefold().endswith(("furryguides.com", "furdar.org")):
                 detail_start = await _fetch_structured_event_date(
                     session, event_url, today, fallback_date=start
                 )
