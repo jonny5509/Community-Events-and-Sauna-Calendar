@@ -9,6 +9,7 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from urllib.parse import quote, quote_plus, urljoin, urlsplit, urlunsplit
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
@@ -24,6 +25,7 @@ COUNTRY_CODES = {
 }
 
 _COUNTRY_CODE_CACHE: dict[str, str] = {}
+_UK_TIMEZONE = ZoneInfo("Europe/London")
 
 
 async def _country_code(session, country: str) -> str:
@@ -398,7 +400,7 @@ async def _fetch_structured_event_date(session, url: str, today: datetime, fallb
         try:
             parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
             if parsed.tzinfo is not None and parsed.utcoffset() is not None:
-                parsed = dt_util.as_local(parsed).replace(tzinfo=None)
+                parsed = parsed.astimezone(_UK_TIMEZONE).replace(tzinfo=None)
         except (ValueError, TypeError):
             parsed = _find_future_date(str(raw), today)
         if parsed and (today - timedelta(days=180)).date() <= parsed.date() <= (today + timedelta(days=730)).date():
