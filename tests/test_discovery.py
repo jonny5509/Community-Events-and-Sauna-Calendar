@@ -440,3 +440,10 @@ def test_furry_event_title_falls_back_to_html_title():
     from custom_components.chastity_calendar.discovery import _event_page_title
 
     assert _event_page_title("<title>BCP Furries - FurDar</title>") == "BCP Furries - FurDar"
+
+
+def test_event_page_start_time_accepts_compact_am_pm_values():
+    from custom_components.chastity_calendar.discovery import _event_page_start_time
+
+    assert _event_page_start_time("<p>Time: 6pm - 11pm</p>").strftime("%H:%M") == "18:00"
+    assert _event_page_start_time("<p>Start time: 6:30pm</p>").strftime("%H:%M") == "18:30"
