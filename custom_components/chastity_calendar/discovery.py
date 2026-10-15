@@ -394,6 +394,22 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
                     return timed_start
     return min(candidates, key=lambda item: item.date()) if candidates else None
 
+def _extract_furryguides_page_name(body: str, url: str) -> str:
+    """Read the group name from the heading on a FurryGuides event page."""
+    parsed_url = urlsplit(url)
+    if parsed_url.netloc.casefold().removeprefix("www.") != "furryguides.com":
+        return ""
+    if not re.match(r"^/events/[^/]+/?$", parsed_url.path, re.IGNORECASE):
+        return ""
+
+    # The main heading is the canonical group name shown to visitors.
+    match = re.search(r"<h1\\b[^>]*>(.*?)</h1\\s*>", body, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return ""
+    name = html.unescape(re.sub(r"<[^>]+>", " ", match.group(1)))
+    return re.sub(r"\\s+", " ", name).strip()[:180]
+
+
 async def _fetch_structured_event_name(session, url: str) -> str:
     """Extract a canonical event name from schema.org Event metadata."""
     if urlsplit(url).scheme not in {"http", "https"}:
@@ -411,6 +427,12 @@ async def _fetch_structured_event_name(session, url: str) -> str:
     except Exception as err:
         _LOGGER.debug("Could not inspect event title page %s: %s", url, err)
         return ""
+    # FurryGuides group pages use their top-level heading as the displayed name.
+    # Prefer it over schema.org metadata, which may be missing or refer to a listing.
+    page_name = _extract_furryguides_page_name(body, url)
+    if page_name:
+        return page_name
+
     pattern = re.compile(r'<script\b[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script\s*>', re.I | re.S)
     names = []
     for raw in pattern.findall(body):
