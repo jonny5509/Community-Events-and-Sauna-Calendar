@@ -417,14 +417,16 @@ class ChastityChallengeCalendar(CalendarEntity):
                     continue
             raw_start = item["start"]
             raw_end = item["end"]
-            # Discovered events can be timed events (not all-day entries).
-            # Preserve their datetimes and compare them against datetime bounds;
-            # converting them to dates made same-day events fail the exclusive
-            # end-date overlap check and disappear from the calendar.
-            if isinstance(raw_start, datetime) or isinstance(raw_end, datetime):
-                # Home Assistant requires timezone-aware datetimes in every
-                # CalendarEvent. Discovery currently provides naive datetimes
-                # for some sources, so interpret those in HA's local timezone.
+            # Date-only source results are stored internally as midnight
+            # datetimes for compatibility with discovery/deduplication, but must
+            # be emitted as date values so Home Assistant renders them all-day.
+            if item.get("all_day"):
+                event_start = raw_start.date() if isinstance(raw_start, datetime) else raw_start
+                event_end = raw_end.date() if isinstance(raw_end, datetime) else raw_end
+                overlaps = event_end > start_day and event_start < end_day
+            elif isinstance(raw_start, datetime) or isinstance(raw_end, datetime):
+                # Home Assistant requires timezone-aware datetimes for timed
+                # CalendarEvents. Interpret naive source times in HA's local zone.
                 event_start = _as_aware_local(
                     raw_start if isinstance(raw_start, datetime)
                     else datetime.combine(raw_start, datetime.min.time())
@@ -448,7 +450,11 @@ class ChastityChallengeCalendar(CalendarEntity):
                     summary=item["summary"],
                     start=event_start,
                     end=event_end,
-                    description=item["description"],
+                    description=(
+                        f'{item["description"]}\n\nWebsite: {item.get("url") or item.get("source_url")}'
+                        if item.get("url") or item.get("source_url")
+                        else item["description"]
+                    ),
                     location=item.get("location") or "",
                 ))
         # Daily crowns appear only on the monthly challenge calendar. A crown

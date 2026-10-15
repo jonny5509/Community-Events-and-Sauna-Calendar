@@ -301,7 +301,10 @@ def _record(title, start, url, category, description, source="Google News RSS", 
     )
     return {
         "summary": title[:180] or "Possible event",
-        # Explicitly timed listings should not become midnight-to-midnight events.
+        # A midnight timestamp from a date-only listing represents an all-day
+        # event, not a timed event starting at 00:00. Keep this explicit so the
+        # calendar entity can emit date values rather than timezone-aware datetimes.
+        "all_day": start.time() == datetime.min.time(),
         "start": start, "end": start + (timedelta(hours=2) if start.time() != datetime.min.time() else timedelta(days=1)),
         "description": description[:1200], "url": url, "category": record_category,
         "categories": _category_tags(record_category, title, description),
