@@ -197,7 +197,7 @@ def test_normalise_url_removes_tracking_parameters_and_trailing_slash():
 
 
 def test_furryguides_quick_facts_time_range_extracts_start_time():
-    from custom_components.chastity_calendar.discovery import _furryguides_time_range
+    from custom_components.chastity_calendar.discovery import _event_page_start_time
 
     body = """
     <ul class="quick-facts">
@@ -206,14 +206,21 @@ def test_furryguides_quick_facts_time_range_extracts_start_time():
       <li><span>Time</span><span>12 PM - 6 PM</span></li>
     </ul>
     """
-    assert _furryguides_time_range(body).strftime("%H:%M") == "12:00"
+    assert _event_page_start_time(body).strftime("%H:%M") == "12:00"
+
+
+def test_furdar_event_page_time_field_extracts_24_hour_start_time():
+    from custom_components.chastity_calendar.discovery import _event_page_start_time
+
+    body = "<div>Event date: 31 October 2026</div><div>Time: 18:00 - 23:00</div>"
+    assert _event_page_start_time(body).strftime("%H:%M") == "18:00"
 
 
 def test_furryguides_quick_facts_time_range_accepts_colon_and_minutes():
     from custom_components.chastity_calendar.discovery import _furryguides_time_range
 
-    assert _furryguides_time_range("<b>Time:</b> 12:30 p.m. – 6:00 p.m.") is not None
-    assert _furryguides_time_range("<b>Time:</b> 12:30 p.m. – 6:00 p.m.").strftime("%H:%M") == "12:30"
+    assert _event_page_start_time("<b>Time:</b> 12:30 p.m. – 6:00 p.m.") is not None
+    assert _event_page_start_time("<b>Time:</b> 12:30 p.m. – 6:00 p.m.").strftime("%H:%M") == "12:30"
 
 
 def test_find_future_date_prefers_earliest_explicit_future_date():
