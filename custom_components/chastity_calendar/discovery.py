@@ -774,7 +774,11 @@ async def _fetch_gaysaunas_directory_events(session, today: datetime) -> list[di
             if not isinstance(raw_start, str):
                 continue
             try:
-                start = datetime.fromisoformat(raw_start.replace("Z", "+00:00")).replace(tzinfo=None)
+                start = datetime.fromisoformat(raw_start.replace("Z", "+00:00"))
+                # Keep the source timezone, then convert aware timestamps to
+                # Home Assistant local time instead of treating UTC as local.
+                if start.tzinfo is not None and start.utcoffset() is not None:
+                    start = dt_util.as_local(start)
             except ValueError:
                 start = _find_future_date(raw_start, today)
             if start is None or not lower <= start.date() <= upper:
