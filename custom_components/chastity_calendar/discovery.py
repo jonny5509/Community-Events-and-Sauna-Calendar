@@ -465,7 +465,29 @@ async def _fetch_structured_event_name(session, url: str) -> str:
                     if isinstance(name, str) and name.strip():
                         names.append(html.unescape(name).strip())
                 stack.extend(item for key, item in value.items() if key not in {"@context"})
-    return names[0] if names else ""
+    if names:
+        return names[0]
+
+    # Some FurDar pages may not expose schema.org Event metadata. Prefer the
+    # visible event heading, then Open Graph/title metadata as a fallback.
+    heading = re.search(r"<h1\\b[^>]*>(.*?)</h1\\s*>", body, re.I | re.S)
+    if heading:
+        visible_name = re.sub(r"<[^>]+>", " ", heading.group(1))
+        visible_name = re.sub(r"\\s+", " ", html.unescape(visible_name)).strip()
+        if visible_name:
+            return visible_name
+    for pattern in (
+        r'<meta\\b[^>]*property=["\\']og:title["\\'][^>]*content=["\\']([^"\\']+)["\\']',
+        r'<meta\\b[^>]*content=["\\']([^"\\']+)["\\'][^>]*property=["\\']og:title["\\']',
+        r"<title\\b[^>]*>(.*?)</title\\s*>",
+    ):
+        match = re.search(pattern, body, re.I | re.S)
+        if match:
+            visible_name = re.sub(r"<[^>]+>", " ", match.group(1))
+            visible_name = re.sub(r"\\s+", " ", html.unescape(visible_name)).strip()
+            if visible_name:
+                return visible_name
+    return ""
 
 async def _fetch_rss(session, category, query, country, location, country_code, today, search_location=None):
     """Fetch one public Google News RSS search."""
