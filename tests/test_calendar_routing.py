@@ -228,3 +228,25 @@ def test_non_gay_sauna_events_remain_out_of_lgbtq_calendar():
 
     assert "General Sauna Session" in _summaries("sauna", [event])
     assert "General Sauna Session" not in _summaries("pride", [event])
+
+
+def test_midnight_date_only_discovery_renders_as_all_day():
+    """A date-only source timestamp must not appear as a midnight timed event."""
+    event = {
+        "summary": "Date-only sauna event",
+        "start": datetime(2027, 6, 14),
+        "end": datetime(2027, 6, 15),
+        "description": "All day",
+        "category": "sauna",
+        "categories": ["sauna"],
+        "location": "",
+        "all_day": True,
+    }
+    sauna = ChastityChallengeCalendar(SimpleNamespace(data=[event]), "sauna", "test-entry")
+    result = sauna._events_between(date(2027, 6, 1), date(2027, 7, 1))
+
+    assert len(result) == 1
+    assert type(result[0].start) is date
+    assert type(result[0].end) is date
+    assert result[0].start == date(2027, 6, 14)
+    assert result[0].end == date(2027, 6, 15)
