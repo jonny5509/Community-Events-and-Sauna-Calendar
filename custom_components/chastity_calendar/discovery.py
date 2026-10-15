@@ -314,7 +314,7 @@ def _record(title, start, url, category, description, source="Google News RSS", 
     }
 
 
-async def _fetch_structured_event_date(session, url: str, today: datetime):
+async def _fetch_structured_event_date(session, url: str, today: datetime, include_end: bool = False):
     """Extract an explicit event start date from a public event page."""
     if urlsplit(url).scheme not in {"http", "https"}:
         return None
@@ -376,26 +376,41 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
     # events are not incorrectly emitted as all-day events.
     time_match = re.search(
         r"\bTime\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)"
-        r"(?:\s*(?:-|–|—|to)\s*\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)?",
+        r"(?:\s*(?:-|–|—|to)\s*(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)?)?",
         normalized_text,
         re.I,
     )
     if time_match:
         date_candidate = min(candidates, key=lambda item: item.date()) if candidates else _find_future_date(normalized_text, today)
         if date_candidate:
-            time_text = re.sub(r"\s+", " ", time_match.group(1)).replace(".", "").upper()
-            parsed_time = None
-            for time_format in ("%I:%M %p", "%I %p"):
-                try:
-                    parsed_time = datetime.strptime(time_text, time_format).time()
-                    break
-                except ValueError:
-                    continue
+            def parse_clock(raw_time):
+                if not raw_time:
+                    return None
+                time_text = re.sub(r"\s+", " ", raw_time).replace(".", "").upper()
+                for time_format in ("%I:%M %p", "%I %p"):
+                    try:
+                        return datetime.strptime(time_text, time_format).time()
+                    except ValueError:
+                        continue
+                return None
+
+            parsed_time = parse_clock(time_match.group(1))
             if parsed_time:
                 timed_start = datetime.combine(date_candidate.date(), parsed_time)
                 if (today - timedelta(days=180)).date() <= timed_start.date() <= (today + timedelta(days=730)).date():
+                    if include_end:
+                        parsed_end_time = parse_clock(time_match.group(2))
+                        # A lone published start time runs until midnight.
+                        timed_end = (
+                            datetime.combine(date_candidate.date(), parsed_end_time)
+                            if parsed_end_time else datetime.combine(date_candidate.date() + timedelta(days=1), datetime.min.time())
+                        )
+                        if timed_end <= timed_start:
+                            timed_end += timedelta(days=1)
+                        return timed_start, timed_end
                     return timed_start
-    return min(candidates, key=lambda item: item.date()) if candidates else None
+    fallback = min(candidates, key=lambda item: item.date()) if candidates else None
+    return (fallback, None) if include_end else fallback
 
 def _extract_furryguides_page_name(body: str, url: str) -> str:
     """Read the group name from the heading on a FurryGuides event page."""
@@ -1129,13 +1144,16 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
                 # The FurryGuides listing supplies the event date, while the
                 # detail page's "Time" field / Event startDate supplies its
                 # actual start time. Prefer that explicit datetime when present.
-                detail_start = await _fetch_structured_event_date(session, event_url, today)
+                detail_result = await _fetch_structured_event_date(session, event_url, today, include_end=True)
+                detail_start, detail_end = detail_result if isinstance(detail_result, tuple) else (detail_result, None)
                 if detail_start is not None:
                     start = detail_start
-                candidates.append((title, start, event_url, plain, "", "extracted_from_source_listing"))
+                candidates.append((title, start, event_url, plain, "", "extracted_from_source_listing", detail_end))
         results = []
         seen = set()
-        for title, start, event_url, description, location, confidence in candidates:
+        for candidate in candidates:
+            title, start, event_url, description, location, confidence = candidate[:6]
+            detail_end = candidate[6] if len(candidate) > 6 else None
             key = (re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip(), start.date())
             if key in seen:
                 continue
@@ -1145,6 +1163,12 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
                 f"Furry community event listing from {source}. {description[:800]} Verify dates, venue and access details with the organiser.",
                 source=source, location=location, date_confidence=confidence,
             )
+            if detail_end is not None:
+                record["end"] = detail_end
+            elif start.time() != datetime.min.time() and "furryguides.com" in event_url.casefold():
+                # If the source gives a start time but no end time, keep the event
+                # visible from its start until midnight rather than assuming 2 hours.
+                record["end"] = datetime.combine(start.date() + timedelta(days=1), datetime.min.time())
             record["categories"] = sorted(set(record.get("categories", [])) | {"furry", "community"})
             results.append(record)
         _LOGGER.info("%s yielded %s dated furry events", source, len(results))
