@@ -371,9 +371,12 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
     # explicit start time with the event date from metadata or visible text.
     visible_text = html.unescape(re.sub(r"<[^>]+>", " ", body))
     normalized_text = re.sub(r"\s+", " ", visible_text)
+    # FurryGuides sometimes publishes only a start time (for example,
+    # "Time 2 PM") instead of a start/end range. Accept either form so timed
+    # events are not incorrectly emitted as all-day events.
     time_match = re.search(
-        r"\bTime\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)\s*(?:-|–|—|to)\s*"
-        r"\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?",
+        r"\bTime\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)"
+        r"(?:\s*(?:-|–|—|to)\s*\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)?",
         normalized_text,
         re.I,
     )
