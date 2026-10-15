@@ -145,8 +145,8 @@ def _find_future_date(text: str, today: datetime):
     # Some convention directories render dates compactly in labels, e.g. SEP262026.
     # Insert separators so the normal date parser can handle those listings too.
     text = re.sub(
-        r"\\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\.?([0-9]{1,2})(20[0-9]{2})\\b",
-        r"\\1 \\2 \\3", text, flags=re.IGNORECASE,
+        r"\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?([0-9]{1,2})(20[0-9]{2})\b",
+        r"\1 \2 \3", text, flags=re.IGNORECASE,
     )
     found_dates = []
     month_names = "January|February|March|April|May|June|July|August|September|October|November|December"
