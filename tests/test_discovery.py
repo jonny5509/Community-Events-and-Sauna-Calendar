@@ -196,6 +196,26 @@ def test_normalise_url_removes_tracking_parameters_and_trailing_slash():
     ) == "https://example.test/events/pride"
 
 
+def test_furryguides_quick_facts_time_range_extracts_start_time():
+    from custom_components.chastity_calendar.discovery import _furryguides_time_range
+
+    body = """
+    <ul class="quick-facts">
+      <li><span>Date</span><span>October 17, 2026</span></li>
+      <li><span>Location</span><span>Birmingham</span></li>
+      <li><span>Time</span><span>12 PM - 6 PM</span></li>
+    </ul>
+    """
+    assert _furryguides_time_range(body).strftime("%H:%M") == "12:00"
+
+
+def test_furryguides_quick_facts_time_range_accepts_colon_and_minutes():
+    from custom_components.chastity_calendar.discovery import _furryguides_time_range
+
+    assert _furryguides_time_range("<b>Time:</b> 12:30 p.m. – 6:00 p.m.") is not None
+    assert _furryguides_time_range("<b>Time:</b> 12:30 p.m. – 6:00 p.m.").strftime("%H:%M") == "12:30"
+
+
 def test_find_future_date_prefers_earliest_explicit_future_date():
     today = datetime(2026, 10, 13)
     assert _find_future_date(
