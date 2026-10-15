@@ -403,11 +403,11 @@ def _extract_furryguides_page_name(body: str, url: str) -> str:
         return ""
 
     # The main heading is the canonical group name shown to visitors.
-    match = re.search(r"<h1\\b[^>]*>(.*?)</h1\\s*>", body, re.IGNORECASE | re.DOTALL)
+    match = re.search(r"<h1\b[^>]*>(.*?)</h1\s*>", body, re.IGNORECASE | re.DOTALL)
     if not match:
         return ""
     name = html.unescape(re.sub(r"<[^>]+>", " ", match.group(1)))
-    return re.sub(r"\\s+", " ", name).strip()[:180]
+    return re.sub(r"\s+", " ", name).strip()[:180]
 
 
 async def _fetch_structured_event_name(session, url: str) -> str:
