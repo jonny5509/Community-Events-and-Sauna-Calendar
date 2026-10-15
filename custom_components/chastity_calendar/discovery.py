@@ -365,6 +365,33 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
             parsed = _find_future_date(str(raw), today)
         if parsed and (today - timedelta(days=180)).date() <= parsed.date() <= (today + timedelta(days=730)).date():
             candidates.append(parsed)
+
+    # FurryGuides publishes the schedule in its "Quick Facts" list, where
+    # "Time" is followed by a range such as "12 PM - 6 PM". Combine the
+    # explicit start time with the event date from metadata or visible text.
+    visible_text = html.unescape(re.sub(r"<[^>]+>", " ", body))
+    normalized_text = re.sub(r"\s+", " ", visible_text)
+    time_match = re.search(
+        r"\bTime\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)\s*(?:-|–|—|to)\s*"
+        r"\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?",
+        normalized_text,
+        re.I,
+    )
+    if time_match:
+        date_candidate = min(candidates, key=lambda item: item.date()) if candidates else _find_future_date(normalized_text, today)
+        if date_candidate:
+            time_text = re.sub(r"\s+", " ", time_match.group(1)).replace(".", "").upper()
+            parsed_time = None
+            for time_format in ("%I:%M %p", "%I %p"):
+                try:
+                    parsed_time = datetime.strptime(time_text, time_format).time()
+                    break
+                except ValueError:
+                    continue
+            if parsed_time:
+                timed_start = datetime.combine(date_candidate.date(), parsed_time)
+                if (today - timedelta(days=180)).date() <= timed_start.date() <= (today + timedelta(days=730)).date():
+                    return timed_start
     return min(candidates, key=lambda item: item.date()) if candidates else None
 
 async def _fetch_structured_event_name(session, url: str) -> str:
