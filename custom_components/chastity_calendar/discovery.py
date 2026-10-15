@@ -73,6 +73,18 @@ SEARCHES = (
     ("kink", '"findom" OR "financial domination" community event dates'),
     ("kink", '"furry meetup" OR "furry convention" OR furmeet events dates'),
     ("kink", '"furry social" OR "furry gathering" OR "furry festival" dates'),
+
+    # Platform-specific searches supplement the public convention directories below.
+    # These platforms do not all expose stable, anonymous event-calendar pages,
+    # so discover listings through indexed public pages rather than scraping private feeds.
+    ("kink", 'site:meetup.com furry (furmeet OR "furry meetup" OR convention)'),
+    ("kink", 'site:eventbrite.co.uk furry (furmeet OR convention OR meetup)'),
+    ("kink", 'site:facebook.com/events furry (furmeet OR convention OR meetup)'),
+    ("kink", 'site:reddit.com/r/furry (furmeet OR convention OR meetup) dates'),
+    ("kink", 'site:howlr.app (event OR meetup OR furmeet) furry'),
+    ("kink", 'site:en.wikifur.com/wiki furry convention UK dates'),
+    ("kink", 'site:discord.com/invite furry UK furmeet event'),
+    ("kink", 'site:disboard.org furry UK meetup community'),
     ("kink", '"fetish fashion" OR latex fashion event dates'),
     ("kink", '"International Fetish Day" OR "World BDSM Day" dates'),
     ("kink", '"straight kink" OR heterosexual BDSM OR "straight fetish" events dates'),
@@ -142,6 +154,12 @@ def _find_future_date(text: str, today: datetime):
     dates are resolved to the nearest eligible occurrence. Numeric dates use
     UK-style day/month/year; ISO dates remain unambiguous.
     """
+    # Some convention directories render dates compactly in labels, e.g. SEP262026.
+    # Insert separators so the normal date parser can handle those listings too.
+    text = re.sub(
+        r"\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?([0-9]{1,2})(20[0-9]{2})\b",
+        r"\1 \2 \3", text, flags=re.IGNORECASE,
+    )
     found_dates = []
     month_names = "January|February|March|April|May|June|July|August|September|October|November|December"
     month_abbrevs = "Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?"
@@ -981,10 +999,11 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
 
 
 async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
-    """Read public furry event listings from FurryCons and FurDar UK pages."""
+    """Read public furry event listings from UK directories and England listings."""
     sources = (
         ("FurryCons.com", "https://furrycons.com/calendar/calendar.php?loc=uk"),
-        ("FurDar", "https://furdar.org/country/GB/"),
+        ("FurryGuides UK", "https://furryguides.com/conventions/countries/united-kingdom"),
+        ("FurDar England", "https://furdar.org/area/1-england/"),
     )
     lower = (today - timedelta(days=180)).date()
     upper = (today + timedelta(days=730)).date()

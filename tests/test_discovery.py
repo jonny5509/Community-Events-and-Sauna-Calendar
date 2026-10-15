@@ -374,3 +374,18 @@ def test_deduplicate_preserves_longer_multi_day_span():
 
     assert len(result) == 1
     assert result[0]["end"] == start + timedelta(days=3)
+
+
+
+def test_find_future_date_parses_compact_furryguides_listing_dates():
+    today = datetime(2026, 10, 15)
+
+    assert _find_future_date("OCT172026 Birmingham Furs", today) == datetime(2026, 10, 17)
+    assert _find_future_date("SEP262027 Cambridge Furs", today) == datetime(2027, 9, 26)
+
+
+def test_find_future_date_parses_furryguides_multi_day_convention_ranges():
+    today = datetime(2026, 10, 15)
+
+    assert _find_future_date("NOV 20 2026 Furcation Brean", today) == datetime(2026, 11, 20)
+    assert _find_future_date("Pawsome October 1 – 5, 2026 Gloucester", today) == datetime(2026, 10, 1)
