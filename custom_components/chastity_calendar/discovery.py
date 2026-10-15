@@ -314,7 +314,7 @@ def _record(title, start, url, category, description, source="Google News RSS", 
     }
 
 
-async def _fetch_structured_event_date(session, url: str, today: datetime):
+async def _fetch_structured_event_date(session, url: str, today: datetime, fallback_date: datetime | None = None):
     """Extract an explicit event start date from a public event page."""
     if urlsplit(url).scheme not in {"http", "https"}:
         return None
@@ -367,32 +367,30 @@ async def _fetch_structured_event_date(session, url: str, today: datetime):
             candidates.append(parsed)
 
     # FurryGuides publishes the schedule in its "Quick Facts" list, where
-    # "Time" is followed by a range such as "12 PM - 6 PM". Combine the
-    # explicit start time with the event date from metadata or visible text.
-    visible_text = html.unescape(re.sub(r"<[^>]+>", " ", body))
-    normalized_text = re.sub(r"\s+", " ", visible_text)
-    time_match = re.search(
-        r"\bTime\s+(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)\s*(?:-|–|—|to)\s*"
-        r"\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?",
-        normalized_text,
-        re.I,
-    )
-    if time_match:
-        date_candidate = min(candidates, key=lambda item: item.date()) if candidates else _find_future_date(normalized_text, today)
+    # "Time" is followed by a range such as "12 PM - 6 PM". Use the event
+    # date from structured metadata, visible page text, or the listing fallback.
+    parsed_time = _furryguides_time_range(body)
+    if parsed_time:
+        date_candidate = (
+            min(candidates, key=lambda item: item.date())
+            if candidates
+            else fallback_date or _find_future_date(normalized_text_from_html(body), today)
+        )
         if date_candidate:
-            time_text = re.sub(r"\s+", " ", time_match.group(1)).replace(".", "").upper()
-            parsed_time = None
-            for time_format in ("%I:%M %p", "%I %p"):
-                try:
-                    parsed_time = datetime.strptime(time_text, time_format).time()
-                    break
-                except ValueError:
-                    continue
-            if parsed_time:
-                timed_start = datetime.combine(date_candidate.date(), parsed_time)
-                if (today - timedelta(days=180)).date() <= timed_start.date() <= (today + timedelta(days=730)).date():
-                    return timed_start
-    return min(candidates, key=lambda item: item.date()) if candidates else None
+            timed_start = datetime.combine(date_candidate.date(), parsed_time)
+            if (today - timedelta(days=180)).date() <= timed_start.date() <= (today + timedelta(days=730)).date():
+                return timed_start
+    if candidates:
+        candidate = min(candidates, key=lambda item: item.date())
+        if (
+            candidate.time() == datetime.min.time()
+            and fallback_date is not None
+            and fallback_date.date() == candidate.date()
+            and fallback_date.time() != datetime.min.time()
+        ):
+            return fallback_date
+        return candidate
+    return fallback_date
 
 async def _fetch_structured_event_name(session, url: str) -> str:
     """Extract a canonical event name from schema.org Event metadata."""
@@ -1101,16 +1099,19 @@ async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
                     event_url = urljoin(url, href)
                     break
             if title:
-                # The FurryGuides listing supplies the event date, while the
-                # detail page's "Time" field / Event startDate supplies its
-                # actual start time. Prefer that explicit datetime when present.
-                detail_start = await _fetch_structured_event_date(session, event_url, today)
-                if detail_start is not None:
-                    start = detail_start
                 candidates.append((title, start, event_url, plain, "", "extracted_from_source_listing"))
         results = []
         seen = set()
         for title, start, event_url, description, location, confidence in candidates:
+            # Every FurryGuides event can carry its real schedule on its detail
+            # page. Enrich both JSON-LD candidates and listing-card candidates;
+            # previously only listing-card candidates were inspected.
+            if urlsplit(event_url).netloc.casefold().endswith("furryguides.com"):
+                detail_start = await _fetch_structured_event_date(
+                    session, event_url, today, fallback_date=start
+                )
+                if detail_start is not None:
+                    start = detail_start
             key = (re.sub(r"[^a-z0-9]+", " ", title.casefold()).strip(), start.date())
             if key in seen:
                 continue
