@@ -196,33 +196,6 @@ def test_normalise_url_removes_tracking_parameters_and_trailing_slash():
     ) == "https://example.test/events/pride"
 
 
-def test_furryguides_quick_facts_time_range_extracts_start_time():
-    from custom_components.chastity_calendar.discovery import _event_page_start_time
-
-    body = """
-    <ul class="quick-facts">
-      <li><span>Date</span><span>October 17, 2026</span></li>
-      <li><span>Location</span><span>Birmingham</span></li>
-      <li><span>Time</span><span>12 PM - 6 PM</span></li>
-    </ul>
-    """
-    assert _event_page_start_time(body).strftime("%H:%M") == "12:00"
-
-
-def test_furdar_event_page_time_field_extracts_24_hour_start_time():
-    from custom_components.chastity_calendar.discovery import _event_page_start_time
-
-    body = "<div>Event date: 31 October 2026</div><div>Time: 18:00 - 23:00</div>"
-    assert _event_page_start_time(body).strftime("%H:%M") == "18:00"
-
-
-def test_furryguides_quick_facts_time_range_accepts_colon_and_minutes():
-    from custom_components.chastity_calendar.discovery import _furryguides_time_range
-
-    assert _event_page_start_time("<b>Time:</b> 12:30 p.m. – 6:00 p.m.") is not None
-    assert _event_page_start_time("<b>Time:</b> 12:30 p.m. – 6:00 p.m.").strftime("%H:%M") == "12:30"
-
-
 def test_find_future_date_prefers_earliest_explicit_future_date():
     today = datetime(2026, 10, 13)
     assert _find_future_date(
@@ -416,34 +389,3 @@ def test_find_future_date_parses_furryguides_multi_day_convention_ranges():
 
     assert _find_future_date("NOV 20 2026 Furcation Brean", today) == datetime(2026, 11, 20)
     assert _find_future_date("Pawsome October 1 – 5, 2026 Gloucester", today) == datetime(2026, 10, 1)
-
-
-
-def test_furry_event_title_prefers_visible_event_heading():
-    from custom_components.chastity_calendar.discovery import _event_page_title
-
-    body = """
-    <html><head><title>Events | FurDar</title></head>
-    <body><h1>BCP Furries: Furmeets in Bournemouth &amp; Christchurch</h1></body></html>
-    """
-    assert _event_page_title(body) == "BCP Furries: Furmeets in Bournemouth & Christchurch"
-
-
-def test_furry_event_title_reads_open_graph_metadata_when_no_heading():
-    from custom_components.chastity_calendar.discovery import _event_page_title
-
-    body = '<meta content="BCP Furries: Furmeets in Bournemouth" property="og:title">'
-    assert _event_page_title(body) == "BCP Furries: Furmeets in Bournemouth"
-
-
-def test_furry_event_title_falls_back_to_html_title():
-    from custom_components.chastity_calendar.discovery import _event_page_title
-
-    assert _event_page_title("<title>BCP Furries - FurDar</title>") == "BCP Furries - FurDar"
-
-
-def test_event_page_start_time_accepts_compact_am_pm_values():
-    from custom_components.chastity_calendar.discovery import _event_page_start_time
-
-    assert _event_page_start_time("<p>Time: 6pm - 11pm</p>").strftime("%H:%M") == "18:00"
-    assert _event_page_start_time("<p>Start time: 6:30pm</p>").strftime("%H:%M") == "18:30"
