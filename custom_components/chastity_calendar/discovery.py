@@ -142,6 +142,12 @@ def _find_future_date(text: str, today: datetime):
     dates are resolved to the nearest eligible occurrence. Numeric dates use
     UK-style day/month/year; ISO dates remain unambiguous.
     """
+    # Some convention directories render dates compactly in labels, e.g. SEP262026.
+    # Insert separators so the normal date parser can handle those listings too.
+    text = re.sub(
+        r"\\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\.?([0-9]{1,2})(20[0-9]{2})\\b",
+        r"\\1 \\2 \\3", text, flags=re.IGNORECASE,
+    )
     found_dates = []
     month_names = "January|February|March|April|May|June|July|August|September|October|November|December"
     month_abbrevs = "Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?"
@@ -981,10 +987,11 @@ async def _fetch_sauna52_events(session, today: datetime) -> list[dict]:
 
 
 async def _fetch_furry_directory_events(session, today: datetime) -> list[dict]:
-    """Read public furry event listings from FurryCons and FurDar UK pages."""
+    """Read public furry event listings from UK directories and England listings."""
     sources = (
         ("FurryCons.com", "https://furrycons.com/calendar/calendar.php?loc=uk"),
-        ("FurDar", "https://furdar.org/country/GB/"),
+        ("FurryGuides UK", "https://furryguides.com/conventions/countries/united-kingdom"),
+        ("FurDar England", "https://furdar.org/area/1-england/"),
     )
     lower = (today - timedelta(days=180)).date()
     upper = (today + timedelta(days=730)).date()
