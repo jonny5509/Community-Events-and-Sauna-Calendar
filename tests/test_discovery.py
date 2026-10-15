@@ -416,3 +416,27 @@ def test_find_future_date_parses_furryguides_multi_day_convention_ranges():
 
     assert _find_future_date("NOV 20 2026 Furcation Brean", today) == datetime(2026, 11, 20)
     assert _find_future_date("Pawsome October 1 – 5, 2026 Gloucester", today) == datetime(2026, 10, 1)
+
+
+
+def test_furry_event_title_prefers_visible_event_heading():
+    from custom_components.chastity_calendar.discovery import _event_page_title
+
+    body = """
+    <html><head><title>Events | FurDar</title></head>
+    <body><h1>BCP Furries: Furmeets in Bournemouth &amp; Christchurch</h1></body></html>
+    """
+    assert _event_page_title(body) == "BCP Furries: Furmeets in Bournemouth & Christchurch"
+
+
+def test_furry_event_title_reads_open_graph_metadata_when_no_heading():
+    from custom_components.chastity_calendar.discovery import _event_page_title
+
+    body = '<meta content="BCP Furries: Furmeets in Bournemouth" property="og:title">'
+    assert _event_page_title(body) == "BCP Furries: Furmeets in Bournemouth"
+
+
+def test_furry_event_title_falls_back_to_html_title():
+    from custom_components.chastity_calendar.discovery import _event_page_title
+
+    assert _event_page_title("<title>BCP Furries - FurDar</title>") == "BCP Furries - FurDar"
