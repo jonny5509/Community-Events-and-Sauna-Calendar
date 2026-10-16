@@ -276,17 +276,6 @@ def _is_lgbtq_event(item: dict) -> bool:
     return any(term in text for term in terms)
 
 
-def _is_gay_sauna_event(item: dict) -> bool:
-    """Return whether the event comes from a source specifically listing gay saunas."""
-    source = str(item.get("source", "")).casefold()
-    url = str(item.get("url", "")).casefold()
-    return (
-        "number 52 sauna official website" in source
-        or "gaysaunas.co.uk" in url
-        or "gay saunas uk directory" in source
-    )
-
-
 def _is_kink_event(item: dict) -> bool:
     """Return whether a discovered event is specifically kink/fetish related."""
     keywords = (
@@ -338,16 +327,13 @@ class ChastityChallengeCalendar(CalendarEntity):
         self.calendar_type = calendar_type
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
-            name="Community Events & Sauna Calendar",
-            manufacturer="Community Events & Sauna Calendar",
+            name="Community Events Calendar",
+            manufacturer="Community Events Calendar",
             configuration_url="https://github.com/jonny5509/community-events-sauna-calendar",
         )
         if calendar_type == "pride":
             self._attr_name = "LGBTQ+ Events"
             self._attr_icon = "mdi:flag"
-        elif calendar_type == "sauna":
-            self._attr_name = "Sauna Events"
-            self._attr_icon = "mdi:hot-tub"
         elif calendar_type == "kink":
             self._attr_name = "Kink & Fetish Events"
             self._attr_icon = "mdi:calendar-heart"
@@ -387,33 +373,15 @@ class ChastityChallengeCalendar(CalendarEntity):
                     events.append(event)
 
         for item in (self.coordinator.data or []):
-            # Keep sauna listings in their own calendar rather than mixing them
-            # into Monthly Events. Pride remains a separate focused calendar.
-            categories = {str(value).casefold() for value in item.get("categories", [])}
-            category = str(item.get("category", "")).casefold()
-            is_sauna = category == "sauna" or "sauna" in categories
             is_lgbtq = _is_lgbtq_event(item)
-            is_gay_sauna = is_sauna and _is_gay_sauna_event(item)
-            # A gay-sauna listing is also relevant to the LGBTQ+ calendar,
-            # even when its title is a generic session name or a kink theme.
-            is_lgbtq = is_lgbtq or is_gay_sauna
             is_kink = _is_kink_event(item)
-
-            # Keep focused discoveries out of the general monthly calendar.
-            # Events can appear in more than one focused calendar when relevant.
-            if self.calendar_type == "monthly" and (is_sauna or is_lgbtq or is_kink):
+            if self.calendar_type == "monthly" and (is_lgbtq or is_kink):
                 continue
-            # Sauna events stay in the Sauna Events calendar. Events at
-            # explicitly identified gay-sauna sources may additionally appear
-            # in LGBTQ+ Events; other focused categories remain exclusive.
-            if self.calendar_type == "sauna":
-                if not is_sauna:
-                    continue
-            elif self.calendar_type == "kink":
-                if not is_kink or is_sauna:
+            if self.calendar_type == "kink":
+                if not is_kink:
                     continue
             elif self.calendar_type == "pride":
-                if not is_lgbtq or ((is_sauna or is_kink) and not is_gay_sauna):
+                if not is_lgbtq or is_kink:
                     continue
             raw_start = item["start"]
             raw_end = item["end"]
@@ -534,11 +502,10 @@ class ChastityChallengeCalendar(CalendarEntity):
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up separate monthly, LGBTQ+, sauna, and kink/fetish calendars."""
+    """Set up separate monthly, LGBTQ+, and kink/fetish calendars."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
         ChastityChallengeCalendar(coordinator, "monthly", entry.entry_id),
         ChastityChallengeCalendar(coordinator, "pride", entry.entry_id),
-        ChastityChallengeCalendar(coordinator, "sauna", entry.entry_id),
         ChastityChallengeCalendar(coordinator, "kink", entry.entry_id),
     ])
