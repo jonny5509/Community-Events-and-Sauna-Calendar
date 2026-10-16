@@ -25,7 +25,7 @@ If the integration is available in the HACS default store, search for **Communit
 If it is not listed yet:
 
 1. Open **HACS → Custom repositories**.
-2. Add `jonny5509/community-events-sauna-calendar` and choose **Integration** as the category.
+2. Add `jonny5509/community-events-calendar` and choose **Integration** as the category.
 3. Download the integration.
 4. Restart Home Assistant.
 5. Go to **Settings → Devices & services → Add integration** and search for **Community Events Calendar**.
