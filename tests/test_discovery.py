@@ -5,11 +5,9 @@ from custom_components.chastity_calendar.discovery import (
     _add_months,
     _category_tags,
     _deduplicate,
-    _is_sauna_event,
     _is_target_event,
     _normalise_url,
     _find_future_date,
-    _gaysaunas_venue_urls,
     _iter_jsonld_events,
     _record,
 )
@@ -48,7 +46,6 @@ def test_target_event_filter_keeps_supported_event_topics():
     start = datetime(2027, 6, 12)
     cases = [
         _event("Newcastle Pride Festival", start),
-        _event("Gay Sauna Theme Night", start),
         _event("Queer BDSM Social", start),
         _event("Leather and Fetish Market", start),
         _event("Non-binary Community Meetup", start),
@@ -138,53 +135,6 @@ def test_deduplicate_does_not_collapse_different_events_on_same_page():
     assert {event["summary"] for event in result} == {"Fetish Night", "Sports Night"}
 
 
-def test_sauna_detection_uses_event_metadata():
-    assert _is_sauna_event({"summary": "Theme Night", "category": "sauna"})
-    assert _is_sauna_event({"summary": "Number 52 Sauna event"})
-    assert not _is_sauna_event({"summary": "Pride Festival", "category": "community"})
-
-
-def test_generic_theme_night_is_not_misclassified_as_sauna():
-    """Generic themed events should not be hidden from the monthly calendar."""
-    tags = _category_tags("community", "80s Theme Night", "A themed social event with music.")
-
-    assert "sauna" not in tags
-
-
-def test_sauna_context_still_classifies_sauna_events():
-    """Explicit sauna wording continues to route events to the sauna calendar."""
-    tags = _category_tags("community", "Theme Night at Number 52 Sauna", "Steam room event.")
-
-    assert "sauna" in tags
-
-
-def test_sauna_search_result_without_sauna_context_is_not_routed_to_sauna_calendar():
-    """A broad search query alone must not classify generic themed nights."""
-    event = _record(
-        "80s Theme Night",
-        datetime(2027, 6, 12),
-        "https://example.test/events/theme-night",
-        "sauna",
-        "A themed social event with music.",
-    )
-
-    assert event["category"] == "community"
-    assert "sauna" not in event["categories"]
-
-
-def test_sauna_search_result_with_explicit_context_is_routed_to_sauna_calendar():
-    """Explicit sauna context remains classified as a sauna event."""
-    event = _record(
-        "Theme Night at Number 52 Sauna",
-        datetime(2027, 6, 12),
-        "https://www.number52sauna.co.uk/our-events/",
-        "sauna",
-        "A themed social event.",
-    )
-
-    assert event["category"] == "sauna"
-    assert "sauna" in event["categories"]
-
 def test_add_months_clamps_end_of_month():
     assert _add_months(datetime(2027, 1, 31), 1) == datetime(2027, 2, 28)
     assert _add_months(datetime(2027, 12, 31), 2) == datetime(2028, 2, 29)
@@ -260,27 +210,11 @@ def test_record_preserves_structured_event_page_date_confidence():
 def test_date_extraction_keeps_recent_past_events_for_calendar_history():
     today = datetime(2026, 10, 14)
     assert _find_future_date("Queer film night on October 1, 2026", today) == datetime(2026, 10, 1)
-    assert _find_future_date("Sauna social on 1 April 2026", today) is None
 
 
 def test_date_extraction_keeps_recent_past_date_without_year():
     today = datetime(2026, 10, 14)
     assert _find_future_date("Pride event on 1 October", today) == datetime(2026, 10, 1)
-
-
-def test_gaysaunas_directory_extracts_individual_venue_pages_only():
-    html = """
-    <a href="/uk/england/">England</a>
-    <a href="/uk/england/north-east/">North East</a>
-    <a href="/uk/england/north-east/number-52-sauna-newcastle/">Number 52</a>
-    <a href="https://gaysaunas.co.uk/uk/england/london/sweatbox-soho/?utm_source=test">Sweatbox</a>
-    <a href="https://example.com/uk/england/london/other-venue/">External</a>
-    <a href="/uk/england/north-east/number-52-sauna-newcastle/">Duplicate</a>
-    """
-    assert _gaysaunas_venue_urls(html) == [
-        "https://gaysaunas.co.uk/uk/england/north-east/number-52-sauna-newcastle/",
-        "https://gaysaunas.co.uk/uk/england/london/sweatbox-soho/",
-    ]
 
 
 def test_gaysaunas_directory_reads_explicit_jsonld_event_dates():
