@@ -8,5 +8,5 @@
   "documentation": "https://github.com/jonny5509/community-events-sauna-calendar",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/jonny5509/community-events-sauna-calendar/issues",
-  "version": "2.4.9"
+  "version": "2.5.0"
 }
