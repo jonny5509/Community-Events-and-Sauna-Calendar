@@ -1,7 +1,7 @@
 class ChastityUpcomingEventsCard extends HTMLElement {
   setConfig(config) {
     if (!config.entities || !Array.isArray(config.entities) || !config.entities.length) {
-      throw new Error("Please configure one or more Community Events & Sauna Calendar entities.");
+      throw new Error("Please configure one or more Community Events Calendar entities.");
     }
     this.config = {
       days: Math.min(Math.max(Number(config.days || 60), 1), 365),
@@ -178,8 +178,8 @@ if (!customElements.get("chastity-upcoming-events-card")) {
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "chastity-upcoming-events-card",
-  name: "Community Events & Sauna Calendar — Upcoming Events",
-  description: "Upcoming community and sauna events with a one-tap Going button.",
+  name: "Community Events Calendar — Upcoming Events",
+  description: "Upcoming community events with a one-tap Going button.",
   getEntitySuggestion: (_hass, entityId) => {
     if (!entityId.startsWith("calendar.chastity_calendar_")) return null;
     return {
