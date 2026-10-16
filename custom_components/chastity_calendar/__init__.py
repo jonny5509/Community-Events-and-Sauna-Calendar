@@ -1,4 +1,4 @@
-"""Community Events & Sauna Calendar integration."""
+"""Community Events Calendar integration."""
 
 import asyncio
 import logging

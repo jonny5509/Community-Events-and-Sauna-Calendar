@@ -1,4 +1,4 @@
-# Community Events & Sauna Calendar
+# Community Events Calendar
 
 A custom [Home Assistant](https://www.home-assistant.io/) integration for discovering public community events and displaying them in focused calendars and sensors.
 
@@ -6,10 +6,9 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration for discov
 
 ## Features
 
-- **Four calendars:** Monthly Events, LGBTQ+ Events, Sauna Events, and Kink & Fetish Events.
+- **Three calendars:** Monthly Events, LGBTQ+ Events, and Kink & Fetish Events.
 - **Event sensors:** ongoing and next monthly event, past and next LGBTQ+ event, and next-event details for LGBTQIA+ categories exposed through the `next_lgbtq_event` sensor attributes.
-- **Community-interest sensors:** next furry event, next kink/fetish event, and next sauna event.
-- **Nearest Sauna:** looks for mapped sauna venues within 30 km of the configured location and reports distance, address, website, phone, map link, and other nearby listings when available.
+- **Community-interest sensors:** next furry event and next kink/fetish event.
 - **Event Hub buttons:** create notifications with next-event details and map links when source and location data are available.
 - **Personal attendance tracking:** save Interested, Going, or Not going for individual event occurrences.
 - **Going reminders:** persist attendance choices and send a Home Assistant dashboard notification plus notifications to configured Home Assistant mobile apps exactly 24 hours before an event starts.
@@ -21,7 +20,7 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration for discov
 
 ### HACS
 
-If the integration is available in the HACS default store, search for **Community Events & Sauna Calendar** and download it.
+If the integration is available in the HACS default store, search for **Community Events Calendar** and download it.
 
 If it is not listed yet:
 
@@ -29,19 +28,19 @@ If it is not listed yet:
 2. Add `jonny5509/community-events-sauna-calendar` and choose **Integration** as the category.
 3. Download the integration.
 4. Restart Home Assistant.
-5. Go to **Settings → Devices & services → Add integration** and search for **Community Events & Sauna Calendar**.
+5. Go to **Settings → Devices & services → Add integration** and search for **Community Events Calendar**.
 
 ### Manual installation
 
 1. Copy `custom_components/chastity_calendar` into your Home Assistant `config/custom_components/` directory.
 2. Restart Home Assistant.
-3. Open **Settings → Devices & services → Add integration** and add **Community Events & Sauna Calendar**.
+3. Open **Settings → Devices & services → Add integration** and add **Community Events Calendar**.
 
-The internal integration domain remains `chastity_calendar` to preserve existing configuration and retained entity IDs. The category-only sensors for lesbian, gay, bisexual, transgender, queer, intersex, asexual, pansexual, non-binary, aromantic, genderfluid, and sapphic events are consolidated into the `next_lgbtq_event` sensor's `next_events_by_category` attribute. On upgrade, the integration removes those retired category-only entity registry entries; update dashboards that referenced them to read the consolidated attribute instead. The dedicated furry, kink, and sauna sensors remain.
+The internal integration domain remains `chastity_calendar` to preserve existing configuration and retained entity IDs.
 
 ### Upcoming Events dashboard card
 
-The optional **Community Events & Sauna Calendar — Upcoming Events** Lovelace card lists upcoming events from selected calendar entities and adds a one-tap **Going** button beside each event. Attendance choices are saved by the integration.
+The optional **Community Events Calendar — Upcoming Events** Lovelace card lists upcoming events from selected calendar entities and adds a one-tap **Going** button beside each event. Attendance choices are saved by the integration.
 
 1. Copy `www/chastity-upcoming-events-card.js` into your Home Assistant `config/www/chastity-upcoming-events-card.js`.
 2. In **Settings → Dashboards → Resources**, add `/local/chastity-upcoming-events-card.js` as a **JavaScript module**.
@@ -55,7 +54,6 @@ max_events: 30
 entities:
   - calendar.chastity_calendar_monthly
   - calendar.chastity_calendar_pride
-  - calendar.chastity_calendar_sauna
   - calendar.chastity_calendar_kink
 ```
 
@@ -65,7 +63,7 @@ The card uses Home Assistant's calendar event API and the `chastity_calendar.set
 
 During setup, choose a country and then select any available region, county, or district options. Enter your town or city as free text. If optional location lists are unavailable, skip them and enter the city manually.
 
-The configured location is used to improve event relevance and find nearby sauna venues. The nearest-sauna sensor uses the configured location, **not live device GPS**, and refreshes every three hours at 00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, and 21:00 Home Assistant local time.
+The configured location is used to improve event relevance.
 
 ### Optional Ticketmaster support
 
@@ -85,7 +83,7 @@ Credentials are stored with the Home Assistant config entry. Use your own creden
 
 ## Event discovery and calendars
 
-The integration searches for publicly indexed LGBTQ+ and Pride events, community meetups, festivals, conventions, arts and music events, sauna events, and kink/fetish-related events. Searches may include leather, rubber/latex, rope and shibari, pup/pet play, chastity, fetish fashion, furry communities, and related social events.
+The integration searches for publicly indexed LGBTQ+ and Pride events, community meetups, festivals, conventions, arts and music events, and kink/fetish-related events. Searches may include leather, rubber/latex, rope and shibari, pup/pet play, chastity, fetish fashion, furry communities, and related social events.
 
 Searches can use indexed results from event platforms and community calendars. A source name in a search query does **not** mean the integration directly connects to or officially partners with that site.
 
@@ -100,10 +98,10 @@ Example service action (replace the title, start time, and URL with the event's 
 ```yaml
 action: chastity_calendar.set_event_attendance
 data:
-  summary: Fetish Night at Number 52 Sauna
+  summary: Local Community Event
   start: "2026-11-05T18:00:00+00:00"
   status: going
-  url: "https://www.number52sauna.co.uk/our-events/"
+  url: "https://example.com/event"
 ```
 
 Use `status: interested` to save a maybe, or `status: not_going` to record that you will not attend. Include the exact start date/time for that occurrence; use an ISO date for an all-day event. The integration creates a persistent dashboard notification and sends phone notifications through configured `notify.mobile_app_*` services. At least one Home Assistant mobile app must be registered for phone delivery. This service stores your choice, but it does not add interactive attendance controls directly inside Home Assistant's standard calendar card; you can call it from Developer Tools → Actions or a dashboard script/button.
@@ -116,13 +114,7 @@ Home Assistant integrations cannot automatically install or modify your dashboar
 2. Import or copy its cards using your dashboard's **Raw configuration editor**.
 3. Check **Developer tools → States** and adjust entity IDs if Home Assistant assigned different ones.
 
-The example includes the calendars, event and sauna sensors, and Event Hub buttons. It is a starting template; customise it to suit your dashboard.
-
-## Sauna lookup details
-
-The nearest-sauna sensor searches OpenStreetMap within 30 km. If no nearby venue is returned, it can use a small maintained fallback index based on the [Gay Sauna Guide UK directory](https://www.gaysaunaguide.net/gay-saunas-in-the-uk/) and geocode entries matching the configured town or city. Number 52 Sauna in Newcastle also has a separate address-based fallback.
-
-Fallback entries are maintained in the integration and are not scraped from the directory at runtime. They may become outdated, and results depend on geocoding services. Venue details should be checked before travelling.
+The example includes the calendars, event sensors, and Event Hub buttons. It is a starting template; customise it to suit your dashboard.
 
 ## Limitations
 
@@ -145,7 +137,7 @@ If the dashboard example does not work, confirm the actual entity IDs under **De
 
 ## Privacy
 
-Configured country and location terms are sent to Google News RSS; if Ticketmaster is enabled, search terms and country code are also sent to Ticketmaster. Nearest-sauna lookups use OpenStreetMap-related services. Do not put private information in location fields or publish API keys.
+Configured country and location terms are sent to Google News RSS; if Ticketmaster is enabled, search terms and country code are also sent to Ticketmaster.  Do not put private information in location fields or publish API keys.
 
 ## Contributing
 

@@ -5,7 +5,7 @@ views:
     icon: mdi:calendar-star
     cards:
       - type: markdown
-        title: Community Events & Sauna Calendar
+        title: Community Events Calendar
         content: >
           Browse the calendars below. Use the action controls to show event
           information and map directions in a persistent notification. Links
@@ -14,14 +14,8 @@ views:
         title: Event Hub controls
         show_header_toggle: false
         entities:
-          - entity: button.community_events_sauna_calendar_next_event_information
             name: Next event information
-          - entity: button.community_events_sauna_calendar_next_event_directions
             name: Next event directions
-          - entity: button.community_events_sauna_calendar_next_sauna_event_information
-            name: Next sauna event information
-          - entity: button.community_events_sauna_calendar_next_sauna_event_directions
-            name: Next sauna event directions
       - type: entities
         title: Calendar status
         show_header_toggle: false
@@ -30,8 +24,6 @@ views:
             name: Monthly Events
           - entity: sensor.lgbtq_events
             name: LGBTQ+ Events
-          - entity: sensor.sauna_events
-            name: Sauna Events
           - entity: sensor.kink_fetish_events
             name: Kink & Fetish Events
       - type: entities
@@ -40,10 +32,6 @@ views:
         entities:
           - entity: sensor.next_lgbtq_event
             name: Next LGBTQ+ event
-          - entity: sensor.next_sauna_event
-            name: Next sauna event
-          - entity: sensor.nearest_sauna
-            name: Nearest sauna
           - entity: sensor.ongoing_month_event
             name: Ongoing monthly event
           - entity: sensor.next_month_event
@@ -71,12 +59,12 @@ views:
           - calendar.monthly_events
           - calendar.lgbtq_events
       - type: calendar
-        title: Sauna events
         initial_view: listWeek
         entities:
-          - calendar.sauna_events
       - type: calendar
         title: Kink & Fetish events
         initial_view: listWeek
         entities:
           - calendar.kink_fetish_events
+
+

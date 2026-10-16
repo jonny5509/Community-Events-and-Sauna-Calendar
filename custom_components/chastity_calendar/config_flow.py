@@ -1,4 +1,4 @@
-"""Config and options flow for Community Events & Sauna Calendar."""
+"""Config and options flow for Community Events Calendar."""
 
 import logging
 from urllib.parse import quote
@@ -518,7 +518,7 @@ class ChastityCalendarConfigFlow(_LocationFlow, config_entries.ConfigFlow, domai
 
     def _finish_location(self):
         return self.async_create_entry(
-            title="Community Events & Sauna Calendar", data=_location_fields(self._location_data)
+            title="Community Events Calendar", data=_location_fields(self._location_data)
         )
 
     @staticmethod

@@ -1,4 +1,4 @@
-"""Event Hub controls for the next discovered event and sauna event."""
+"""Event Hub controls for the next discovered event."""
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -58,8 +58,6 @@ class EventHubButton(ButtonEntity):
             searchable = " ".join(str(item.get(key, "")) for key in (
                 "summary", "description", "category", "location"
             )) + " " + " ".join(str(value) for value in item.get("categories", []))
-            if self.event_kind == "sauna" and "sauna" not in searchable.casefold():
-                continue
             matches.append((start, item))
         return min(matches, key=lambda pair: pair[0])[1] if matches else None
 
@@ -132,30 +130,10 @@ class NextEventDirectionsButton(EventHubButton):
     action = "directions"
 
 
-class NextSaunaInformationButton(EventHubButton):
-    """Show details and source URL for the next discovered sauna event."""
-
-    _attr_name = "Next Sauna Event Information"
-    _attr_icon = "mdi:hot-tub"
-    event_kind = "sauna"
-    action = "info"
-
-
-class NextSaunaDirectionsButton(EventHubButton):
-    """Show a map link for the next discovered sauna event."""
-
-    _attr_name = "Next Sauna Event Directions"
-    _attr_icon = "mdi:map-marker"
-    event_kind = "sauna"
-    action = "directions"
-
-
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
     """Register Event Hub controls as device-associated button entities."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
         NextEventInformationButton(hass, coordinator, entry),
         NextEventDirectionsButton(hass, coordinator, entry),
-        NextSaunaInformationButton(hass, coordinator, entry),
-        NextSaunaDirectionsButton(hass, coordinator, entry),
     ])
