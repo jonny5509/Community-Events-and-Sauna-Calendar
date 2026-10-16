@@ -6,7 +6,7 @@ set_event_attendance:
       name: Event title
       description: Exact title of the event.
       required: true
-      example: Fetish Night at Number 52 Sauna
+      example: Community Social at Number 52
       selector:
         text:
     start:
