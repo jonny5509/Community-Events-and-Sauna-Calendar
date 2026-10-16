@@ -259,6 +259,31 @@ def _normalise_url(url: str) -> str:
         return urlunsplit((p.scheme.lower(), p.netloc.lower(), p.path.rstrip("/"), "", ""))
     except ValueError: return url.strip()
 
+def _iter_jsonld_events(body: str):
+    """Yield Schema.org Event objects from JSON-LD without depending on HTML layout."""
+    pattern = re.compile(
+        r"""<script\b[^>]*type=["']application/ld\+json["'][^>]*>(.*?)</script\s*>""",
+        re.I | re.S,
+    )
+    for raw in pattern.findall(body or ""):
+        try:
+            payload = json.loads(html.unescape(raw).strip())
+        except (json.JSONDecodeError, TypeError):
+            continue
+        stack = [payload]
+        while stack:
+            value = stack.pop()
+            if isinstance(value, list):
+                stack.extend(reversed(value))
+            elif isinstance(value, dict):
+                types = value.get("@type", [])
+                if isinstance(types, str):
+                    types = [types]
+                if any(str(kind).casefold() == "event" for kind in types):
+                    yield value
+                stack.extend(item for key, item in value.items() if key not in {"@context"})
+
+
 def _category_tags(category: str, title: str, description: str) -> list[str]:
     """Return overlapping keyword-based category tags."""
     text = f"{category} {title} {description}".casefold()
