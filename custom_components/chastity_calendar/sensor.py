@@ -1,4 +1,4 @@
-"""Focused event sensors and the nearest-sauna venue sensor."""
+"""Focused event sensors for community events."""
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -10,7 +10,7 @@ from homeassistant.helpers.event import async_track_time_change
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.util import dt as dt_util
 
-from .calendar import ChastityChallengeCalendar, _is_gay_sauna_event
+from .calendar import ChastityChallengeCalendar
 from .const import DOMAIN
 
 
@@ -34,8 +34,8 @@ class ChastityCalendarSensorBase(SensorEntity):
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{self._attr_name.lower().replace(' ', '_')}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
-            name="Community Events & Sauna Calendar",
-            manufacturer="Community Events & Sauna Calendar",
+            name="Community Events Calendar",
+            manufacturer="Community Events Calendar",
             configuration_url="https://github.com/jonny5509/community-events-sauna-calendar",
         )
 
@@ -267,15 +267,8 @@ class ChastityNextCategoryEventSensor(ChastityCalendarSensorBase):
                 item_category,
                 " ".join(item_categories),
             )).casefold()
-            # Directory listings can have generic titles (for example
-            # "Sauna 52") without explicit LGBTQ+ keywords. The source identifies
-            # these as gay-sauna events, so include them in Next Gay.
-            is_gay_sauna_for_gay_sensor = (
-                self.category == "gay" and _is_gay_sauna_event(item)
-            )
             if (
-                is_gay_sauna_for_gay_sensor
-                or item_category == self.category
+                item_category == self.category
                 or self.category in item_categories
                 or any(term in text for term in terms)
             ):
@@ -421,138 +414,6 @@ _CATEGORY_SENSOR_CLASSES = (
 )
 
 
-class ChastityNearestSaunaSensor(SensorEntity):
-    """Show the nearest sauna mapped in OpenStreetMap to the configured location."""
-
-    _attr_has_entity_name = True
-    _attr_name = "Nearest Sauna"
-    _attr_icon = "mdi:hot-tub"
-    _attr_should_poll = False
-
-    def __init__(self, hass, entry, preferences) -> None:
-        self.hass = hass
-        self.preferences = preferences
-        self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_nearest_sauna"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name="Community Events & Sauna Calendar",
-            manufacturer="Community Events & Sauna Calendar",
-            configuration_url="https://github.com/jonny5509/community-events-sauna-calendar",
-        )
-        self._saunas = []
-        self._unsub_refresh = None
-
-    async def async_added_to_hass(self) -> None:
-        await super().async_added_to_hass()
-        await self._async_refresh()
-        self._unsub_refresh = async_track_time_change(
-            self.hass, self._scheduled_refresh, hour=[0, 6, 12, 18], minute=0, second=0
-        )
-        self.async_on_remove(self._unsub_refresh)
-
-    async def _scheduled_refresh(self, _now) -> None:
-        await self._async_refresh()
-
-    async def _async_refresh(self) -> None:
-        from .discovery import async_discover_nearest_saunas
-        self._saunas = await async_discover_nearest_saunas(
-            self.hass,
-            country=self.preferences.get("country", ""),
-            location=", ".join(filter(None, (
-                self.preferences.get("area", ""),
-                self.preferences.get("city", ""),
-                self.preferences.get("county", ""),
-                self.preferences.get("region", ""),
-                self.preferences.get("location", ""),
-            ))),
-        )
-        self.async_write_ha_state()
-
-    @property
-    def native_value(self):
-        if not self._saunas:
-            return "No mapped sauna found"
-        return self._saunas[0]["name"]
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        if not self._saunas:
-            return {"search_radius_km": 30, "data_source": "OpenStreetMap"}
-        nearest = self._saunas[0]
-        return {
-            "distance_km": nearest["distance_km"],
-            "address": nearest["address"],
-            "website": nearest["website"],
-            "phone": nearest["phone"],
-            "latitude": nearest["latitude"],
-            "longitude": nearest["longitude"],
-            "map_url": nearest["osm_url"],
-            "search_radius_km": 30,
-            "other_nearby_saunas": self._saunas[1:6],
-            "data_source": "OpenStreetMap",
-        }
-
-class ChastityNextSaunaEventSensor(ChastityCalendarSensorBase):
-    """Show the next discovered public sauna event."""
-
-    _attr_name = "Next Sauna Event"
-    _attr_icon = "mdi:calendar-star"
-
-    def _event_record(self):
-        today = dt_util.now().date()
-        matches = []
-        for item in self.coordinator.data or []:
-            searchable = " ".join(str(item.get(key, "")) for key in (
-                "summary", "description", "category", "location"
-            )) + " " + " ".join(str(value) for value in item.get("categories", []))
-            if "sauna" not in searchable.casefold():
-                continue
-            start = item.get("start")
-            if not start:
-                continue
-            if hasattr(start, "date"):
-                event_date = start.date()
-            else:
-                try:
-                    event_date = date.fromisoformat(str(start)[:10])
-                except ValueError:
-                    continue
-            if event_date >= today:
-                matches.append((event_date, item))
-        return min(matches, key=lambda match: match[0])[1] if matches else None
-
-    @property
-    def native_value(self) -> str:
-        event = self._event_record()
-        if not event:
-            return "No upcoming sauna event found"
-        start = event.get("start")
-        event_date = start.date().isoformat() if hasattr(start, "date") else str(start)[:10]
-        return _sensor_event_name(event.get("summary", "Sauna event"))
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        event = self._event_record()
-        if not event:
-            return {}
-        start = event.get("start")
-        end = event.get("end")
-        return {
-            "event_date": start.date().isoformat() if hasattr(start, "date") else str(start)[:10],
-            "end_date": (
-                (end - timedelta(days=1)).isoformat() if type(end) is date
-                else end.date().isoformat() if hasattr(end, "date")
-                else str(end)[:10] if end else ""
-            ),
-            "location": event.get("location", ""),
-            "source_url": event.get("url", ""),
-            "source": event.get("source", ""),
-            "sources": event.get("sources", []),
-            "categories": event.get("categories", []),
-        }
-
-
-
 class ChastityNextKinkEventSensor(ChastityCalendarSensorBase):
     """Show the next discovered kink or fetish event."""
 
@@ -602,6 +463,4 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         ChastityNextLGBTQEventSensor(coordinator, entry.entry_id),
         ChastityNextFurryEventSensor(coordinator, entry.entry_id),
         ChastityNextKinkEventSensor(coordinator, entry.entry_id),
-        ChastityNextSaunaEventSensor(coordinator, entry.entry_id),
-        ChastityNearestSaunaSensor(hass, entry, preferences),
     ])
