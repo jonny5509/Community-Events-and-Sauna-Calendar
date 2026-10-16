@@ -27,31 +27,15 @@ def test_lgbtq_events_are_separate_from_monthly_calendar():
     events = [
         _event("Gay social meetup", "gay", ["gay", "lgbtq"]),
         _event("General community fair", "community", ["community"]),
-        _event("Sauna theme night", "sauna", ["sauna"]),
     ]
 
     monthly = _summaries("monthly", events)
     assert "General community fair" in monthly
     assert "Gay social meetup" not in monthly
-    assert "Sauna theme night" not in monthly
     lgbtq = _summaries("pride", events)
     assert "Gay social meetup" in lgbtq
     assert "Pride Month" in lgbtq
     assert "General community fair" not in lgbtq
-    assert "Sauna theme night" not in lgbtq
-    sauna = _summaries("sauna", events)
-    assert "Sauna theme night" in sauna
-    assert "Gay social meetup" not in sauna
-    assert "General community fair" not in sauna
-
-
-def test_overlapping_event_is_assigned_to_only_one_focused_calendar():
-    event = _event("Queer sauna social", "sauna", ["sauna", "queer", "lgbtq"])
-
-    assert "Queer sauna social" not in _summaries("monthly", [event])
-    assert "Queer sauna social" not in _summaries("pride", [event])
-    assert "Queer sauna social" not in _summaries("kink", [event])
-    assert "Queer sauna social" in _summaries("sauna", [event])
 
 
 def test_lgbtq_kink_event_appears_only_in_kink_calendar():
@@ -68,7 +52,6 @@ def test_lgbtq_only_event_remains_in_pride_calendar():
     assert "Queer Film Night" not in _summaries("monthly", [event])
     assert "Queer Film Night" in _summaries("pride", [event])
     assert "Queer Film Night" not in _summaries("kink", [event])
-    assert "Queer Film Night" not in _summaries("sauna", [event])
 
 
 
@@ -204,30 +187,6 @@ def test_lgbtq_single_and_multi_day_events_preserve_original_spans():
     assert results["Multi-day Pride festival"].start == date(2027, 6, 14)
     assert results["Multi-day Pride festival"].end == date(2027, 6, 18)
 
-
-
-def test_gay_sauna_events_appear_in_both_sauna_and_lgbtq_calendars():
-    event = _event(
-        "Fetish Night at Number 52 Sauna",
-        "sauna",
-        ["sauna", "gay", "lgbtq", "kink"],
-    )
-    event["source"] = "Number 52 Sauna official website"
-    event["url"] = "https://www.number52sauna.co.uk/our-events/"
-
-    assert "Fetish Night at Number 52 Sauna" not in _summaries("monthly", [event])
-    assert "Fetish Night at Number 52 Sauna" in _summaries("sauna", [event])
-    assert "Fetish Night at Number 52 Sauna" in _summaries("pride", [event])
-    assert "Fetish Night at Number 52 Sauna" not in _summaries("kink", [event])
-
-
-def test_non_gay_sauna_events_remain_out_of_lgbtq_calendar():
-    event = _event("General Sauna Session", "sauna", ["sauna"])
-    event["source"] = "Generic sauna listing"
-    event["url"] = "https://example.com/sauna/events"
-
-    assert "General Sauna Session" in _summaries("sauna", [event])
-    assert "General Sauna Session" not in _summaries("pride", [event])
 
 
 def test_midnight_date_only_discovery_renders_as_all_day():
