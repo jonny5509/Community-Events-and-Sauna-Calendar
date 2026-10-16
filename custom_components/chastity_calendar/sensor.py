@@ -36,7 +36,7 @@ class ChastityCalendarSensorBase(SensorEntity):
             identifiers={(DOMAIN, entry_id)},
             name="Community Events Calendar",
             manufacturer="Community Events Calendar",
-            configuration_url="https://github.com/jonny5509/community-events-sauna-calendar",
+            configuration_url="https://github.com/jonny5509/community-events-calendar",
         )
 
     async def async_added_to_hass(self) -> None:
