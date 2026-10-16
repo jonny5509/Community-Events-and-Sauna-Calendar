@@ -16,7 +16,7 @@ async def test_config_entry_setup_creates_entities_and_unloads_cleanly(
     """Exercise the real HA config-entry and platform lifecycle without network calls."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        title="Community Events & Sauna Calendar",
+        title="Community Events Calendar",
         data={
             "country": "United Kingdom",
             "location": "",
