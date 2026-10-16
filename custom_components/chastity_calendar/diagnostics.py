@@ -1,4 +1,4 @@
-"""Diagnostics support for Community Events & Sauna Calendar."""
+"""Diagnostics support for Community Events Calendar."""
 from __future__ import annotations
 
 from collections import Counter
